@@ -1,0 +1,73 @@
+stages:
+  - build
+  - test
+
+.job_template:
+  only:
+    - branches
+    - tags
+
+  image: docker:stable
+
+  services:
+    - docker:dind
+
+  before_script:
+    - "docker info"
+    - "docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY"
+
+  variables:
+    # Image tags cannot contain '/' so use safer $CI_COMMIT_REF_SLUG
+    IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+
+    # When using dind service we need to instruct docker, to talk with the
+    # daemon started inside of the service. The daemon is available with a
+    # network connection instead of the default /var/run/docker.sock socket.
+    #
+    # The 'docker' hostname is the alias of the service container as described
+    # at:
+    # https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#accessing-the-services
+    #
+    # Note that if you're using Kubernetes executor, the variable should be set
+    # to tcp://localhost:2375 because of how Kubernetes executor connects
+    # services to the job container
+    DOCKER_HOST: tcp://localhost:2375/
+    # When using dind, it's wise to use the overlayfs driver for improved
+    # performance.
+    DOCKER_DRIVER: overlay2
+
+# Job definitions -------------------------------------------------------------
+
+build:
+  stage: build
+
+  extends: .job_template
+
+  retry: 2
+
+  script:
+    - "cd ${CI_PROJECT_DIR}"
+    - "docker build -t $IMAGE_TAG ."
+    - "docker push $IMAGE_TAG"
+
+#----------
+
+pytest:
+  stage: test
+
+  extends: .job_template
+
+  script:
+    - "docker run $IMAGE_TAG"
+
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+
+#----------
+
+pre-commit:
+  stage: test
+
+  extends: .job_template
+
+  script:
+    - "docker run $IMAGE_TAG \"pre-commit run --all-files\""
