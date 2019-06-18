@@ -106,3 +106,6 @@ venv.bak/
 # helm
 requirements.lock
 charts/
+
+# terraform
+.terraform
