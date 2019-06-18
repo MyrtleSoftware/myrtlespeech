@@ -1,10 +1,24 @@
 # Git pre-commit hooks: https://pre-commit.com
 repos:
+  # type checking
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: v0.701
+  hooks:
+  - id: mypy
+
+  # automatic code formatting
 - repo: https://github.com/python/black
   rev: stable
   hooks:
     - id: black
       language_version: python3.7
+  # run black on Python code blocks in documentation files
+- repo: https://github.com/asottile/blacken-docs
+  rev: v1.0.0
+  hooks:
+  - id: blacken-docs
+
+  # pre-commit built-in hooks
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v2.2.3
   hooks:
