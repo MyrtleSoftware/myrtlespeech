@@ -1,4 +1,4 @@
-name: speech
+name: myrtlespeech
 channels:
   - conda-forge
   - defaults
