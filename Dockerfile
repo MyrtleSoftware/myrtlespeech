@@ -6,17 +6,17 @@ USER user
 WORKDIR /home/user
 
 # setup Conda environment
-COPY --chown=user:user environment.yml repaper/
-RUN conda env create --quiet --file repaper/environment.yml
+COPY --chown=user:user environment.yml myrtlespeech/
+RUN conda env create --quiet --file myrtlespeech/environment.yml
 
 # ensure conda env is loaded
-RUN echo "source /opt/conda/bin/activate repaper" > ~/.bashrc
+RUN echo "source /opt/conda/bin/activate myrtlespeech" > ~/.bashrc
 RUN echo "force_color_prompt=no" >> ~/.bashrc
 SHELL ["/bin/bash", "--login", "-c"]
 
-# install repaper package
-COPY --chown=user:user . repaper/
-WORKDIR /home/user/repaper
+# install myrtlespeech package
+COPY --chown=user:user . myrtlespeech/
+WORKDIR /home/user/myrtlespeech
 RUN pip install -e .
 
 # use CI Hypothesis profile, see ``tests/__init__.py`
