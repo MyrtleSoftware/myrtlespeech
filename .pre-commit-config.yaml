@@ -18,6 +18,21 @@ repos:
   hooks:
   - id: blacken-docs
 
+  # terraform
+- repo: git://github.com/antonbabenko/pre-commit-terraform
+  rev: v1.11.0
+  hooks:
+    # disabled due to https://github.com/antonbabenko/pre-commit-terraform/issues/8
+    # should be an easy fix, waiting for author to confirm my analysis
+    # - id: terraform_fmt
+    - id: terraform_docs
+
+  # helm
+- repo: https://github.com/gruntwork-io/pre-commit
+  rev: v0.0.8
+  hooks:
+    - id: helmlint
+
   # pre-commit built-in hooks
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v2.2.3
