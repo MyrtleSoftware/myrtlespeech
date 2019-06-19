@@ -21,5 +21,10 @@ class RNNEncoder(torch.nn.Module):
 
             Document
 
+
+        Args: (seq_len, batch, in_features)?
+
+        Returns: (seq_len, batch, out_features)?
+
         """
         pass

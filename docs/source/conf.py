@@ -33,6 +33,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.todo",
     "sphinx.ext.imgmath",
+    "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
 ]
@@ -80,3 +81,9 @@ html_sidebars = {"**": ["globaltoc.html", "searchbox.html"]}
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
+
+# -- Options for intersphinx extension ---------------------------------------
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/", None),
+    "torch": ("https://pytorch.org/docs/stable/", None),
+}
