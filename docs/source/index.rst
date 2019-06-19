@@ -2,12 +2,14 @@ myrtlespeech
 ============
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Contents:
+    :maxdepth: 1
+    :caption: Contents:
 
-   document
-   install
-   test
+    data/index
+    document
+    infra/index
+    install
+    test
 
 
 Indices and tables

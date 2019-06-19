@@ -105,6 +105,7 @@ dependencies:
   - pyzmq=18.0.0=py37he6710b0_0
   - readline=7.0=h7b6447c_5
   - requests=2.22.0=py37_0
+  - scipy=1.2.1=py37h7c811a0_0
   - send2trash=1.5.0=py37_0
   - setuptools=41.0.1=py37_0
   - six=1.12.0=py37_0
@@ -141,4 +142,5 @@ dependencies:
     - appdirs==1.4.3
     - black==19.3b0
     - click==7.0
+    - mypy-extensions==0.4.1
     - python-speech-features==0.6
