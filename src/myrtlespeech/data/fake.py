@@ -52,7 +52,7 @@ def speech_to_text(
             Range specificed in milliseconds and is inclusive of both ends
             (i.e. a closed interval).
 
-            Requires ``audio_ms[0] <= audio_ms[1]`` and ``audio_ms[0] >= 0``.
+            Requires ``audio_ms[0] <= audio_ms[1]`` and ``audio_ms[0] > 0``.
             i.e. Lower bound must be less than or equal to upper bound and
             non-negative.
 
@@ -64,6 +64,10 @@ def speech_to_text(
         label_symbols: Symbols to sample from when generating the label.
 
         label_len: The label will have length between this range inclusive.
+
+            Requires ``label_len[0] <= label_len[1]`` and ``label_len[0] >= 0``.
+            i.e. Lower bound must be less than or equal to upper bound and
+            non-negative.
 
         audio_channels: Number of audio channels to simulate. Must be ``>= 1``.
 
@@ -98,6 +102,10 @@ def speech_to_text(
 
         :py:class:`ValueError`: if ``audio_ms[0] <= 0``.
 
+        :py:class:`ValueError`: if ``label_len[0] > label_len[1]``.
+
+        :py:class:`ValueError`: if ``label_len[0] < 0``.
+
         :py:class:`ValueError`: if ``audio_channels < 1``.
 
         :py:class:`ValueError`: if not in
@@ -108,6 +116,12 @@ def speech_to_text(
 
     if audio_ms[0] <= 0:
         raise ValueError("audio_ms must be greater than 0")
+
+    if label_len[0] > label_len[1]:
+        raise ValueError("label_len lower bound must be > upper bound")
+
+    if label_len[0] < 0:
+        raise ValueError("label_len must be greater than or equal to 0")
 
     if audio_channels < 1:
         raise ValueError("audio_channels must be >= 1")
@@ -121,7 +135,12 @@ def speech_to_text(
     def generator(key: int) -> Tuple[torch.Tensor, str]:
         rnd.seed(a=key)
 
-        label = "".join(rnd.choices(label_symbols, k=rnd.randint(*label_len)))
+        if label_symbols:
+            label = "".join(
+                rnd.choices(label_symbols, k=rnd.randint(*label_len))
+            )
+        else:
+            label = ""
 
         audio_samples = math.ceil(
             rnd.randint(*audio_ms) * (audio_sample_rate / 1000)
