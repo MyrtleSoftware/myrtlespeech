@@ -55,7 +55,10 @@ class MFCC:
             nfilt=self.numcep,
         )
         return torch.tensor(
-            mfcc, device=audiodata.device, requires_grad=audiodata.requires_grad
+            mfcc,
+            dtype=audiodata.dtype,
+            device=audiodata.device,
+            requires_grad=audiodata.requires_grad,
         )
 
     def __repr__(self):
