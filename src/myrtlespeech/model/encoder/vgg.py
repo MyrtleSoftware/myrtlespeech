@@ -41,7 +41,9 @@ from typing import List, Union
 import torch.nn as nn
 
 
-#: foo
+VGGConfig = List[Union[int, str]]
+
+
 cfgs = {
     "A": [64, "M", 128, "M", 256, 256, "M", 512, 512, "M", 512, 512, "M"],
     "B": [
@@ -115,11 +117,11 @@ r"""VGG *"ConvNet"* configurations as defined in the `paper`_.
     B [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M']
     D [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M']
     E [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M']
-"""   # pylint: disable=W0105
+"""  # pylint: disable=W0105
 
 
 def make_layers(
-    cfg: List[Union[int, str]],
+    cfg: VGGConfig,
     in_channels: int = 3,
     batch_norm: bool = False,
     initialize_weights: bool = True,
@@ -184,13 +186,23 @@ def make_layers(
         in_channels: ``in_channels`` argument for the first
             :py:class:`torch.nn.Conv2d``.
 
-        batch_norm: If :py:class:`True` then a :py:class:`torch.nn.BatchNorm2d`
+        batch_norm: If :py:data:`True` then a :py:class:`torch.nn.BatchNorm2d`
             layer is inserted after each :py:class:`torch.nn.Conv2d`.
 
-        initialize_weights:
+        initialize_weights: If :py:data:`True`, :py:class:`torch.nn.Conv2d`
+            weights are initialized using
+            :py:func:`torch.nn.init.kaiming_normal_` with ``mode="fan_out",
+            nonlinearity="relu"`` and biases initialized to 0.
+            :py:class:`torch.nn.BatchNorm2d` weights (scales) are set to 1 and
+            biases 0.
+
+            If :py:data:`False` the default initialization for each PyTorch
+            class is used.
 
 
     Returns:
+        :py:class:`torch.nn.Sequential` :py:class:`torch.nn.Module`
+
         TODO
 
 
@@ -198,9 +210,7 @@ def make_layers(
         TODO
 
     """
-    # build ConvNet
-    layers = []
-    in_channels = in_channels
+    layers: List[nn.Module] = []
     for v in cfg:
         if v == "M":
             layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
@@ -214,16 +224,16 @@ def make_layers(
         else:
             raise ValueError("unknown value %r in cfg" % v)
 
-    # initialize weights
-    for m in layers:
-        if isinstance(m, nn.Conv2d):
-            nn.init.kaiming_normal_(
-                m.weight, mode="fan_out", nonlinearity="relu"
-            )
-            if m.bias is not None:
+    if initialize_weights:
+        for m in layers:
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(
+                    m.weight, mode="fan_out", nonlinearity="relu"
+                )
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
-        elif isinstance(m, nn.BatchNorm2d):
-            nn.init.constant_(m.weight, 1)
-            nn.init.constant_(m.bias, 0)
 
     return nn.Sequential(*layers)
