@@ -109,3 +109,6 @@ charts/
 
 # terraform
 .terraform
+
+# protobuf
+*_pb2.py
