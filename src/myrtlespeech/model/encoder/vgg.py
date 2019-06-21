@@ -201,14 +201,14 @@ def make_layers(
 
 
     Returns:
-        :py:class:`torch.nn.Sequential` :py:class:`torch.nn.Module`
-
-        TODO
-
+        A :py:class:`torch.nn.Sequential` :py:class:`torch.nn.Module`
+        containing the :py:class:`torch.nn.Conv2d`,
+        :py:class:`torch.nn.BatchNorm2d` and :py:class:`torch.nn.ReLU`
+        :py:class:`torch.nn.Module`'s.
 
     Raises:
-        TODO
-
+        :py:class:`ValueError`: If ``cfg`` contains values other than ``"M"``
+            or :py:class:`int`.
     """
     layers: List[nn.Module] = []
     for v in cfg:
