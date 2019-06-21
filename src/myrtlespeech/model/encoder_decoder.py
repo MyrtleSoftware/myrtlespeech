@@ -11,18 +11,15 @@ class EncoderDecoder(torch.nn.Module):
         Document this
 
     Args:
-        feature_extractor:
         encoder:
         decoder:
     """
 
     def __init__(
         self,
-        audio_feature_extractor: Callable[[torch.Tensor], torch.Tensor],
         encoder: torch.nn.Module,
         decoder: torch.nn.Module,
     ):
-        self.audio_feature_extractor = audio_feature_extractor
         self.encoder = encoder
         self.decoder = decoder
 
@@ -37,6 +34,5 @@ class EncoderDecoder(torch.nn.Module):
             x:
 
         """
-        features = self.audio_feature_extractor(x)
         hidden_state = self.encoder(features)
         return self.decoder(hidden_state)

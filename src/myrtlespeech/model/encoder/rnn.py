@@ -10,9 +10,8 @@ class RNNEncoder(torch.nn.Module):
 
     """
 
-    def __init__(self, n_conv_layers: int):
+    def __init__(self, cnn, rnn):
         super().__init__()
-        self.front_end = ...
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -27,4 +26,8 @@ class RNNEncoder(torch.nn.Module):
         Returns: (seq_len, batch, out_features)?
 
         """
+
+        # CNN wants (batch, channels, height, width)
+
+        # LSTM wants (seq_len, batch, input_size) OR (batch, seq_len, features)
         pass

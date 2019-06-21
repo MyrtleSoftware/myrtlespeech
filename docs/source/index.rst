@@ -6,6 +6,7 @@ myrtlespeech
     :caption: Contents:
 
     data/index
+    model/index
     document
     infra/index
     install
