@@ -1,6 +1,7 @@
 name: myrtlespeech
 channels:
   - pytorch
+  - anaconda
   - conda-forge
   - defaults
 dependencies:
@@ -53,6 +54,7 @@ dependencies:
   - libgcc-ng=9.1.0=hdf63c60_0
   - libgfortran-ng=7.3.0=hdf63c60_0
   - libpng=1.6.37=hbc83047_0
+  - libprotobuf=3.8.0=hd408876_0
   - libsodium=1.0.16=h1bed415_0
   - libstdcxx-ng=9.1.0=hdf63c60_0
   - libtiff=4.0.10=h2733197_2
@@ -72,7 +74,7 @@ dependencies:
   - numpy=1.16.4=py37h7e9f1db_0
   - numpy-base=1.16.4=py37hde5b4d6_0
   - olefile=0.46=py37_0
-  - openssl=1.1.1c=h7b6447c_1
+  - openssl=1.1.1=h7b6447c_0
   - packaging=19.0=py37_0
   - pandoc=2.2.3.2=0
   - pandocfilters=1.4.2=py37_1
@@ -85,6 +87,7 @@ dependencies:
   - pre_commit=1.17.0=py37_0
   - prometheus_client=0.6.0=py37_0
   - prompt_toolkit=2.0.9=py37_0
+  - protobuf=3.8.0=py37he6710b0_0
   - ptyprocess=0.6.0=py37_0
   - py=1.8.0=py37_0
   - pycodestyle=2.5.0=py37_0
