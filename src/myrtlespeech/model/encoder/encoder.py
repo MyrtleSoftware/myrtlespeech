@@ -11,7 +11,8 @@ class Encoder(torch.nn.Module):
         Document this!
 
     Raises:
-        :py:class:`ValueError`: if both ``cnn`` and ``rnn`` are :py:data`None`.
+        :py:class:`ValueError`: if both ``cnn`` and ``rnn`` are
+            :py:data:`None`.
     """
 
     def __init__(
