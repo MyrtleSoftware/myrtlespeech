@@ -36,14 +36,14 @@ def build(encoder_decoder_cfg) -> EncoderDecoder:
             "encoder_decoder_cfg not of type encoder_decoder_pb.EncoderDecoder"
         )
 
-    encoder = build_encoder(encoder_decoder_cfg.encoder)
+    encoder = _build_encoder(encoder_decoder_cfg.encoder)
 
     decoder = None
 
     return EncoderDecoder(encoder=encoder, decoder=decoder)
 
 
-def build_encoder(encoder_cfg) -> Encoder:
+def _build_encoder(encoder_cfg) -> Encoder:
     """Returns a :py:class:`.Encoder` based on the given config.
 
     Args:
@@ -58,23 +58,23 @@ def build_encoder(encoder_cfg) -> Encoder:
     if cnn_choice == "no_cnn":
         cnn = None
     elif cnn_choice == "vgg":
-        cnn = build_vgg(encoder_cfg.vgg)
+        cnn = _build_vgg(encoder_cfg.vgg)
     else:
-        raise ValueError(f"build_encoder does not support {cnn_choice}")
+        raise ValueError(f"_build_encoder does not support {cnn_choice}")
 
     # build rnn, if any
     rnn_choice = encoder_cfg.WhichOneof("supported_rnns")
     if rnn_choice == "no_rnn":
         rnn = None
     elif rnn_choice == "rnn":
-        rnn = build_rnn(encoder_cfg.rnn)
+        rnn = _build_rnn(encoder_cfg.rnn)
     else:
-        raise ValueError(f"build_encoder does not support {rnn_choice}")
+        raise ValueError(f"_build_encoder does not support {rnn_choice}")
 
     return Encoder(cnn=cnn, rnn=rnn)
 
 
-def build_vgg(vgg_cfg) -> torch.nn.Module:
+def _build_vgg(vgg_cfg) -> torch.nn.Module:
     """Returns a :py:class:`torch.nn.Module` based on the VGG confg.
 
     Args:
@@ -89,7 +89,7 @@ def build_vgg(vgg_cfg) -> torch.nn.Module:
         vgg_config = vgg_config_map[vgg_cfg.vgg_config]
     except KeyError:
         raise ValueError(
-            f"build_vgg does not support vgg_config={vgg_cfg.vgg_config}"
+            f"_build_vgg does not support vgg_config={vgg_cfg.vgg_config}"
         )
 
     vgg = make_layers(
@@ -101,7 +101,7 @@ def build_vgg(vgg_cfg) -> torch.nn.Module:
     return vgg
 
 
-def build_rnn(rnn_cfg) -> torch.nn.Module:
+def _build_rnn(rnn_cfg) -> torch.nn.Module:
     """Returns a :py:class:`torch.nn.Module` based on the config.
 
     .. todo:: what is the input size!?
@@ -117,7 +117,7 @@ def build_rnn(rnn_cfg) -> torch.nn.Module:
     try:
         rnn_type = rnn_type_map[rnn_cfg.rnn_type]
     except KeyError:
-        raise ValueError(f"build_rnn does not rnn_type={rnn_cfg.rnn_type}")
+        raise ValueError(f"_build_rnn does not rnn_type={rnn_cfg.rnn_type}")
 
     return rnn_type(
         input_size=1,  # TODO
