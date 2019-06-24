@@ -1,5 +1,3 @@
-from typing import Callable
-
 import torch
 
 
@@ -15,11 +13,8 @@ class EncoderDecoder(torch.nn.Module):
         decoder:
     """
 
-    def __init__(
-        self,
-        encoder: torch.nn.Module,
-        decoder: torch.nn.Module,
-    ):
+    def __init__(self, encoder: torch.nn.Module, decoder: torch.nn.Module):
+        super().__init__()
         self.encoder = encoder
         self.decoder = decoder
 
@@ -34,5 +29,5 @@ class EncoderDecoder(torch.nn.Module):
             x:
 
         """
-        hidden_state = self.encoder(features)
-        return self.decoder(hidden_state)
+        h = self.encoder(x)
+        return self.decoder(h)

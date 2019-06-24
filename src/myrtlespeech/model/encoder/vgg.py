@@ -36,7 +36,7 @@ that is licensed under the BSD 3-Clause:
     OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
-from typing import List, Union
+from typing import List, Union, Optional
 
 import torch.nn as nn
 
@@ -111,6 +111,9 @@ r"""VGG *"ConvNet"* configurations as defined in the `paper`_.
 
 .. _paper: https://arxiv.org/abs/1409.1556
 
+Each *"ConvNet"* configuration consists of 5 blocks. Each block contains one
+or more convolutional and batch norm layers followed by a max pooling layer.
+
     >>> for name, cfg in cfgs.items():
     ...     print(name, cfg)
     A [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M']
@@ -125,7 +128,8 @@ def make_layers(
     in_channels: int = 3,
     batch_norm: bool = False,
     initialize_weights: bool = True,
-):
+    use_output_from_block: Optional[int] = None,
+) -> nn.Module:
     """Returns a :py:class:`torch.nn.Sequential` module for the given `cfg`.
 
     Example:
@@ -199,6 +203,19 @@ def make_layers(
             If :py:data:`False` the default initialization for each PyTorch
             class is used.
 
+        use_output_from_block: Truncate the *"ConvNet"* configuration after
+            block ``use_output_from_block``. Must be :py:data`None` or in ``[1,
+            2, 3, 4, 5]`` otherwise a :py:class:`ValueError` will be raised.
+
+                >>> cfgs['A']
+                [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M']
+                >>> make_layers(cfgs['A'], in_channels=5, batch_norm=True, use_output_from_block=1)
+                Sequential(
+                  (0): Conv2d(5, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+                  (1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                  (2): ReLU(inplace)
+                  (3): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+                )
 
     Returns:
         A :py:class:`torch.nn.Sequential` :py:class:`torch.nn.Module`
@@ -209,11 +226,28 @@ def make_layers(
     Raises:
         :py:class:`ValueError`: If ``cfg`` contains values other than ``"M"``
             or :py:class:`int`.
-    """
+
+        :py:class:`ValueError`: If ``use_output_from_block is not None and
+            use_output_from_block not in [1, 2, 3, 4, 5]``.  """
+    if use_output_from_block is not None and use_output_from_block not in [
+        1,
+        2,
+        3,
+        4,
+        5,
+    ]:
+        raise ValueError(
+            "use_output_from_block must be None or in [1, 2, 3, 4, 5]"
+        )
+
     layers: List[nn.Module] = []
+    block = 0
     for v in cfg:
         if v == "M":
             layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+            block += 1
+            if use_output_from_block and block == use_output_from_block:
+                break
         elif isinstance(v, int):
             conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
             if batch_norm:

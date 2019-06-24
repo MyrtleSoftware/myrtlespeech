@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import hypothesis.strategies as st
 import torch
@@ -55,22 +55,38 @@ def random_invalid_cfg(draw) -> st.SearchStrategy[List]:
     in_channels=st.integers(min_value=1, max_value=128),
     batch_norm=st.booleans(),
     initialize_weights=st.booleans(),
+    use_output_from_block=st.one_of(st.none(), st.integers(1, 5)),
 )
 def test_make_layers_returns_correct_module_structure_for_valid_cfg(
-    cfg: VGGConfig, in_channels: int, batch_norm: bool, initialize_weights: bool
+    cfg: VGGConfig,
+    in_channels: int,
+    batch_norm: bool,
+    initialize_weights: bool,
+    use_output_from_block: Optional[int],
 ) -> None:
     """Ensures Module returned by ``make_layers`` has correct structure."""
-    module = make_layers(cfg, in_channels, batch_norm, initialize_weights)
+    module = make_layers(
+        cfg, in_channels, batch_norm, initialize_weights, use_output_from_block
+    )
 
     assert isinstance(module, torch.nn.Sequential)
 
     m_idx = 0  # iterate through torch.nn.Sequential module using index from 0
+    n_blocks = 0  # track blocks to test use_output_from_block
     for cfg_val in cfg:
+        if use_output_from_block and n_blocks >= use_output_from_block:
+            # if layers exist after seeing use_output_from_block max pools then
+            # layers not truncated
+            with pytest.raises(IndexError):
+                module[m_idx]
+            return
+
         m = module[m_idx]
         if cfg_val == "M":
             assert isinstance(m, torch.nn.MaxPool2d)
             assert m.kernel_size == 2
             assert m.stride == 2
+            n_blocks += 1
         else:
             assert isinstance(m, torch.nn.Conv2d)
             assert m.in_channels == in_channels
@@ -96,3 +112,17 @@ def test_make_layers_raises_value_error_for_invalid_cfg(cfg: List) -> None:
     """Ensures ValueError raised when cfg is invalid."""
     with pytest.raises(ValueError):
         make_layers(cfg)
+
+
+@given(
+    cfg=random_cfg(),
+    use_output_from_block=st.one_of(
+        st.integers(-1000, 0), st.integers(6, 1000)
+    ),
+)
+def test_make_layers_raises_value_error_for_invalid_use_output_from_block(
+    cfg: VGGConfig, use_output_from_block: int
+) -> None:
+    """Ensures ValueError raised when use_output_from_block invalid."""
+    with pytest.raises(ValueError):
+        make_layers(cfg, use_output_from_block=use_output_from_block)

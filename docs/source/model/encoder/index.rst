@@ -3,8 +3,11 @@
 =========
 
 .. toctree::
-    :maxdepth: 1
-    :caption: Contents:
+    :hidden:
 
-    rnn
     vgg
+
+
+.. automodule:: myrtlespeech.model.encoder.encoder
+    :members:
+    :show-inheritance:

@@ -4,13 +4,17 @@ package myrtlespeech;
 
 import "google/protobuf/empty.proto";
 
-message RNNEncoder {
-  oneof supported_cnn {
+message EncoderDecoder {
+  Encoder encoder = 1;
+}
+
+message Encoder {
+  oneof supported_cnns {
     google.protobuf.Empty no_cnn = 1;
     VGG vgg = 2;
   }
 
-  oneof supported_rnn {
+  oneof supported_rnns {
     google.protobuf.Empty no_rnn = 3;
     RNN rnn = 4;
   }
