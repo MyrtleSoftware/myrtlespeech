@@ -26,6 +26,19 @@ Development
 
       $ pre-commit run --all-files
 
+3. Compile the `Protocol Buffer
+   <https://developers.google.com/protocol-buffers/>`_ files into Python
+   modules:
+
+   .. code-block:: bash
+
+    $ protoc /path/to/myrtlespeech/src/myrtlespeech/protos/*.proto --python_out=.
+
+    .. note::
+
+        This command should be executed each time a ``.proto`` file is
+        modified.
+
 
 Continuous Integration
 -----------------------
@@ -37,5 +50,5 @@ the package can be easily deployed to a cluster. To build the container:
 
    $ sudo docker build . -t myrtlespeech
 
-The default Docker ``CMD`` is to run the full test suite under
-the ``ci`` Hypothesis profile (see :ref:`hypothesis-label`).
+The default Docker ``CMD`` is to run the full test suite under the ``ci``
+Hypothesis profile (see :ref:`hypothesis-label`).
