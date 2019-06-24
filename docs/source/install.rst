@@ -34,7 +34,7 @@ Development
 
     $ protoc /path/to/myrtlespeech/src/myrtlespeech/protos/*.proto --python_out=.
 
-    .. note::
+   .. note::
 
         This command should be executed each time a ``.proto`` file is
         modified.
