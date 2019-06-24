@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "google/protobuf/empty.proto";
+import "myrtlespeech/protos/vgg.proto";
+
+message Encoder {
+  oneof supported_cnns {
+    google.protobuf.Empty no_cnn = 1;
+    VGG vgg = 2;
+  }
+
+  oneof supported_rnns {
+    google.protobuf.Empty no_rnn = 3;
+    RNN rnn = 4;
+  }
+}
+
+message RNN {
+  enum RNN_TYPE {
+    LSTM = 0;
+    GRU = 1;
+    RNN = 2;
+  }
+
+  RNN_TYPE rnn_type = 1;
+
+  uint32 hidden_size = 2;
+
+  uint32 num_layers = 3;
+
+  bool bias = 4;
+
+  bool bidirectional = 5;
+}

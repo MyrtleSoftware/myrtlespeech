@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+message VGG {
+
+  enum VGG_CONFIG {
+    reserved 2;
+    reserved "C";
+    A = 0;
+    B = 1;
+    D = 3;
+    E = 4;
+  }
+
+  enum USE_OUTPUT_FROM_BLOCK {
+    ONE = 0;
+    TWO = 1;
+    THREE = 2;
+    FOUR = 3;
+    FIVE = 4;
+  }
+
+  VGG_CONFIG vgg_config = 1;
+
+  bool batch_norm = 2;
+
+  USE_OUTPUT_FROM_BLOCK use_output_from_block = 3;
+}

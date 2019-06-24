@@ -1,68 +1,9 @@
 syntax = "proto3";
 
-package myrtlespeech;
+package myrtlespeech.protos;
 
-import "google/protobuf/empty.proto";
+import "myrtlespeech/protos/encoder.proto";
 
 message EncoderDecoder {
   Encoder encoder = 1;
-}
-
-message Encoder {
-  oneof supported_cnns {
-    google.protobuf.Empty no_cnn = 1;
-    VGG vgg = 2;
-  }
-
-  oneof supported_rnns {
-    google.protobuf.Empty no_rnn = 3;
-    RNN rnn = 4;
-  }
-}
-
-
-message VGG {
-
-  enum VGG_CONFIG {
-    reserved 2;
-    reserved "C";
-    A = 0;
-    B = 1;
-    D = 3;
-    E = 4;
-  }
-
-  enum USE_OUTPUT_FROM_BLOCK {
-    ONE = 0;
-    TWO = 1;
-    THREE = 2;
-    FOUR = 3;
-    FIVE = 4;
-  }
-
-  VGG_CONFIG vgg_config = 1;
-
-  bool batch_norm = 2;
-
-  USE_OUTPUT_FROM_BLOCK use_output_from_block = 3;
-}
-
-
-message RNN {
-
-  enum RNN_TYPE {
-    LSTM = 0;
-    GRU = 1;
-    RNN = 2;
-  }
-
-  RNN_TYPE rnn_type = 1;
-
-  uint32 hidden_size = 2;
-
-  uint32 num_layers = 3;
-
-  bool bias = 4;
-
-  bool bidirectional = 5;
 }
