@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
+// Recurrent neural network configuration.
 message RNN {
   enum RNN_TYPE {
     LSTM = 0;
@@ -9,13 +10,18 @@ message RNN {
     RNN = 2;
   }
 
+  // Type of RNN to apply.
   RNN_TYPE rnn_type = 1;
 
+  // The number of features in the hidden state.
   uint32 hidden_size = 2;
 
+  // Number of recurrent layers.
   uint32 num_layers = 3;
 
+  // If false then each recurrent layer does not add any bias.
   bool bias = 4;
 
+  // If true then each recurrent layer is bidirectional.
   bool bidirectional = 5;
 }

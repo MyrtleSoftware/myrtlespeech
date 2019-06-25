@@ -7,14 +7,23 @@ import "myrtlespeech/protos/rnn.proto";
 import "myrtlespeech/protos/vgg.proto";
 
 
+// Configuration for the Encoder part of an Encoder-Decoder model.
+//
+// Convolutional layers are applied before any recurrent layers.
 message Encoder {
   oneof supported_cnns {
+    // No convolutional layers.
     google.protobuf.Empty no_cnn = 1;
+
+    // Apply (part of) a VGG "ConvNet" configuration.
     VGG vgg = 2;
   }
 
   oneof supported_rnns {
+    // No recurrent layers.
     google.protobuf.Empty no_rnn = 3;
+
+    // Apply a recurrent neural network.
     RNN rnn = 4;
   }
 }
