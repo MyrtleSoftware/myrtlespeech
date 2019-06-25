@@ -2,13 +2,11 @@
 
 .. todo::
 
-    * test this using randomly generated protobuf objects?
-
     * type all the _cfg parameters?
 
-    * how to deal with imports when testing as need to compile protobufs?
-
     * add examples in the docstrings for each to make onboarding easier?
+
+    * how to configure input_size for _build_rnn?
 """
 import torch
 
