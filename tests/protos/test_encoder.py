@@ -4,9 +4,11 @@ import hypothesis.strategies as st
 from google.protobuf import empty_pb2
 
 from myrtlespeech.protos import encoder_pb2
+from myrtlespeech.protos import rnn_pb2
 from myrtlespeech.protos import vgg_pb2
-from tests.protos.utils import all_fields_set
+from tests.protos import test_rnn
 from tests.protos import test_vgg
+from tests.protos.utils import all_fields_set
 
 
 # Fixtures and Strategies -----------------------------------------------------
@@ -35,7 +37,7 @@ def encoders(
     rnn = draw(_supported_rnns())
     if isinstance(rnn, empty_pb2.Empty):
         kwargs["no_rnn"] = rnn
-    elif isinstance(rnn, encoder_pb2.RNN):
+    elif isinstance(rnn, rnn_pb2.RNN):
         kwargs["rnn"] = rnn
     else:
         raise ValueError(f"unknown rnn type {type(rnn)}")
@@ -89,8 +91,8 @@ def _supported_rnns(
 ) -> Union[
     st.SearchStrategy[empty_pb2.Empty],
     st.SearchStrategy[Tuple[empty_pb2.Empty, Dict]],
-    st.SearchStrategy[encoder_pb2.RNN],
-    st.SearchStrategy[Tuple[encoder_pb2.RNN, Dict]],
+    st.SearchStrategy[rnn_pb2.RNN],
+    st.SearchStrategy[Tuple[rnn_pb2.RNN, Dict]],
 ]:
     """Returns a SearchStrategy for supported_rnns plus maybe the kwargs."""
     kwargs: Dict = {}
@@ -102,42 +104,17 @@ def _supported_rnns(
         supported_rnn_fields.add(f.name)
     if supported_rnn_fields != {"no_rnn", "rnn"}:
         raise ValueError("update tests to support all supported_rnns")
-    rnn_type = draw(st.sampled_from([empty_pb2.Empty, encoder_pb2.RNN]))
+    rnn_type = draw(st.sampled_from([empty_pb2.Empty, rnn_pb2.RNN]))
 
     # get kwargs for chosen rnn_type
     if rnn_type == empty_pb2.Empty:
         pass
-    elif rnn_type == encoder_pb2.RNN:
-        _, kwargs = draw(_rnns(return_kwargs=True))
+    elif rnn_type == rnn_pb2.RNN:
+        _, kwargs = draw(test_rnn.rnns(return_kwargs=True))
 
     # initialise rnn_type and return
     all_fields_set(rnn_type, kwargs)
     rnn = rnn_type(**kwargs)
-    if not return_kwargs:
-        return rnn
-    return rnn, kwargs
-
-
-@st.composite
-def _rnns(
-    draw, return_kwargs: bool = False
-) -> Union[
-    st.SearchStrategy[encoder_pb2.RNN],
-    st.SearchStrategy[Tuple[encoder_pb2.RNN, Dict]],
-]:
-    """Returns a SearchStrategy for RNN plus maybe the kwargs."""
-    kwargs = {}
-
-    kwargs["rnn_type"] = draw(
-        st.sampled_from(encoder_pb2.RNN.RNN_TYPE.values())
-    )
-    kwargs["hidden_size"] = draw(st.integers(1, 128))
-    kwargs["num_layers"] = draw(st.integers(1, 4))
-    kwargs["bias"] = draw(st.booleans())
-    kwargs["bidirectional"] = draw(st.booleans())
-
-    all_fields_set(encoder_pb2.RNN, kwargs)
-    rnn = encoder_pb2.RNN(**kwargs)
     if not return_kwargs:
         return rnn
     return rnn, kwargs

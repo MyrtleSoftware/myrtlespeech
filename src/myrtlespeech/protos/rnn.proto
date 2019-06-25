@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+message RNN {
+  enum RNN_TYPE {
+    LSTM = 0;
+    GRU = 1;
+    RNN = 2;
+  }
+
+  RNN_TYPE rnn_type = 1;
+
+  uint32 hidden_size = 2;
+
+  uint32 num_layers = 3;
+
+  bool bias = 4;
+
+  bool bidirectional = 5;
+}
