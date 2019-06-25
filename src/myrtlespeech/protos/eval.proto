@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "myrtlespeech/protos/preprocessor.proto";
+
+// Configuration for evaluation.
+message EvalConfig {
+  // Preprocessing/data augmentation steps.
+  repeated PreprocessingStep preprocessing_step = 1;
+}

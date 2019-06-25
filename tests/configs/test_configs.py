@@ -4,9 +4,8 @@ from glob import glob
 import pytest
 import google.protobuf.text_format as text_format  # weird import for mypy
 
-from myrtlespeech.builders.encoder_decoder_builder import build
 from myrtlespeech import configs
-from myrtlespeech.protos import encoder_decoder_pb2
+from myrtlespeech.protos import pipeline_pb2
 
 
 # Fixtures and Strategies -----------------------------------------------------
@@ -24,8 +23,7 @@ def config_path(request):
 
 
 def test_all_configs_build(config_path):
-    """Ensures all config files in `myrtlespeech/config/` `build`."""
+    """Ensures all `myrtlespeech/config/*.config` files parse."""
     with open(config_path, "r") as config_file:
         config = config_file.read()
-    enc_dec = text_format.Merge(config, encoder_decoder_pb2.EncoderDecoder())
-    build(enc_dec)
+    text_format.Merge(config, pipeline_pb2.Pipeline())

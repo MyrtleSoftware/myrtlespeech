@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+// Preprocessing steps to apply to the input data.
+message PreprocessingStep {
+  oneof preprocessing_step {
+    MFCC mfcc = 1;
+  }
+}
+
+// Computes Mel-frequency cepstral coefficients (MFCC).
+message MFCC {
+  // Number of cepstrum.
+  uint32 numcep = 1;
+
+  // Length of the analysis window in seconds.
+  float winlen = 2;
+
+  // Step between successive windows in seconds.
+  float winstep = 3;
+}

@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "myrtlespeech/protos/encoder_decoder.proto";
+
+message SpeechToTextModel {
+  oneof model {
+    EncoderDecoder encoder_decoder = 1;
+  }
+}
