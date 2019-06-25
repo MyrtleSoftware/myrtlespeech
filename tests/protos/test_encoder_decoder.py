@@ -1,0 +1,29 @@
+from typing import Union, Tuple, Dict
+
+import hypothesis.strategies as st
+
+from myrtlespeech.protos import encoder_decoder_pb2
+from tests.protos.utils import all_fields_set
+from tests.protos.test_encoder import encoders
+
+
+# Fixtures and Strategies -----------------------------------------------------
+
+
+@st.composite
+def encoder_decoders(
+    draw, return_kwargs: bool = False
+) -> Union[
+    st.SearchStrategy[encoder_decoder_pb2.EncoderDecoder],
+    st.SearchStrategy[Tuple[encoder_decoder_pb2.EncoderDecoder, Dict]],
+]:
+    """Returns a SearchStrategy for EncoderDecoder plus maybe the kwargs."""
+    kwargs = {}
+    kwargs["encoder"] = draw(encoders())
+
+    # initialise encoder and return
+    all_fields_set(encoder_decoder_pb2.EncoderDecoder, kwargs)
+    encoder_decoder = encoder_decoder_pb2.EncoderDecoder(**kwargs)
+    if not return_kwargs:
+        return encoder_decoder
+    return encoder_decoder, kwargs

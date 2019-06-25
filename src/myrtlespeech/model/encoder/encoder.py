@@ -9,18 +9,12 @@ class Encoder(torch.nn.Module):
     .. todo::
 
         Document this!
-
-    Raises:
-        :py:class:`ValueError`: if both ``cnn`` and ``rnn`` are
-            :py:data:`None`.
     """
 
     def __init__(
         self, cnn: Optional[torch.nn.Module], rnn: Optional[torch.nn.Module]
     ):
         super().__init__()
-        if cnn is None and rnn is None:
-            raise ValueError("one of cnn or rnn must not be None")
         self.cnn = cnn
         self.rnn = rnn
 
