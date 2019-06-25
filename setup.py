@@ -8,4 +8,5 @@ setuptools.setup(
     url="https://github.com/myrtlesoftware/myrtlespeech",
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src", exclude=["tests"]),
+    include_package_data=True,
 )
