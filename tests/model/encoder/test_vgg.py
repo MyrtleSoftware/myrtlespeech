@@ -1,11 +1,15 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import hypothesis.strategies as st
 import torch
 import pytest
 from hypothesis import given, assume
 
-from myrtlespeech.model.encoder.vgg import VGGConfig, make_layers
+from myrtlespeech.model.encoder.vgg import (
+    VGGConfig,
+    make_layers,
+    vgg_output_size,
+)
 
 
 # Fixtures and Strategies -----------------------------------------------------
@@ -47,7 +51,30 @@ def random_invalid_cfg(draw) -> st.SearchStrategy[List]:
     return invalid_cfg
 
 
+@st.composite
+def vgg_input_sizes(
+    draw
+) -> st.SearchStrategy[Tuple[torch.nn.Sequential, torch.Size]]:
+    """Returns a SearchStrategy for modules from VGGConfig's and input_sizes."""
+    input_size = draw(st.lists(st.integers(1, 32), min_size=4, max_size=4))
+    input_size = torch.Size(input_size)
+
+    cfg = draw(random_cfg())
+    batch_norm = draw(st.booleans())
+    use_output_from_block = draw(st.integers(1, 5))
+    vgg = make_layers(
+        cfg=cfg,
+        in_channels=input_size[1],
+        batch_norm=batch_norm,
+        use_output_from_block=use_output_from_block,
+    )
+
+    return vgg, input_size
+
+
 # Tests -----------------------------------------------------------------------
+
+# make_layers ---------------------------------------
 
 
 @given(
@@ -126,3 +153,16 @@ def test_make_layers_raises_value_error_for_invalid_use_output_from_block(
     """Ensures ValueError raised when use_output_from_block invalid."""
     with pytest.raises(ValueError):
         make_layers(cfg, use_output_from_block=use_output_from_block)
+
+
+# vgg_ouput_size ------------------------------------
+
+
+@given(vgg_input_size=vgg_input_sizes())
+def test_vgg_output_size_returns_correct_size(
+    vgg_input_size: Tuple[torch.nn.Sequential, torch.Size]
+) -> None:
+    """Ensures vgg_output_size matches actual module output size."""
+    vgg, input_size = vgg_input_size
+    x = torch.empty(input_size).normal_()
+    assert vgg_output_size(vgg, input_size) == vgg(x).size()

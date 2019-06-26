@@ -36,8 +36,10 @@ that is licensed under the BSD 3-Clause:
     OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
-from typing import List, Union, Optional
+import math
+from typing import Tuple, List, Union, Optional
 
+import torch
 import torch.nn as nn
 
 
@@ -271,3 +273,76 @@ def make_layers(
                 nn.init.constant_(m.bias, 0)
 
     return nn.Sequential(*layers)
+
+
+def vgg_output_size(
+    vgg: torch.nn.Sequential, input_size: torch.Size
+) -> torch.Size:
+    """Returns the output size after applying vgg to input of input_size.
+
+    Args:
+        vgg: A :py:class`torch.nn.Sequential` module produced by
+            :py:func:`make_layers`.
+
+            This function only supports :py:class:`torch.nn.Conv2d`,
+            :py:class:`torch.nn.BatchNorm2d`, :py:class:`torch.nn.ReLU` and
+            :py:class:`torch.nn.MaxPool2d` layers being part of ``vgg``.
+
+        input_size: A :py:class:`torch.Size` object representing the size of
+            the input.
+
+            This must be 4-dimensional where each dimension represents:
+                1. Batch size.
+                2. Channels.
+                3. Number of features.
+                4. Sequence length.
+
+            i.e. NCHW format.
+
+    Raises:
+        :py:class:`ValueError`: if ``vgg`` contains unsupported layers.
+    """
+    batch, channels, features, seq_len = input_size
+    for layer in vgg:
+        if isinstance(layer, (nn.Conv2d, nn.MaxPool2d)):
+            if isinstance(layer, nn.Conv2d):
+                channels = layer.out_channels
+            features, seq_len = _conv_pool_2d_output_height_width(
+                layer, (features, seq_len)
+            )
+        elif isinstance(layer, (nn.BatchNorm2d, nn.ReLU)):
+            pass
+        else:
+            raise ValueError(f"{type(layer)} not supported")
+
+    return torch.Size([batch, channels, features, seq_len])
+
+
+def _conv_pool_2d_output_height_width(
+    layer: Union[nn.Conv2d, nn.MaxPool2d], input_height_width: Tuple[int, int]
+) -> Tuple[int, int]:
+    """Returns the height and width after applying a Conv2d or MaxPool2d.
+
+    Size calculations taken from the equation given by PyTorch's
+    :py:class:`torch.nn.Conv2d` and :py:class`torch.nn.MaxPool2d`
+    documentation.
+    """
+    output = [0, 0]
+    for i in range(2):
+        # kernel_size, stride, padding, and dilation can be int or tuple
+        # ensure all are converted to ints for use in eqn below
+        params = {}
+        for param in ["kernel_size", "stride", "padding", "dilation"]:
+            val = getattr(layer, param)
+            if isinstance(val, tuple):
+                val = val[i]
+            params[param] = val
+
+        # numerator in PyTorch doc eqn
+        out = float(input_height_width[i])
+        out += 2 * params["padding"]
+        out -= params["dilation"] * (params["kernel_size"] - 1)
+        out -= 1
+        # apply remaining parts of eqn: divide by denominator, add 1 and floor
+        output[i] = max(1, math.floor((out / params["stride"]) + 1))
+    return tuple(output)  # type: ignore
