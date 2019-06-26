@@ -22,7 +22,7 @@ def encoders(
     st.SearchStrategy[Tuple[encoder_pb2.Encoder, Dict]],
 ]:
     """Returns a SearchStrategy for Encoder plus maybe the kwargs."""
-    kwargs = {}
+    kwargs: Dict = {}
 
     # initialise oneof supported_cnns
     cnn = draw(_supported_cnns())

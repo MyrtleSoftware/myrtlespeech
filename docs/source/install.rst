@@ -32,7 +32,7 @@ Development
 
    .. code-block:: bash
 
-    $ protoc --proto_path src/ --python_out src/ src/myrtlespeech/protos/*.proto
+    $ protoc --proto_path src/ --python_out src/ src/myrtlespeech/protos/*.proto --mypy_out src/
 
    .. note::
 

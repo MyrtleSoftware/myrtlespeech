@@ -146,4 +146,5 @@ dependencies:
     - black==19.3b0
     - click==7.0
     - mypy-extensions==0.4.1
+    - mypy-protobuf==1.10
     - python-speech-features==0.6

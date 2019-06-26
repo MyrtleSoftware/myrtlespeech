@@ -14,7 +14,7 @@ class Lambda(torch.nn.Module):
 
         >>> scale = Lambda(lambda_fn=lambda x: x*2.0)
         >>> scale(torch.tensor([1.0]))
-        torch.tensor([2.0])
+        tensor([2.])
     """
 
     def __init__(self, lambda_fn: Callable):

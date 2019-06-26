@@ -1,6 +1,6 @@
 from hypothesis import given
 
-from myrtlespeech.builders.encoder_decoder_builder import build
+from myrtlespeech.builders.encoder_decoder import build
 from tests.protos.test_encoder_decoder import encoder_decoders
 
 

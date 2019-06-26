@@ -18,7 +18,7 @@ SHELL ["/bin/bash", "--login", "-c"]
 COPY --chown=user:user . myrtlespeech/
 WORKDIR /home/user/myrtlespeech
 RUN pip install -e .
-RUN protoc --proto_path src/ --python_out src/ src/myrtlespeech/protos/*.proto
+RUN protoc --proto_path src/ --python_out src/ src/myrtlespeech/protos/*.proto --mypy_out src/
 
 # use CI Hypothesis profile, see ``tests/__init__.py``
 ENV HYPOTHESIS_PROFILE ci

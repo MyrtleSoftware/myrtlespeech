@@ -7,7 +7,7 @@ message RNN {
   enum RNN_TYPE {
     LSTM = 0;
     GRU = 1;
-    RNN = 2;
+    BASIC_RNN = 2;
   }
 
   // Type of RNN to apply.
