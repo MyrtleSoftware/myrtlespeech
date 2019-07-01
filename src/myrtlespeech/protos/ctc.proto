@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+message CTC {
+  // should this be here or be part of a higher-level message (model)?
+  string alphabet = 1;
+
+}

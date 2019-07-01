@@ -3,9 +3,13 @@ syntax = "proto3";
 package myrtlespeech.protos;
 
 import "myrtlespeech/protos/encoder.proto";
+import "myrtlespeech/protos/decoder.proto";
 
 // Configuration for Encoder-Decoder models.
 message EncoderDecoder {
   // Encoder config.
   Encoder encoder = 1;
+
+  // Decoder config.
+  Decoder decoder = 2;
 }
