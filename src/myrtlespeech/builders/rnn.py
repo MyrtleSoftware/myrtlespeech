@@ -18,6 +18,23 @@ def build_rnn(rnn_cfg: rnn_pb2.RNN, input_features: int) -> torch.nn.Module:
 
         The :py:class:`torch.nn.Module` accepts :py:class:`torch.Tensor` input
         of size `[seq_len, batch, input_features]`.
+
+    Example:
+
+        >>> from google.protobuf import text_format
+        >>> rnn_cfg_text = '''
+        ... rnn_type: LSTM;
+        ... hidden_size: 1024;
+        ... num_layers: 5;
+        ... bias: true;
+        ... bidirectional: true;
+        ... '''
+        >>> rnn_cfg = text_format.Merge(
+        ...     rnn_cfg_text,
+        ...     rnn_pb2.RNN()
+        ... )
+        >>> build_rnn(rnn_cfg, input_features=512)
+        LSTM(512, 1024, num_layers=5, bidirectional=True)
     """
     rnn_type_map = {0: torch.nn.LSTM, 1: torch.nn.GRU, 2: torch.nn.RNN}
     try:
