@@ -19,7 +19,7 @@ def rnns(
     kwargs = {}
 
     kwargs["rnn_type"] = draw(st.sampled_from(rnn_pb2.RNN.RNN_TYPE.values()))
-    kwargs["hidden_size"] = draw(st.integers(1, 128))
+    kwargs["hidden_size"] = draw(st.integers(1, 32))
     kwargs["num_layers"] = draw(st.integers(1, 4))
     kwargs["bias"] = draw(st.booleans())
     kwargs["bidirectional"] = draw(st.booleans())
