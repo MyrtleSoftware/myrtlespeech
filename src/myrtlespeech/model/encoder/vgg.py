@@ -225,12 +225,22 @@ def make_layers(
         :py:class:`torch.nn.BatchNorm2d` and :py:class:`torch.nn.ReLU`
         :py:class:`torch.nn.Module`'s.
 
+        The :py:class:`torch.nn.Sequential` :py:class:`torch.nn.Module`
+        expects input of size ``[batch, channels, features, seq_len]`` and
+        produces output with size ``[batch, out_channels, out_features,
+        out_seq_len]`` where each ``out_*`` will depend on the exact network
+        configuration and input size.
+
+        Exact values can be found using :py:func:`vgg_output_size`.
+
+
     Raises:
         :py:class:`ValueError`: If ``cfg`` contains values other than ``"M"``
             or :py:class:`int`.
 
         :py:class:`ValueError`: If ``use_output_from_block is not None and
-            use_output_from_block not in [1, 2, 3, 4, 5]``.  """
+            use_output_from_block not in [1, 2, 3, 4, 5]``.
+    """
     if use_output_from_block is not None and use_output_from_block not in [
         1,
         2,
@@ -278,10 +288,10 @@ def make_layers(
 def vgg_output_size(
     vgg: torch.nn.Sequential, input_size: torch.Size
 ) -> torch.Size:
-    """Returns the output size after applying vgg to input of input_size.
+    """Returns the output size after ``vgg`` is applied to ``input_size``.
 
     Args:
-        vgg: A :py:class`torch.nn.Sequential` module produced by
+        vgg: A :py:class:`torch.nn.Sequential` module produced by
             :py:func:`make_layers`.
 
             This function only supports :py:class:`torch.nn.Conv2d`,

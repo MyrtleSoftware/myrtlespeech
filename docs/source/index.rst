@@ -5,6 +5,7 @@
 .. toctree::
     :maxdepth: 1
     :caption: Contents:
+    :titlesonly:
 
     myrtlespeech/index
     document

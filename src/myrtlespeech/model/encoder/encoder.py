@@ -45,7 +45,7 @@ def conv_to_rnn_size(x: torch.Tensor) -> torch.Tensor:
             seq_len]``
 
     Returns:
-        ``x`` but resized to ``[batch, seq_len, channels*features]``
+        ``x`` but resized to ``[seq_len, batch, channels*features]``
     """
     batch, channels, features, seq_len = x.size()
-    return x.transpose(1, 3).resize_(batch, seq_len, channels * features)
+    return x.transpose(0, 3).resize_(seq_len, batch, channels * features)

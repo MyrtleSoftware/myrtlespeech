@@ -15,7 +15,7 @@ def test_conv_to_rnn_size_returns_tensor_with_correct_size(
     """Ensures the Tensor returned by conv_to_rnn_size has correct size."""
     batch, channels, features, seq_len = tensor.size()
     out = conv_to_rnn_size(tensor)
-    out_batch, out_seq_len, out_features = out.size()
+    out_seq_len, out_batch, out_features = out.size()
 
     assert batch == out_batch
     assert seq_len == out_seq_len

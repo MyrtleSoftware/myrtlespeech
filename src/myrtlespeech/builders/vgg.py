@@ -1,9 +1,7 @@
-"""Builds an :py:class:`torch.nn.Module` from a configuration.
-
+"""
 .. todo::
 
     * add examples in the docstrings for each to make onboarding easier?
-
 """
 import torch
 

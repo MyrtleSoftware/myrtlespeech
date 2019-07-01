@@ -1,12 +1,9 @@
-"""Builds an :py:class:`.EncoderDecoder` model from a configuration.
-
+"""
 .. todo::
 
     * type all the _cfg parameters?
 
     * add examples in the docstrings for each to make onboarding easier?
-
-    * how to configure input_size for _build_rnn?
 """
 from typing import Tuple
 
@@ -20,7 +17,7 @@ from myrtlespeech.builders.rnn import build_rnn
 def build_encoder(
     encoder_cfg, input_size: torch.Size
 ) -> Tuple[Encoder, torch.Size]:
-    """Returns a :py:class:`.Encoder` based on the given config.
+    """Returns an :py:class:`.Encoder` based on the given config.
 
     Args:
         rnn_encoder_cfg: A ``Encoder.proto`` object containing the config for
