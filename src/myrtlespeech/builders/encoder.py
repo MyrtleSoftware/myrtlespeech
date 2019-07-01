@@ -32,6 +32,46 @@ def build_encoder(
 
     Returns:
         A tuple containing an :py:class:`.Encoder` based on the config.
+
+    Example:
+
+        >>> from google.protobuf import text_format
+        >>> encoder_cfg_text = '''
+        ... vgg {
+        ...   vgg_config: A;
+        ...   batch_norm: false;
+        ...   use_output_from_block: 2;
+        ... }
+        ... rnn {
+        ...   rnn_type: LSTM;
+        ...   hidden_size: 1024;
+        ...   num_layers: 5;
+        ...   bias: true;
+        ...   bidirectional: true;
+        ... }
+        ... '''
+        >>> encoder_cfg = text_format.Merge(
+        ...     encoder_cfg_text,
+        ...     encoder_pb2.Encoder()
+        ... )
+        >>> build_encoder(encoder_cfg, input_features=10, input_channels=3)
+        Encoder(
+          (cnn): Sequential(
+            (0): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+            (1): ReLU(inplace)
+            (2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+            (3): Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+            (4): ReLU(inplace)
+            (5): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+            (6): Conv2d(128, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+            (7): ReLU(inplace)
+            (8): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+            (9): ReLU(inplace)
+            (10): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+          )
+          (cnn_to_rnn): Lambda()
+          (rnn): LSTM(256, 1024, num_layers=5, bidirectional=True)
+        )
     """
     # build cnn, if any
     cnn_choice = encoder_cfg.WhichOneof("supported_cnns")
