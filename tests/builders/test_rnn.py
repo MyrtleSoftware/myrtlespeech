@@ -9,16 +9,13 @@ from tests.protos.test_rnn import rnns
 from tests.utils.utils import tensors
 
 
-# Tests -----------------------------------------------------------------------
+# Utilities -------------------------------------------------------------------
 
 
-@given(rnn_cfg=rnns(), input_features=st.integers(1, 128))
-def test_build_rnn_returns_correct_rnn_with_valid_params(
-    rnn_cfg: rnn_pb2.RNN, input_features: int
+def rnn_module_match_cfg(
+    rnn: torch.nn.Module, rnn_cfg: rnn_pb2.RNN, input_features: int
 ) -> None:
-    """Test that build_rnn returns the correct RNN with valid params."""
-    rnn = build_rnn(rnn_cfg, input_features)
-
+    """Ensures RNN matches protobuf configuration."""
     if rnn_cfg.rnn_type == rnn_pb2.RNN.LSTM:
         assert isinstance(rnn, torch.nn.LSTM)
     elif rnn_cfg.rnn_type == rnn_pb2.RNN.GRU:
@@ -32,6 +29,18 @@ def test_build_rnn_returns_correct_rnn_with_valid_params(
     assert rnn.bias == rnn_cfg.bias
     assert not rnn.batch_first
     assert rnn.bidirectional == rnn_cfg.bidirectional
+
+
+# Tests -----------------------------------------------------------------------
+
+
+@given(rnn_cfg=rnns(), input_features=st.integers(1, 128))
+def test_build_rnn_returns_correct_rnn_with_valid_params(
+    rnn_cfg: rnn_pb2.RNN, input_features: int
+) -> None:
+    """Test that build_rnn returns the correct RNN with valid params."""
+    rnn = build_rnn(rnn_cfg, input_features)
+    rnn_module_match_cfg(rnn, rnn_cfg, input_features)
 
 
 @given(rnn_cfg=rnns(), tensor=tensors(min_n_dims=3, max_n_dims=3))

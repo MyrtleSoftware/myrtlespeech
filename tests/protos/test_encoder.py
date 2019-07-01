@@ -63,23 +63,25 @@ def _supported_cnns(
     kwargs: Dict = {}
 
     # verify test can generate all "supported_cnns" and draw one
-    supported_cnn_fields = set()
-    descriptor = encoder_pb2.Encoder.DESCRIPTOR
-    for f in descriptor.oneofs_by_name["supported_cnns"].fields:
-        supported_cnn_fields.add(f.name)
-    if supported_cnn_fields != {"no_cnn", "vgg"}:
-        raise ValueError("update tests to support all supported_cnns")
-    cnn_type = draw(st.sampled_from([empty_pb2.Empty, vgg_pb2.VGG]))
+    descript = encoder_pb2.Encoder.DESCRIPTOR
+    cnn_type_str = draw(
+        st.sampled_from(
+            [f.name for f in descript.oneofs_by_name["supported_cnns"].fields]
+        )
+    )
 
     # get kwargs for chosen cnn_type
-    if cnn_type == empty_pb2.Empty:
-        pass
-    elif cnn_type == vgg_pb2.VGG:
+    if cnn_type_str == "no_cnn":
+        cnn_type = empty_pb2.Empty
+    elif cnn_type_str == "vgg":
+        cnn_type = vgg_pb2.VGG  # type: ignore
         _, kwargs = draw(test_vgg.vggs(return_kwargs=True))
+    else:
+        raise ValueError(f"test does not support generation of {cnn_type}")
 
     # initialise cnn_type and return
     all_fields_set(cnn_type, kwargs)
-    cnn = cnn_type(**kwargs)
+    cnn = cnn_type(**kwargs)  # type: ignore
     if not return_kwargs:
         return cnn
     return cnn, kwargs
@@ -97,24 +99,25 @@ def _supported_rnns(
     """Returns a SearchStrategy for supported_rnns plus maybe the kwargs."""
     kwargs: Dict = {}
 
-    # verify test can generate all "supported_rnns" and draw one
-    supported_rnn_fields = set()
-    descriptor = encoder_pb2.Encoder.DESCRIPTOR
-    for f in descriptor.oneofs_by_name["supported_rnns"].fields:
-        supported_rnn_fields.add(f.name)
-    if supported_rnn_fields != {"no_rnn", "rnn"}:
-        raise ValueError("update tests to support all supported_rnns")
-    rnn_type = draw(st.sampled_from([empty_pb2.Empty, rnn_pb2.RNN]))
+    descript = encoder_pb2.Encoder.DESCRIPTOR
+    rnn_type_str = draw(
+        st.sampled_from(
+            [f.name for f in descript.oneofs_by_name["supported_rnns"].fields]
+        )
+    )
 
     # get kwargs for chosen rnn_type
-    if rnn_type == empty_pb2.Empty:
-        pass
-    elif rnn_type == rnn_pb2.RNN:
+    if rnn_type_str == "no_rnn":
+        rnn_type = empty_pb2.Empty
+    elif rnn_type_str == "rnn":
+        rnn_type = rnn_pb2.RNN  # type: ignore
         _, kwargs = draw(test_rnn.rnns(return_kwargs=True))
+    else:
+        raise ValueError(f"test does not support generation of {rnn_type}")
 
     # initialise rnn_type and return
     all_fields_set(rnn_type, kwargs)
-    rnn = rnn_type(**kwargs)
+    rnn = rnn_type(**kwargs)  # type: ignore
     if not return_kwargs:
         return rnn
     return rnn, kwargs

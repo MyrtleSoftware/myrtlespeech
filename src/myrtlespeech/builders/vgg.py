@@ -28,9 +28,7 @@ def build_vgg(vgg_cfg: vgg_pb2.VGG, input_channels: int) -> torch.nn.Module:
     try:
         vgg_config = vgg_config_map[vgg_cfg.vgg_config]
     except KeyError:
-        raise ValueError(
-            f"build_vgg does not support vgg_config={vgg_cfg.vgg_config}"
-        )
+        raise ValueError(f"vgg_config={vgg_cfg.vgg_config} not supported")
 
     vgg = make_layers(
         cfg=cfgs[vgg_config],

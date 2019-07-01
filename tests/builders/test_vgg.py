@@ -9,17 +9,14 @@ from myrtlespeech.builders.vgg import build_vgg
 from tests.protos.test_vgg import vggs
 
 
-# Tests -----------------------------------------------------------------------
+# Utilities -------------------------------------------------------------------
 
 
-@given(vgg_cfg=vggs(), input_channels=st.integers(min_value=1, max_value=8))
-def test_build_vgg_returns_correct_module_structure(
-    vgg_cfg: vgg_pb2.VGG, input_channels: int
+def vgg_module_match_cfg(
+    vgg: torch.nn.Sequential, vgg_cfg: vgg_pb2.VGG, input_channels: int
 ) -> None:
-    """Ensures Module returned by ``build_vgg`` has correct structure."""
-    actual = build_vgg(vgg_cfg, input_channels)
-
-    assert isinstance(actual, torch.nn.Sequential)
+    """Ensures VGG module matches protobuf configuration."""
+    assert isinstance(vgg, torch.nn.Sequential)
 
     c_map = {index: letter for letter, index in vgg_pb2.VGG.VGG_CONFIG.items()}
     expected = make_layers(
@@ -30,8 +27,8 @@ def test_build_vgg_returns_correct_module_structure(
         use_output_from_block=vgg_cfg.use_output_from_block + 1,
     )
 
-    assert len(actual) == len(expected)
-    for act, exp in zip(actual, expected):
+    assert len(vgg) == len(expected)
+    for act, exp in zip(vgg, expected):
         assert type(act) == type(exp)
         if isinstance(act, torch.nn.Conv2d):
             assert act.in_channels == exp.in_channels
@@ -57,6 +54,18 @@ def test_build_vgg_returns_correct_module_structure(
             assert act.dilation == exp.dilation
             assert act.return_indices == exp.return_indices
             assert act.ceil_mode == exp.ceil_mode
+
+
+# Tests -----------------------------------------------------------------------
+
+
+@given(vgg_cfg=vggs(), input_channels=st.integers(min_value=1, max_value=8))
+def test_build_vgg_returns_correct_module_structure(
+    vgg_cfg: vgg_pb2.VGG, input_channels: int
+) -> None:
+    """Ensures Module returned by ``build_vgg`` has correct structure."""
+    actual = build_vgg(vgg_cfg, input_channels)
+    vgg_module_match_cfg(actual, vgg_cfg, input_channels)
 
 
 @given(

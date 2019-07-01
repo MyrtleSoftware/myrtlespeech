@@ -11,7 +11,7 @@ def build_rnn(rnn_cfg: rnn_pb2.RNN, input_features: int) -> torch.nn.Module:
         rnn_cfg: A ``RNN`` protobuf object containing the config for the
             desired :py:class:`torch.nn.Module`.
 
-        input_size: The number of features for the input.
+        input_features: The number of features for the input.
 
     Returns:
         A :py:class:`torch.nn.Module` based on the config.
