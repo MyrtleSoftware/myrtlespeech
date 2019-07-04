@@ -7,4 +7,5 @@
     :caption: Contents:
 
     data/index
+    configs/index
     model/index
