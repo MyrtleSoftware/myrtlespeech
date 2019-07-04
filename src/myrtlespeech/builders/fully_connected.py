@@ -35,10 +35,14 @@ def build(
     else:
         raise ValueError("unsupported activation_fn")
 
+    hidden_size = None
+    if fully_connected_cfg.hidden_size > 0:
+        hidden_size = fully_connected_cfg.hidden_size
+
     return FullyConnected(
         in_features=input_features,
         out_features=output_features,
         num_hidden_layers=fully_connected_cfg.num_hidden_layers,
-        hidden_size=fully_connected_cfg.hidden_size,
+        hidden_size=hidden_size,
         hidden_activation_fn=hidden_activation_fn,
     )

@@ -13,19 +13,22 @@ from tests.protos.test_encoder import encoders
 
 @st.composite
 def encoder_decoders(
-    draw, return_kwargs: bool = False
+    draw, return_kwargs: bool = False, valid_only: bool = False
 ) -> Union[
     st.SearchStrategy[encoder_decoder_pb2.EncoderDecoder],
     st.SearchStrategy[Tuple[encoder_decoder_pb2.EncoderDecoder, Dict]],
 ]:
     """Returns a SearchStrategy for EncoderDecoder plus maybe the kwargs."""
     kwargs = {}
+    kwargs["alphabet"] = "".join(draw(st.sets(elements=st.characters())))
     kwargs["encoder"] = draw(encoders())
-    kwargs["decoder"] = draw(decoders())
+    kwargs["decoder"] = draw(decoders(valid_only=valid_only))
 
     # initialise encoder and return
     all_fields_set(encoder_decoder_pb2.EncoderDecoder, kwargs)
-    encoder_decoder = encoder_decoder_pb2.EncoderDecoder(**kwargs)
+    encoder_decoder = encoder_decoder_pb2.EncoderDecoder(  # type: ignore
+        **kwargs
+    )
     if not return_kwargs:
         return encoder_decoder
     return encoder_decoder, kwargs

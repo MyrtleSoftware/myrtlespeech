@@ -18,7 +18,7 @@ def build(
     encoder_cfg: encoder_pb2.Encoder,
     input_features: int,
     input_channels: Optional[int] = None,
-) -> Tuple[Encoder, torch.Size]:
+) -> Tuple[Encoder, int]:
     """Returns an :py:class:`.Encoder` based on the given config.
 
     Args:
@@ -31,7 +31,8 @@ def build(
             if ``encoder_cfg`` does not use a ``cnn``.
 
     Returns:
-        A tuple containing an :py:class:`.Encoder` based on the config.
+        A tuple containing an :py:class:`.Encoder` based on the config and the
+            number of output features.
 
     Example:
 
@@ -55,7 +56,7 @@ def build(
         ...     encoder_pb2.Encoder()
         ... )
         >>> build(encoder_cfg, input_features=10, input_channels=3)
-        Encoder(
+        (Encoder(
           (cnn): Sequential(
             (0): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
             (1): ReLU(inplace)
@@ -71,7 +72,7 @@ def build(
           )
           (cnn_to_rnn): Lambda()
           (rnn): LSTM(256, 1024, num_layers=5, bidirectional=True)
-        )
+        ), 2048)
     """
     # build cnn, if any
     cnn_choice = encoder_cfg.WhichOneof("supported_cnns")
@@ -93,9 +94,13 @@ def build(
     rnn_choice = encoder_cfg.WhichOneof("supported_rnns")
     if rnn_choice == "no_rnn":
         rnn = None
+        output_features = input_features
     elif rnn_choice == "rnn":
         rnn = build_rnn(encoder_cfg.rnn, input_features)
+        output_features = rnn.hidden_size
+        if rnn.bidirectional:
+            output_features *= 2
     else:
         raise ValueError(f"{rnn_choice} not supported")
 
-    return Encoder(cnn=cnn, rnn=rnn)
+    return Encoder(cnn=cnn, rnn=rnn), output_features

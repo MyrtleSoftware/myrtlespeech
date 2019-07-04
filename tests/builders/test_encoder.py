@@ -57,14 +57,14 @@ def encoder_module_match_cfg(
     input_features=st.integers(min_value=1, max_value=32),
     input_channels=st.one_of(st.none(), st.integers(min_value=1, max_value=8)),
 )
-def test_build_encoder_returns_correct_module_structure(
+def test_build_encoder_returns_correct_module_structure_and_out_features(
     encoder_cfg: encoder_pb2.Encoder,
     input_features: int,
     input_channels: Optional[int],
 ) -> None:
-    """Ensures Module returned by ``build_encoder`` has correct structure."""
+    """Ensures tuple returned by ``build`` has correct structure."""
     assume(encoder_cfg.HasField("no_cnn") or input_channels is not None)
-    encoder = build(encoder_cfg, input_features, input_channels)
+    encoder, _ = build(encoder_cfg, input_features, input_channels)
     encoder_module_match_cfg(
         encoder, encoder_cfg, input_features, input_channels
     )

@@ -1,4 +1,7 @@
-def all_fields_set(proto, kwargs) -> None:
+from typing import Dict
+
+
+def all_fields_set(proto, kwargs: Dict) -> None:
     """Crude check to ensure kwargs.keys() sets all fields for proto.
 
     Args:

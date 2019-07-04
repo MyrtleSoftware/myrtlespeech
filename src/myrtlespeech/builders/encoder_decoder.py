@@ -8,22 +8,30 @@
 
     * how to configure input_size for _build_rnn?
 """
-import torch
+from typing import Optional
 
+from myrtlespeech.builders.decoder import build as build_decoder
 from myrtlespeech.builders.encoder import build as build_encoder
+from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.model.encoder_decoder import EncoderDecoder
 from myrtlespeech.protos import encoder_decoder_pb2
 
 
-def build(encoder_decoder_cfg, input_size: torch.Size) -> EncoderDecoder:
+def build(
+    encoder_decoder_cfg: encoder_decoder_pb2.EncoderDecoder,
+    input_features: int,
+    input_channels: Optional[int],
+) -> EncoderDecoder:
     """Returns a :py:class:`.EncoderDecoder` model based on the model config.
 
     Args:
         encoder_decoder_cfg: A ``EncoderDecoder.proto`` object containing the
             config for the desired :py:class:`.EncoderDecoder`.
 
-        input_size: A :py:class:`torch.Size` object containing the size of the
-            input. ``-1`` represents an unknown/dynamic size.
+        input_features: The number of features for the input.
+
+        input_channels: The number of channels for the input. May be ``None``
+            if encoder does require it.
 
     Returns:
         An :py:class:`.EncoderDecoder` based on the config.
@@ -36,8 +44,18 @@ def build(encoder_decoder_cfg, input_size: torch.Size) -> EncoderDecoder:
             "encoder_decoder_cfg not of type encoder_decoder_pb.EncoderDecoder"
         )
 
-    encoder = build_encoder(encoder_decoder_cfg.encoder, input_size)
+    alphabet = Alphabet(list(encoder_decoder_cfg.alphabet))
 
-    decoder = None
+    encoder, input_features = build_encoder(
+        encoder_decoder_cfg.encoder,
+        input_features=input_features,
+        input_channels=input_channels,
+    )
 
-    return EncoderDecoder(encoder=encoder, decoder=decoder)
+    decoder = build_decoder(
+        encoder_decoder_cfg.decoder,
+        input_features=input_features,
+        output_features=len(alphabet),
+    )
+
+    return EncoderDecoder(alphabet=alphabet, encoder=encoder, decoder=decoder)

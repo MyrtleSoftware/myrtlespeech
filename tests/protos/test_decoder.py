@@ -12,7 +12,7 @@ from tests.protos.utils import all_fields_set
 
 @st.composite
 def decoders(
-    draw, return_kwargs: bool = False
+    draw, return_kwargs: bool = False, valid_only: bool = False
 ) -> Union[
     st.SearchStrategy[decoder_pb2.Decoder],
     st.SearchStrategy[Tuple[decoder_pb2.Decoder, Dict]],
@@ -27,7 +27,9 @@ def decoders(
     ]
     decoder_str = draw(st.sampled_from(supported_decoders))
     if decoder_str == "fully_connected":
-        kwargs["fully_connected"] = draw(fully_connecteds())
+        kwargs["fully_connected"] = draw(
+            fully_connecteds(valid_only=valid_only)
+        )
     else:
         raise ValueError(f"test does not support {decoder_str}")
 

@@ -7,9 +7,12 @@ import "myrtlespeech/protos/decoder.proto";
 
 // Configuration for Encoder-Decoder models.
 message EncoderDecoder {
+  // Output alphabet.
+  string alphabet = 1;
+
   // Encoder config.
-  Encoder encoder = 1;
+  Encoder encoder = 2;
 
   // Decoder config.
-  Decoder decoder = 2;
+  Decoder decoder = 3;
 }

@@ -1,5 +1,7 @@
 import torch
 
+from myrtlespeech.data.alphabet import Alphabet
+
 
 class EncoderDecoder(torch.nn.Module):
     """An encoder-decoder sequence-to-sequence model.
@@ -13,8 +15,14 @@ class EncoderDecoder(torch.nn.Module):
         decoder:
     """
 
-    def __init__(self, encoder: torch.nn.Module, decoder: torch.nn.Module):
+    def __init__(
+        self,
+        alphabet: Alphabet,
+        encoder: torch.nn.Module,
+        decoder: torch.nn.Module,
+    ):
         super().__init__()
+        self.alphabet = alphabet
         self.encoder = encoder
         self.decoder = decoder
 
