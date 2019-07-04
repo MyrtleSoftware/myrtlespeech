@@ -5,7 +5,7 @@ import torch
 import hypothesis.strategies as st
 from hypothesis import assume, given
 
-from myrtlespeech.builders.encoder import build_encoder
+from myrtlespeech.builders.encoder import build
 from myrtlespeech.model.encoder.encoder import Encoder
 from myrtlespeech.model.encoder.vgg import vgg_output_size
 from myrtlespeech.protos import encoder_pb2
@@ -64,7 +64,7 @@ def test_build_encoder_returns_correct_module_structure(
 ) -> None:
     """Ensures Module returned by ``build_encoder`` has correct structure."""
     assume(encoder_cfg.HasField("no_cnn") or input_channels is not None)
-    encoder = build_encoder(encoder_cfg, input_features, input_channels)
+    encoder = build(encoder_cfg, input_features, input_channels)
     encoder_module_match_cfg(
         encoder, encoder_cfg, input_features, input_channels
     )
@@ -80,4 +80,4 @@ def test_input_channels_none_when_not_no_cnn_raises_value_error(
     """Ensures ValueError raised when input_channels is None, cnn not None."""
     assume(not encoder_cfg.HasField("no_cnn"))
     with pytest.raises(ValueError):
-        build_encoder(encoder_cfg, input_features, None)
+        build(encoder_cfg, input_features, None)

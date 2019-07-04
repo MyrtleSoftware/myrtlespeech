@@ -10,7 +10,7 @@
 """
 import torch
 
-from myrtlespeech.builders.encoder import build_encoder
+from myrtlespeech.builders.encoder import build as build_encoder
 from myrtlespeech.model.encoder_decoder import EncoderDecoder
 from myrtlespeech.protos import encoder_decoder_pb2
 

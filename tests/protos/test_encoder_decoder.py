@@ -4,6 +4,7 @@ import hypothesis.strategies as st
 
 from myrtlespeech.protos import encoder_decoder_pb2
 from tests.protos.utils import all_fields_set
+from tests.protos.test_decoder import decoders
 from tests.protos.test_encoder import encoders
 
 
@@ -20,6 +21,7 @@ def encoder_decoders(
     """Returns a SearchStrategy for EncoderDecoder plus maybe the kwargs."""
     kwargs = {}
     kwargs["encoder"] = draw(encoders())
+    kwargs["decoder"] = draw(decoders())
 
     # initialise encoder and return
     all_fields_set(encoder_decoder_pb2.EncoderDecoder, kwargs)

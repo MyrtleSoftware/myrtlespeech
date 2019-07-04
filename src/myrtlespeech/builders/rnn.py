@@ -4,7 +4,7 @@ import torch
 from myrtlespeech.protos import rnn_pb2
 
 
-def build_rnn(rnn_cfg: rnn_pb2.RNN, input_features: int) -> torch.nn.Module:
+def build(rnn_cfg: rnn_pb2.RNN, input_features: int) -> torch.nn.Module:
     """Returns a :py:class:`torch.nn.Module` based on the config.
 
     Args:
@@ -33,16 +33,14 @@ def build_rnn(rnn_cfg: rnn_pb2.RNN, input_features: int) -> torch.nn.Module:
         ...     rnn_cfg_text,
         ...     rnn_pb2.RNN()
         ... )
-        >>> build_rnn(rnn_cfg, input_features=512)
+        >>> build(rnn_cfg, input_features=512)
         LSTM(512, 1024, num_layers=5, bidirectional=True)
     """
     rnn_type_map = {0: torch.nn.LSTM, 1: torch.nn.GRU, 2: torch.nn.RNN}
     try:
         rnn_type = rnn_type_map[rnn_cfg.rnn_type]
     except KeyError:
-        raise ValueError(
-            f"build_rnn does not support rnn_type={rnn_cfg.rnn_type}"
-        )
+        raise ValueError(f"rnn_type={rnn_cfg.rnn_type} not supported")
 
     rnn = rnn_type(
         input_size=input_features,

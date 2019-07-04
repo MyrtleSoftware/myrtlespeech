@@ -7,14 +7,14 @@ from typing import Tuple, Optional
 
 import torch
 
-from myrtlespeech.builders.rnn import build_rnn
-from myrtlespeech.builders.vgg import build_vgg
+from myrtlespeech.builders.rnn import build as build_rnn
+from myrtlespeech.builders.vgg import build as build_vgg
 from myrtlespeech.model.encoder.encoder import Encoder
 from myrtlespeech.model.encoder.vgg import vgg_output_size
 from myrtlespeech.protos import encoder_pb2
 
 
-def build_encoder(
+def build(
     encoder_cfg: encoder_pb2.Encoder,
     input_features: int,
     input_channels: Optional[int] = None,
@@ -54,7 +54,7 @@ def build_encoder(
         ...     encoder_cfg_text,
         ...     encoder_pb2.Encoder()
         ... )
-        >>> build_encoder(encoder_cfg, input_features=10, input_channels=3)
+        >>> build(encoder_cfg, input_features=10, input_channels=3)
         Encoder(
           (cnn): Sequential(
             (0): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))

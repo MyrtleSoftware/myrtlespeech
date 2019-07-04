@@ -9,7 +9,7 @@ from myrtlespeech.model.encoder.vgg import cfgs, make_layers
 from myrtlespeech.protos import vgg_pb2
 
 
-def build_vgg(vgg_cfg: vgg_pb2.VGG, input_channels: int) -> torch.nn.Module:
+def build(vgg_cfg: vgg_pb2.VGG, input_channels: int) -> torch.nn.Module:
     """Returns a :py:class:`torch.nn.Module` based on the VGG config.
 
     Args:
@@ -34,7 +34,7 @@ def build_vgg(vgg_cfg: vgg_pb2.VGG, input_channels: int) -> torch.nn.Module:
         ...     vgg_cfg_text,
         ...     vgg_pb2.VGG()
         ... )
-        >>> build_vgg(vgg_cfg, input_channels=3)
+        >>> build(vgg_cfg, input_channels=3)
         Sequential(
           (0): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
           (1): ReLU(inplace)

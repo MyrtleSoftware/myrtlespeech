@@ -6,7 +6,8 @@ package myrtlespeech.protos;
 message FullyConnected {
   // The supported activation functions.
   enum ACTIVATION_FN {
-    RELU = 0;
+    NONE = 0;
+    RELU = 1;
   }
 
   // The number of hidden layers (0 means a single affine transformation).

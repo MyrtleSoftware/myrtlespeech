@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 
@@ -7,18 +7,33 @@ class FullyConnected(torch.nn.Module):
     r"""A fully connected neural network.
 
     Args:
-        in_features: foo
+        in_features: Size of each input sample.
 
-        out_features: foo
+        out_features: Size of each output sample.
 
-        num_hidden_layers: foo
+        num_hidden_layers: Number of hidden layers. Must be a non-negative
+            integer. ``0`` means no hidden layers making this module the same
+            as a single :py:class:`torch.nn.Linear` layer.
 
-        hidden_size: foo
+        hidden_size: The number of features output by each hidden layer, if
+            any.
 
-        hidden_activation_fn: foo
+        hidden_activation_fn: The activation function applied after each hidden
+            layer, if any.
+
+    Attributes:
+        fully_connected (Union[:py:class:`torch.nn.Linear`, :py:class:`torch.nn.Sequential`]):
+            A :py:class:`torch.nn.Module` that implements the network specified
+            by the class arguments. It is be an instance of
+            :py:class:`torch.nn.Linear` if ``num_hidden_layers == 0`` otherwise
+            it is an instance of :py:class:`torch.nn.Sequential`.
 
     Raises:
-        foo: TODO
+        :py:class:`ValueError`: If ``num_hidden_layers < 0``.
+
+        :py:class:`ValueError`: If ``num_hidden_layers == 0 and hidden_size is not None``.
+
+        :py:class:`ValueError`: If ``num_hidden_layers == 0 and hidden_activation_fn is not None``.
     """
 
     def __init__(
@@ -59,8 +74,7 @@ class FullyConnected(torch.nn.Module):
         num_hidden_layers: int,
         hidden_size: Optional[int],
         hidden_activation_fn: Optional[torch.nn.Module],
-    ) -> torch.nn.Module:
-        """TODO"""
+    ) -> Union[torch.nn.Linear, torch.nn.Sequential]:
         hidden_layers = []
         for _ in range(num_hidden_layers):
             hidden_layers.append(torch.nn.Linear(in_features, hidden_size))

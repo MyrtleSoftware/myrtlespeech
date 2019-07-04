@@ -3,7 +3,7 @@ import torch
 import hypothesis.strategies as st
 from hypothesis import assume, given
 
-from myrtlespeech.builders.rnn import build_rnn
+from myrtlespeech.builders.rnn import build
 from myrtlespeech.protos import rnn_pb2
 from tests.protos.test_rnn import rnns
 from tests.utils.utils import tensors
@@ -39,7 +39,7 @@ def test_build_rnn_returns_correct_rnn_with_valid_params(
     rnn_cfg: rnn_pb2.RNN, input_features: int
 ) -> None:
     """Test that build_rnn returns the correct RNN with valid params."""
-    rnn = build_rnn(rnn_cfg, input_features)
+    rnn = build(rnn_cfg, input_features)
     rnn_module_match_cfg(rnn, rnn_cfg, input_features)
 
 
@@ -49,7 +49,7 @@ def test_build_rnn_rnn_forward_output_correct_size(
 ) -> None:
     """Ensures returned RNN forward produces output with correct size."""
     seq_len, batch, input_features = tensor.size()
-    rnn = build_rnn(rnn_cfg, input_features)
+    rnn = build(rnn_cfg, input_features)
 
     out, _ = rnn(tensor)
     out_seq_len, out_batch, out_features = out.size()
@@ -78,4 +78,4 @@ def test_unknown_rnn_type_raises_value_error(
     assume(invalid_rnn_type not in rnn_pb2.RNN.RNN_TYPE.values())
     rnn_cfg.rnn_type = invalid_rnn_type  # type: ignore
     with pytest.raises(ValueError):
-        build_rnn(rnn_cfg, input_features=input_features)
+        build(rnn_cfg, input_features=input_features)

@@ -5,7 +5,7 @@ from hypothesis import assume, given
 
 from myrtlespeech.model.encoder.vgg import cfgs, make_layers
 from myrtlespeech.protos import vgg_pb2
-from myrtlespeech.builders.vgg import build_vgg
+from myrtlespeech.builders.vgg import build
 from tests.protos.test_vgg import vggs
 
 
@@ -63,8 +63,8 @@ def vgg_module_match_cfg(
 def test_build_vgg_returns_correct_module_structure(
     vgg_cfg: vgg_pb2.VGG, input_channels: int
 ) -> None:
-    """Ensures Module returned by ``build_vgg`` has correct structure."""
-    actual = build_vgg(vgg_cfg, input_channels)
+    """Ensures Module returned by ``build`` has correct structure."""
+    actual = build(vgg_cfg, input_channels)
     vgg_module_match_cfg(actual, vgg_cfg, input_channels)
 
 
@@ -78,9 +78,9 @@ def test_unknown_vgg_config_raises_value_error(
 ) -> None:
     """Ensures ValueError is raised when vgg_config not supported.
 
-    This can occur when the protobuf is updated and build_vgg is not.
+    This can occur when the protobuf is updated and build is not.
     """
     assume(invalid_vgg_config not in vgg_pb2.VGG.VGG_CONFIG.values())
     vgg_cfg.vgg_config = invalid_vgg_config  # type: ignore
     with pytest.raises(ValueError):
-        build_vgg(vgg_cfg, input_channels=input_channels)
+        build(vgg_cfg, input_channels=input_channels)
