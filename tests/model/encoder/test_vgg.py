@@ -164,9 +164,11 @@ def test_vgg_output_size_returns_correct_size(
 ) -> None:
     """Ensures vgg_output_size matches actual module output size."""
     vgg, input_size = vgg_input_size
-    if any([isinstance(m, torch.nn.BatchNorm2d) for m in vgg.modules()]):
-        # BN expects more than 1 value per channel when training
-        # https://github.com/pytorch/pytorch/blob/34aee933f9f38f80adaa38b52f4cd5a59cb47e48/torch/nn/functional.py#L1704
-        assume(input_size[1] > 1)
+    # BN expects more than 1 value per channel when training or err thrown
+    # https://github.com/pytorch/pytorch/blob/34aee933f9f38f80adaa38b52f4cd5a59cb47e48/torch/nn/functional.py#L1704
+    for idx, module in enumerate(vgg.modules()):
+        if isinstance(module, torch.nn.BatchNorm2d):
+            bn_input_size = vgg_output_size(vgg[: max(0, idx - 1)], input_size)
+            assume(bn_input_size[1] > 1)
     x = torch.empty(input_size).normal_()
     assert vgg_output_size(vgg, input_size) == vgg(x).size()

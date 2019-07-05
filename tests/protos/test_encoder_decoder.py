@@ -20,7 +20,6 @@ def encoder_decoders(
 ]:
     """Returns a SearchStrategy for EncoderDecoder plus maybe the kwargs."""
     kwargs = {}
-    kwargs["alphabet"] = "".join(draw(st.sets(elements=st.characters())))
     kwargs["encoder"] = draw(encoders())
     kwargs["decoder"] = draw(decoders(valid_only=valid_only))
 

@@ -12,7 +12,6 @@ from typing import Optional
 
 from myrtlespeech.builders.decoder import build as build_decoder
 from myrtlespeech.builders.encoder import build as build_encoder
-from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.model.encoder_decoder import EncoderDecoder
 from myrtlespeech.protos import encoder_decoder_pb2
 
@@ -20,6 +19,7 @@ from myrtlespeech.protos import encoder_decoder_pb2
 def build(
     encoder_decoder_cfg: encoder_decoder_pb2.EncoderDecoder,
     input_features: int,
+    output_features: int,
     input_channels: Optional[int],
 ) -> EncoderDecoder:
     """Returns a :py:class:`.EncoderDecoder` model based on the model config.
@@ -44,8 +44,6 @@ def build(
             "encoder_decoder_cfg not of type encoder_decoder_pb.EncoderDecoder"
         )
 
-    alphabet = Alphabet(list(encoder_decoder_cfg.alphabet))
-
     encoder, input_features = build_encoder(
         encoder_decoder_cfg.encoder,
         input_features=input_features,
@@ -55,7 +53,7 @@ def build(
     decoder = build_decoder(
         encoder_decoder_cfg.decoder,
         input_features=input_features,
-        output_features=len(alphabet),
+        output_features=output_features,
     )
 
-    return EncoderDecoder(alphabet=alphabet, encoder=encoder, decoder=decoder)
+    return EncoderDecoder(encoder=encoder, decoder=decoder)

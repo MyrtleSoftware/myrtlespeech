@@ -5,7 +5,10 @@ package myrtlespeech.protos;
 import "myrtlespeech/protos/encoder_decoder.proto";
 
 message SpeechToTextModel {
+  // Output alphabet.
+  string alphabet = 1;
+
   oneof model {
-    EncoderDecoder encoder_decoder = 1;
+    EncoderDecoder encoder_decoder = 2;
   }
 }
