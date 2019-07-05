@@ -66,8 +66,8 @@ def test_len(alphabet_kwargs: Tuple[Alphabet, AlphabetKwargs]) -> None:
 @given(alphabet_kwargs=random_alphabet(return_kwargs=True))
 def test_iterator(alphabet_kwargs: Tuple[Alphabet, AlphabetKwargs]) -> None:
     """Ensures iter over ``Alphabet`` is same as iter over ``symbols``."""
-    alphabet, kwargs = alphabet_kwargs
-    for index, symbol in enumerate(alphabet):
+    alphabet, kwargs = alphabet_kwargs  # type: ignore
+    for index, symbol in enumerate(alphabet):  # type: ignore
         assert symbol == kwargs["symbols"][index]
 
 
