@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+message CTCLoss {
+  enum REDUCTION {
+    // No reduction will be applied.
+    NONE = 0;
+
+    // Output losses will be divided by the target lengths and then the mean
+    // over the batch is taken.
+    MEAN = 1;
+
+    // Output losses will be summed.
+    SUM = 2;
+  }
+
+  // Index in Alphabet of the blank label.
+  uint32 blank_index = 1;
+
+  // Reduction to apply.
+  REDUCTION reduction = 2;
+}

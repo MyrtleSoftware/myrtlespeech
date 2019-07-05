@@ -9,3 +9,4 @@
     data/index
     configs/index
     model/index
+    loss/index
