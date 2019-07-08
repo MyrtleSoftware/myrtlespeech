@@ -9,4 +9,5 @@
     data/index
     configs/index
     model/index
+    post_process/index
     loss/index
