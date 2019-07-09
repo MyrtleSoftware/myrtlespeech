@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "myrtlespeech.protos.language_model";
+
+message CTCBeamDecoder {
+  // Index in Alphabet of the blank label.
+  uint32 blank_index = 1;
+
+  uint32 beam_width = 2;
+
+  float prune_threshold = 3;
+
+  uint32 separator_index = 4;
+
+  LanguageModel language_model = 5;
+
+  float lm_weight = 6;
+
+  float word_weight = 7;
+}

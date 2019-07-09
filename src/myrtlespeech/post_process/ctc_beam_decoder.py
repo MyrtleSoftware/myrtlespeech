@@ -1,22 +1,52 @@
-from typing import Callable, Tuple, List, Optional, Union
+from typing import Callable, Tuple, List, Optional
 from collections import defaultdict, Counter
 
 import torch
 
 
 class CTCBeamDecoder(torch.nn.Module):
-    """Decodes CTC output using a beam search.
+    r"""Decodes CTC output using a beam search.
 
     This is a reference implementation and its performance is *not* guaranteed
     to be useful for a production system.
 
+    Based on the technique described in `Hannun et al. 2014
+    <https://arxiv.org/pdf/1408.2873.pdf>`_.
+
     Args:
-        blank_index: Index of the "blank" symbol.
-        beam_width: TODO
-        prune_threshold: TODO
-        separator_index: TODO
-        language_model: Takes Tuple[int] representing sentence, returns
-            probability of last word given all previous words
+        blank_index: Index of the blank symbol in the ``alphabet_len``
+            dimension of the ``x`` argument of
+            :py:meth:`CTCBeamDecoder.forward`.
+
+        beam_width: Width of the beam search.
+
+        prune_threshold: The beam search :py:meth:`CTCBeamDecoder.forward`
+            iteratively grows sequences of symbols (represented by integers).
+            When extending prefixes by a symbol ``s``, if ``s`` has less than
+            or equal to this probability then the expansion will be skipped.
+
+        separator_index: Index of the separator symbol in the ``alphabet_len``
+            dimension of the ``x`` argument of
+            :py:meth:`CTCBeamDecoder.forward`. This symbol is used to delineate
+            tokens (words) in a predicted sequence. For example in English this
+            is typically the index of ``" "``. The ``language_model``, if set,
+            is applied each time a token (word) is predicted.
+
+        language_model: A ``Callable`` that takes a ``Tuple[int, ...]``
+            representing (the indices of) a variable-length sequence of symbols
+            and returns the probability of the last token (word) given all
+            previous ones.
+
+        lm_weight: Language model weight. Referred to as :math:`\alpha` in the
+            paper above.
+
+        word_weight: Word count weight. Referred to as :math:`\beta` in the
+            paper above.
+
+            .. note::
+
+                The implementation differs from the paper as it adds 1 to the
+                total word count (additive smoothing).
     """
 
     def __init__(
@@ -25,7 +55,9 @@ class CTCBeamDecoder(torch.nn.Module):
         beam_width: int,
         prune_threshold: float = 0.001,
         separator_index: Optional[int] = None,
-        language_model: Optional[Callable[[Tuple[int]], float]] = None,
+        language_model: Optional[Callable[[Tuple[int, ...]], float]] = None,
+        lm_weight: Optional[float] = None,
+        word_weight: float = 1.0,
     ):
         super().__init__()
         self.blank_index = blank_index
@@ -34,10 +66,25 @@ class CTCBeamDecoder(torch.nn.Module):
         self.separator_index = separator_index
         self.language_model = language_model
 
+        if language_model is not None and lm_weight is None:
+            raise ValueError("lm_weight must be set when using language_model")
+        self.lm_weight = lm_weight
+
+        self.word_weight = word_weight
+
+    def _n_words(self, prefix: List[int]) -> int:
+        n = 0
+        prev = None
+        for symbol in prefix:
+            if symbol == self.separator_index and prev != self.separator_index:
+                n += 1
+            prev = symbol
+        return n
+
     def forward(
         self, x: torch.Tensor, lengths: torch.Tensor
     ) -> List[List[int]]:
-        r"""
+        r"""Decodes CTC output using a beam search.
 
         Args:
             x: A 3D :py:class:`torch.Tensor` of size ``(seq_len, batch,
@@ -54,8 +101,41 @@ class CTCBeamDecoder(torch.nn.Module):
             ``List[int]`` corresponds to approximately the *most likely*
             sequence of symbols -- as found through a beam search -- for the
             :math:`i\textsuperscript{th}` sequence in ``x``.
+
+        Raises:
+            :py:class:`ValueError`: if ``lengths.dtype`` not in ``[torch.uint8, torch.int8, torch.int16, torch.int32, torch.int64]``.
+
+            :py:class:`ValueError`: if the ``batch`` dimension of ``x`` is not
+                equal to the ``len(lengths)``.
+
+            :py:class:`ValueError`: if any of the sequence lengths in
+                ``lengths`` are greater than the ``seq_len`` dimension of
+                ``x``.
         """
+        supported_dtypes = [
+            torch.uint8,
+            torch.int8,
+            torch.int16,
+            torch.int32,
+            torch.int64,
+        ]
+        if lengths.dtype not in supported_dtypes:
+            raise ValueError(
+                f"lengths.dtype={lengths.dtype} must be in {supported_dtypes}"
+            )
+
         seq_len, x_batch, symbols = x.size()
+        l_batch = len(lengths)
+        if x_batch != l_batch:
+            raise ValueError(
+                f"batch size of x ({x_batch}) and lengths {l_batch} "
+                "must be equal"
+            )
+
+        if not (lengths <= seq_len).all():
+            raise ValueError(
+                "length values must be less than or equal to x seq_len"
+            )
 
         # each element in batch processed sequentially
         for i in range(x_batch):
@@ -71,8 +151,8 @@ class CTCBeamDecoder(torch.nn.Module):
             Pb[-1][()] = 1.0
             Pnb[-1][()] = 0.0
             # previous beam, init to only null sequence
-            A_prev: List[Tuple[int]] = []
-            A_prev.append(())  # type: ignore
+            A_prev: List[Tuple[int, ...]] = []
+            A_prev.append(())
 
             ctc = x[:, i, :]
             out: List[List[int]] = []
@@ -103,13 +183,13 @@ class CTCBeamDecoder(torch.nn.Module):
 
                                 if (
                                     self.separator_index is not None
-                                    and c == self.separator_index
                                     and self.language_model is not None
+                                    and c == self.separator_index
                                 ):
-                                    # include LM symbol is separator and LM
-                                    raise ValueError("todo: support LM")
+                                    # keep mypy happy
+                                    assert self.lm_weight is not None
                                     lm_prob = self.language_model(l_plus)
-                                    p_l_plus *= lm_prob ** self.alpha
+                                    p_l_plus *= lm_prob ** self.lm_weight
 
                                 Pnb[t][l_plus] += p_l_plus
 
@@ -122,10 +202,15 @@ class CTCBeamDecoder(torch.nn.Module):
                                 )
                                 Pnb[t][l_plus] += ctc[t][c] * Pnb[t - 1][l_plus]
 
-                # keep beam_width prefixes
-                print(Pb[t] + Pnb[t])
+                # keep beam_width prefixes, scale scores by weighted number of
+                # words to compensate for LM reducing scores (1 added to smooth
+                # result)
                 A_next = Pb[t] + Pnb[t]
-                A_prev = sorted(A_next, key=A_next.get, reverse=True)
+                sorter = (
+                    lambda l: A_next[l]
+                    * (1 + self._n_words(l)) ** self.word_weight
+                )
+                A_prev = sorted(A_next, key=sorter, reverse=True)
                 A_prev = A_prev[: self.beam_width]
 
             out.append(list(A_prev[0]) if len(A_prev) > 0 else [])

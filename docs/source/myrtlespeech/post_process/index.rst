@@ -9,3 +9,4 @@ Modules for post processing the network output.
     :caption: Contents:
 
     ctc_greedy_decoder
+    ctc_beam_decoder

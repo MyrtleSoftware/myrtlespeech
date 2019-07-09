@@ -17,7 +17,7 @@ class CTCGreedyDecoder(torch.nn.Module):
     def forward(
         self, x: torch.Tensor, lengths: torch.Tensor
     ) -> List[List[int]]:
-        r"""
+        r"""Decodes CTC output using a greedy strategy.
 
         Args:
             x: A 3D :py:class:`torch.Tensor` of size ``(seq_len, batch,
@@ -36,8 +36,7 @@ class CTCGreedyDecoder(torch.nn.Module):
             for the :math:`i\textsuperscript{th}` sequence in ``x``.
 
         Raises:
-            :py:class:`ValueError`: if ``lengths.dtype`` not in ``[torch.uint8,
-                torch.int8, torch.int16, torch.int32, torch.int64]``.
+            :py:class:`ValueError`: if ``lengths.dtype`` not in ``[torch.uint8, torch.int8, torch.int16, torch.int32, torch.int64]``.
 
             :py:class:`ValueError`: if the ``batch`` dimension of ``x`` is not
                 equal to the ``len(lengths)``.
