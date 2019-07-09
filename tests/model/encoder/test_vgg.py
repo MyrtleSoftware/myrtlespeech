@@ -169,6 +169,6 @@ def test_vgg_output_size_returns_correct_size(
     for idx, module in enumerate(vgg.modules()):
         if isinstance(module, torch.nn.BatchNorm2d):
             bn_input_size = vgg_output_size(vgg[: max(0, idx - 1)], input_size)
-            assume(bn_input_size[1] > 1)
+            assume(bn_input_size[2] > 1 and bn_input_size[3] > 1)
     x = torch.empty(input_size).normal_()
     assert vgg_output_size(vgg, input_size) == vgg(x).size()
