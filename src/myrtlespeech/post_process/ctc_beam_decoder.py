@@ -27,13 +27,6 @@ class CTCBeamDecoder(torch.nn.Module):
             Must be in the closed interval ``[0.0, 1.0]`` where ``0.0`` means
             no pruning.
 
-        separator_index: Index of the separator symbol in the ``alphabet_len``
-            dimension of the ``x`` argument of
-            :py:meth:`CTCBeamDecoder.forward`. This symbol is used to delineate
-            tokens (words) in a predicted sequence. For example in English this
-            is typically the index of ``" "``. The ``language_model``, if set,
-            is applied each time a token (word) is predicted.
-
         language_model: A ``Callable`` that takes a ``Tuple[int, ...]``
             representing (the indices of) a variable-length sequence of symbols
             and returns the probability of the last token (word) given all
@@ -42,8 +35,20 @@ class CTCBeamDecoder(torch.nn.Module):
         lm_weight: Language model weight. Referred to as :math:`\alpha` in the
             paper above.
 
+        separator_index: Index of the separator symbol in the ``alphabet_len``
+            dimension of the ``x`` argument of
+            :py:meth:`CTCBeamDecoder.forward`. This symbol is used to delineate
+            tokens (words) in a predicted sequence. For example in English this
+            is typically the index of ``" "``. The ``language_model``, if set,
+            is applied each time a token (word) is predicted.
+
         word_weight: Word count weight. Referred to as :math:`\beta` in the
             paper above.
+
+            .. note::
+
+                If ``separator_index is None`` this is not used (as there will
+                only ever be one word!)
 
             .. note::
 
@@ -51,6 +56,8 @@ class CTCBeamDecoder(torch.nn.Module):
                 total word count (additive smoothing).
 
     Raises:
+        :py:class:`ValueError`: If ``blank_index < 0``.
+
         :py:class:`ValueError`: If ``beam_width <= 0``.
 
         :py:class:`ValueError`:
@@ -65,11 +72,13 @@ class CTCBeamDecoder(torch.nn.Module):
         blank_index: int,
         beam_width: int,
         prune_threshold: float = 0.001,
-        separator_index: Optional[int] = None,
         language_model: Optional[Callable[[Tuple[int, ...]], float]] = None,
         lm_weight: Optional[float] = None,
+        separator_index: Optional[int] = None,
         word_weight: float = 1.0,
     ):
+        if blank_index < 0:
+            raise ValueError(f"blank_index={blank_index} must be >= 0")
         if beam_width <= 0:
             raise ValueError(f"beam_width={beam_width} must be > 0")
         if prune_threshold < 0.0 or prune_threshold > 1.0:
@@ -78,17 +87,20 @@ class CTCBeamDecoder(torch.nn.Module):
             )
         if language_model is not None and lm_weight is None:
             raise ValueError("lm_weight must be set when using language_model")
+        if separator_index is not None and separator_index < 0:
+            raise ValueError(f"separator_index={separator_index} must be >= 0")
 
         super().__init__()
         self.blank_index = blank_index
         self.beam_width = beam_width
         self.prune_threshold = prune_threshold
-        self.separator_index = separator_index
         self.language_model = language_model
         self.lm_weight = lm_weight
+        self.separator_index = separator_index
         self.word_weight = word_weight
 
     def _n_words(self, prefix: List[int]) -> int:
+        assert self.separator_index is not None
         n = 0
         prev = None
         for symbol in prefix:
@@ -222,13 +234,28 @@ class CTCBeamDecoder(torch.nn.Module):
                 # words to compensate for LM reducing scores (1 added to smooth
                 # result)
                 A_next = Pb[t] + Pnb[t]
-                sorter = (
-                    lambda l: A_next[l]
-                    * (1 + self._n_words(l)) ** self.word_weight
-                )
+
+                def sorter(l):
+                    if self.separator_index is None:
+                        return A_next[l]
+                    return (
+                        A_next[l] * (1 + self._n_words(l)) ** self.word_weight
+                    )
+
                 A_prev = sorted(A_next, key=sorter, reverse=True)
                 A_prev = A_prev[: self.beam_width]
 
             out.append(list(A_prev[0]) if len(A_prev) > 0 else [])
 
         return out
+
+    def extra_repr(self) -> str:
+        return (
+            f"blank_index={self.blank_index}, "
+            f"beam_width={self.beam_width}, "
+            f"prune_threshold={self.prune_threshold}, "
+            f"language_model={self.language_model}, "
+            f"lm_weight={self.lm_weight}, "
+            f"separator_index={self.separator_index}, "
+            f"word_weight={self.word_weight}"
+        )

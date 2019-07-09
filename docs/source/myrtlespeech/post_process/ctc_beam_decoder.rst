@@ -17,3 +17,10 @@ Message
 
 .. literalinclude:: ../../../../src/myrtlespeech/protos/ctc_beam_decoder.proto
     :language: protobuf
+
+Builder
+~~~~~~~
+
+.. automodule:: myrtlespeech.builders.ctc_beam_decoder
+    :members:
+    :show-inheritance:

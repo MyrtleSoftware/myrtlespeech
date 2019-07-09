@@ -142,6 +142,15 @@ def test_ctc_beam_decoder_raises_value_error_lengths_values_greater_seq_len() ->
         ctc_decoder(x, lengths)
 
 
+@given(blank_index=st.integers(-1000, -1))
+def test_ctc_beam_decoder_raises_value_error_negative_blank_index(
+    blank_index: int
+) -> None:
+    """Ensures ValueError raised when blank_index < 0."""
+    with pytest.raises(ValueError):
+        CTCBeamDecoder(blank_index=blank_index, beam_width=20)
+
+
 @given(beam_width=st.integers(-1000, 0))
 def test_ctc_beam_decoder_raises_value_error_non_positive_beam_width(
     beam_width: int
@@ -172,4 +181,15 @@ def test_ctc_beam_decoder_raises_value_error_lm_but_no_lm_weight() -> None:
     with pytest.raises(ValueError):
         CTCBeamDecoder(
             blank_index=0, beam_width=20, language_model=lambda _: 0.0
+        )
+
+
+@given(separator_index=st.integers(-1000, -1))
+def test_ctc_beam_decoder_raises_value_error_negative_separator_index(
+    separator_index: int
+) -> None:
+    """Ensures ValueError raised when separator_index < 0."""
+    with pytest.raises(ValueError):
+        CTCBeamDecoder(
+            blank_index=0, beam_width=20, separator_index=separator_index
         )
