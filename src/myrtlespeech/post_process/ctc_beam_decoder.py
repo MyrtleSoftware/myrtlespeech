@@ -18,12 +18,14 @@ class CTCBeamDecoder(torch.nn.Module):
             dimension of the ``x`` argument of
             :py:meth:`CTCBeamDecoder.forward`.
 
-        beam_width: Width of the beam search.
+        beam_width: Width of the beam search. Must be a positive integer.
 
         prune_threshold: The beam search :py:meth:`CTCBeamDecoder.forward`
             iteratively grows sequences of symbols (represented by integers).
             When extending prefixes by a symbol ``s``, if ``s`` has less than
             or equal to this probability then the expansion will be skipped.
+            Must be in the closed interval ``[0.0, 1.0]`` where ``0.0`` means
+            no pruning.
 
         separator_index: Index of the separator symbol in the ``alphabet_len``
             dimension of the ``x`` argument of
@@ -47,6 +49,15 @@ class CTCBeamDecoder(torch.nn.Module):
 
                 The implementation differs from the paper as it adds 1 to the
                 total word count (additive smoothing).
+
+    Raises:
+        :py:class:`ValueError`: If ``beam_width <= 0``.
+
+        :py:class:`ValueError`:
+            If ``prune_threshold < 0 or prune_threshold > 1.0``.
+
+        :py:class:`ValueError`:
+            If ``language_model is not None and lm_weight is None``.
     """
 
     def __init__(
@@ -59,17 +70,22 @@ class CTCBeamDecoder(torch.nn.Module):
         lm_weight: Optional[float] = None,
         word_weight: float = 1.0,
     ):
+        if beam_width <= 0:
+            raise ValueError(f"beam_width={beam_width} must be > 0")
+        if prune_threshold < 0.0 or prune_threshold > 1.0:
+            raise ValueError(
+                f"prune_threshold={prune_threshold} not in [0.0, 1.0]"
+            )
+        if language_model is not None and lm_weight is None:
+            raise ValueError("lm_weight must be set when using language_model")
+
         super().__init__()
         self.blank_index = blank_index
         self.beam_width = beam_width
         self.prune_threshold = prune_threshold
         self.separator_index = separator_index
         self.language_model = language_model
-
-        if language_model is not None and lm_weight is None:
-            raise ValueError("lm_weight must be set when using language_model")
         self.lm_weight = lm_weight
-
         self.word_weight = word_weight
 
     def _n_words(self, prefix: List[int]) -> int:

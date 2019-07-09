@@ -142,6 +142,31 @@ def test_ctc_beam_decoder_raises_value_error_lengths_values_greater_seq_len() ->
         ctc_decoder(x, lengths)
 
 
+@given(beam_width=st.integers(-1000, 0))
+def test_ctc_beam_decoder_raises_value_error_non_positive_beam_width(
+    beam_width: int
+) -> None:
+    """Ensures ValueError raised when beam_width <= 0."""
+    with pytest.raises(ValueError):
+        CTCBeamDecoder(blank_index=0, beam_width=beam_width)
+
+
+@given(
+    prune_threshold=st.one_of(
+        st.floats(max_value=-0.0, exclude_max=True),
+        st.floats(min_value=1.0, exclude_min=True),
+    )
+)
+def test_ctc_beam_decoder_raises_value_error_prune_threshold_not_0_1(
+    prune_threshold: float
+) -> None:
+    """Ensures ValueError raised when prune_threshold not in [0.0, 1.0]."""
+    with pytest.raises(ValueError):
+        CTCBeamDecoder(
+            blank_index=0, beam_width=1, prune_threshold=prune_threshold
+        )
+
+
 def test_ctc_beam_decoder_raises_value_error_lm_but_no_lm_weight() -> None:
     """Ensures ValueError raised when language_model set but not lm_weight."""
     with pytest.raises(ValueError):
