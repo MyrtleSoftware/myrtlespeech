@@ -32,7 +32,11 @@ def ctc_beam_decoders(
             value=draw(st.floats(allow_nan=False, allow_infinity=False))
         )
 
-    kwargs["separator_index"] = UInt32Value(value=draw(st.integers(0, 100)))
+    kwargs["separator_index"] = UInt32Value(
+        value=draw(
+            st.integers(0, 100).filter(lambda v: v != kwargs["blank_index"])
+        )
+    )
     kwargs["word_weight"] = draw(
         st.floats(allow_nan=False, allow_infinity=False)
     )
