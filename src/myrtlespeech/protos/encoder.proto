@@ -3,6 +3,7 @@ syntax = "proto3";
 package myrtlespeech.protos;
 
 import "google/protobuf/empty.proto";
+
 import "myrtlespeech/protos/rnn.proto";
 import "myrtlespeech/protos/vgg.proto";
 

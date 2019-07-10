@@ -3,9 +3,11 @@ syntax = "proto3";
 package myrtlespeech.protos;
 
 // Preprocessing steps to apply to the input data.
-message PreprocessingStep {
-  oneof preprocessing_step {
-    MFCC mfcc = 1;
+message PreProcessStep {
+  bool train_only = 1;
+
+  oneof pre_process_step {
+    MFCC mfcc = 2;
   }
 }
 
