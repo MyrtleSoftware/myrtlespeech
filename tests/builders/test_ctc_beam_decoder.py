@@ -1,54 +1,47 @@
 import pytest
-import torch
 import hypothesis.strategies as st
 from hypothesis import assume, given
 
-from myrtlespeech.builders.ctc_loss import build
-from myrtlespeech.protos import ctc_loss_pb2
-from tests.protos.test_ctc_loss import ctc_losses
-from tests.utils.utils import tensors
+from myrtlespeech.builders.ctc_beam_decoder import build
+from myrtlespeech.post_process.ctc_beam_decoder import CTCBeamDecoder
+from myrtlespeech.protos import ctc_beam_decoder_pb2
+from tests.builders.test_language_model import language_model_module_match_cfg
+from tests.protos.test_ctc_beam_decoder import ctc_beam_decoders
 
 
 # Utilities -------------------------------------------------------------------
 
 
-def ctc_loss_module_match_cfg(
-    ctc_loss: torch.nn.CTCLoss, ctc_loss_cfg: ctc_loss_pb2.CTCLoss
+def ctc_beam_decoder_module_match_cfg(
+    ctc: CTCBeamDecoder, ctc_cfg: ctc_beam_decoder_pb2.CTCBeamDecoder
 ) -> None:
-    """Ensures CTCLoss matches protobuf configuration."""
-    assert ctc_loss.blank == ctc_loss_cfg.blank_index
+    """Ensures CTCBeamDecoder matches protobuf configuration."""
+    assert ctc.blank_index == ctc_cfg.blank_index
+    assert ctc.beam_width == ctc_cfg.beam_width
+    assert ctc.prune_threshold == ctc_cfg.prune_threshold
 
-    if ctc_loss_cfg.reduction == ctc_loss_pb2.CTCLoss.NONE:
-        assert ctc_loss.reduction == "none"
-    elif ctc_loss_cfg.reduction == ctc_loss_pb2.CTCLoss.MEAN:
-        assert ctc_loss.reduction == "mean"
-    elif ctc_loss_cfg.reduction == ctc_loss_pb2.CTCLoss.SUM:
-        assert ctc_loss.reduction == "sum"
+    language_model_module_match_cfg(ctc.language_model, ctc_cfg.language_model)
+
+    if ctc_cfg.HasField("lm_weight"):
+        assert ctc.lm_weight == ctc_cfg.lm_weight.value
     else:
-        raise ValueError(f"unknownreduction {ctc_loss.reduction}")
+        assert ctc.lm_weight is None
+
+    if ctc_cfg.HasField("separator_index"):
+        assert ctc.separator_index == ctc_cfg.separator_index.value
+    else:
+        assert ctc.separator_index is None
+
+    assert ctc.word_weight == ctc_cfg.word_weight
 
 
 # Tests -----------------------------------------------------------------------
 
 
-@given(ctc_loss_cfg=ctc_losses())
-def test_build_returns_correct_ctc_loss_with_valid_params(
-    ctc_loss_cfg: ctc_loss_pb2.CTCLoss
+@given(ctc_cfg=ctc_beam_decoders())
+def test_build_returns_correct_ctc_beam_decoder_with_valid_params(
+    ctc_cfg: ctc_beam_decoder_pb2.CTCBeamDecoder
 ) -> None:
-    """Test that build returns the correct CTCLoss with valid params."""
-    ctc_loss = build(ctc_loss_cfg)
-    ctc_loss_module_match_cfg(ctc_loss, ctc_loss_cfg)
-
-
-@given(ctc_loss_cfg=ctc_losses(), invalid_reduction=st.integers(0, 128))
-def test_unknown_reduction_raises_value_error(
-    ctc_loss_cfg: ctc_loss_pb2.CTCLoss, invalid_reduction: int
-) -> None:
-    """Ensures ValueError is raised when reduction not supported.
-
-    This can occur when the protobuf is updated and build is not.
-    """
-    assume(invalid_reduction not in ctc_loss_pb2.CTCLoss.REDUCTION.values())
-    ctc_loss_cfg.reduction = invalid_reduction  # type: ignore
-    with pytest.raises(ValueError):
-        build(ctc_loss_cfg)
+    """Test that build returns the correct CTCBeamDecoder with valid params."""
+    ctc = build(ctc_cfg)
+    ctc_beam_decoder_module_match_cfg(ctc, ctc_cfg)

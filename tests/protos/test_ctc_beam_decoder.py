@@ -2,6 +2,7 @@ from typing import Union, Tuple, Dict
 
 import hypothesis.strategies as st
 from google.protobuf import empty_pb2
+from google.protobuf.wrappers_pb2 import FloatValue, UInt32Value
 
 from myrtlespeech.protos import ctc_beam_decoder_pb2
 from tests.protos.test_language_model import language_models
@@ -27,12 +28,12 @@ def ctc_beam_decoders(
 
     kwargs["language_model"] = draw(language_models())
     if not isinstance(kwargs["language_model"], empty_pb2.Empty):
-        kwargs["lm_weight"] = draw(
-            st.floats(allow_nan=False, allow_infinity=False)
+        kwargs["lm_weight"] = FloatValue(
+            value=draw(st.floats(allow_nan=False, allow_infinity=False))
         )
 
-    kwargs["separator_index"] = draw(st.integers(0, 100))
-    kwargs["prune_threshold"] = draw(
+    kwargs["separator_index"] = UInt32Value(value=draw(st.integers(0, 100)))
+    kwargs["word_weight"] = draw(
         st.floats(allow_nan=False, allow_infinity=False)
     )
 
