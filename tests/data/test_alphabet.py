@@ -15,13 +15,17 @@ AlphabetKwargs = TypedDict("AlphabetKwargs", {"symbols": List[str]})
 
 @st.composite
 def random_alphabet(
-    draw, return_kwargs: bool = False
+    draw, return_kwargs: bool = False, min_size: int = 0
 ) -> Union[
     st.SearchStrategy[Alphabet],
     st.SearchStrategy[Tuple[Alphabet, AlphabetKwargs]],
 ]:
     """Returns a SearchStrategy for an Alphabet plus maybe the kwargs."""
-    kwargs = {"symbols": list(draw(st.sets(elements=st.characters())))}
+    kwargs = {
+        "symbols": list(
+            draw(st.sets(elements=st.characters(), min_size=min_size))
+        )
+    }
     alphabet = Alphabet(**kwargs)
     if return_kwargs:
         return alphabet, kwargs

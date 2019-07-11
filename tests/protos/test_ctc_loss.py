@@ -1,4 +1,4 @@
-from typing import Union, Tuple, Dict
+from typing import Dict, Optional, Tuple, Union
 
 import hypothesis.strategies as st
 
@@ -11,14 +11,19 @@ from tests.protos.utils import all_fields_set
 
 @st.composite
 def ctc_losses(
-    draw, return_kwargs: bool = False
+    draw, return_kwargs: bool = False, alphabet_len: Optional[int] = None
 ) -> Union[
     st.SearchStrategy[ctc_loss_pb2.CTCLoss],
     st.SearchStrategy[Tuple[ctc_loss_pb2.CTCLoss, Dict]],
 ]:
     """Returns a SearchStrategy for CTCLoss plus maybe the kwargs."""
     kwargs = {}
-    kwargs["blank_index"] = draw(st.integers(0, 1000))
+
+    end = 1000
+    if alphabet_len is not None:
+        end = max(0, alphabet_len - 1)
+    kwargs["blank_index"] = draw(st.integers(0, end))
+
     kwargs["reduction"] = draw(
         st.sampled_from(ctc_loss_pb2.CTCLoss.REDUCTION.values())
     )

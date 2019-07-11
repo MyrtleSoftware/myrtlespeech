@@ -1,5 +1,5 @@
 """Builds an :py:class:`.SpeechToText` model from a configuration."""
-from typing import List
+from typing import Callable, List, Tuple
 
 from myrtlespeech.builders.ctc_beam_decoder import (
     build as build_ctc_beam_decoder,
@@ -44,7 +44,7 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText,) -> SpeechToText:
     # preprocessing
     input_channels = None
     input_features = 1
-    pre_process_steps = []
+    pre_process_steps: List[Tuple[Callable, bool]] = []
     for step_cfg in stt_cfg.pre_process_step:
         step = build_pre_process_step(step_cfg)
         if isinstance(step[0], MFCC):
@@ -56,6 +56,11 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText,) -> SpeechToText:
     # model
     model_type = stt_cfg.WhichOneof("model")
     if model_type == "encoder_decoder":
+        # if CNN present and pre-processing not created channel dim set it to 1
+        cnn = stt_cfg.encoder_decoder.encoder.WhichOneof("supported_cnns")
+        if cnn != "no_cnn" and input_channels is None:
+            input_channels = 1
+
         model = build_encoder_decoder(
             encoder_decoder_cfg=stt_cfg.encoder_decoder,
             input_features=input_features,
@@ -73,10 +78,10 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText,) -> SpeechToText:
     if loss_type == "ctc_loss":
         blank_index = stt_cfg.ctc_loss.blank_index
         ctc_blank_indices.append(blank_index)
-        if not (0 <= blank_index < len(alphabet)):
+        if not (0 <= blank_index <= max(0, len(alphabet) - 1)):
             raise ValueError(
                 f"ctc_loss.blank_index={blank_index} must be in "
-                f"[0, {len(alphabet)})"
+                f"[0, {max(0, len(alphabet) - 1)}]"
             )
         loss = build_ctc_loss(stt_cfg.ctc_loss)
     else:
@@ -87,26 +92,26 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText,) -> SpeechToText:
     if post_process_type == "ctc_greedy_decoder":
         blank_index = stt_cfg.ctc_greedy_decoder.blank_index
         ctc_blank_indices.append(blank_index)
-        if not (0 <= blank_index < len(alphabet)):
+        if not (0 <= blank_index <= max(0, len(alphabet) - 1)):
             raise ValueError(
                 f"ctc_greedy_decoder.blank_index={blank_index} must be in "
-                f"[0, {len(alphabet)})"
+                f"[0, {max(0, len(alphabet) - 1)}]"
             )
         post_process = CTCGreedyDecoder(blank_index=blank_index)
     elif post_process_type == "ctc_beam_decoder":
         blank_index = stt_cfg.ctc_beam_decoder.blank_index
         ctc_blank_indices.append(blank_index)
-        if not (0 <= blank_index < len(alphabet)):
+        if not (0 <= blank_index <= max(0, len(alphabet) - 1)):
             raise ValueError(
                 f"ctc_beam_decoder.blank_index={blank_index} must be in "
-                f"[0, {len(alphabet)})"
+                f"[0, {max(0, len(alphabet) - 1)}]"
             )
         if stt_cfg.ctc_beam_decoder.HasField("separator_index"):
             separator_index = stt_cfg.ctc_beam_decoder.separator_index.value
-            if not (0 <= separator_index < len(alphabet)):
+            if not (0 <= separator_index <= max(0, len(alphabet) - 1)):
                 raise ValueError(
                     f"ctc_beam_decoder.separator_index.value={separator_index} "
-                    f"must be in [0, {len(alphabet)})"
+                    f"[0, {max(0, len(alphabet) - 1)}]"
                 )
         post_process = build_ctc_beam_decoder(stt_cfg.ctc_beam_decoder)
     else:

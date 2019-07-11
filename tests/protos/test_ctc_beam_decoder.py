@@ -1,4 +1,4 @@
-from typing import Union, Tuple, Dict
+from typing import Union, Tuple, Dict, Optional
 
 import hypothesis.strategies as st
 from google.protobuf import empty_pb2
@@ -14,7 +14,10 @@ from tests.protos.utils import all_fields_set
 
 @st.composite
 def ctc_beam_decoders(
-    draw, return_kwargs: bool = False
+    draw,
+    return_kwargs: bool = False,
+    alphabet_len: Optional[int] = None,
+    blank_index: Optional[int] = None,
 ) -> Union[
     st.SearchStrategy[ctc_beam_decoder_pb2.CTCBeamDecoder],
     st.SearchStrategy[Tuple[ctc_beam_decoder_pb2.CTCBeamDecoder, Dict]],
@@ -22,7 +25,15 @@ def ctc_beam_decoders(
     """Returns a SearchStrategy for CTCBeamDecoder plus maybe the kwargs."""
     kwargs: Dict = {}
 
-    kwargs["blank_index"] = draw(st.integers(0, 100))
+    end = 100
+    if alphabet_len is not None:
+        end = max(0, alphabet_len - 1)
+
+    if blank_index is not None:
+        kwargs["blank_index"] = blank_index
+    else:
+        kwargs["blank_index"] = draw(st.integers(0, end))
+
     kwargs["beam_width"] = draw(st.integers(1, 2048))
     kwargs["prune_threshold"] = draw(st.floats(0.0, 1.0, allow_nan=False))
 
@@ -34,7 +45,7 @@ def ctc_beam_decoders(
 
     kwargs["separator_index"] = UInt32Value(
         value=draw(
-            st.integers(0, 100).filter(lambda v: v != kwargs["blank_index"])
+            st.integers(0, end).filter(lambda v: v != kwargs["blank_index"])
         )
     )
     kwargs["word_weight"] = draw(

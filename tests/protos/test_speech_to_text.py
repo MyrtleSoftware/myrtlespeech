@@ -1,33 +1,93 @@
-from typing import Union, Tuple, Dict
+from typing import Dict, Optional, Tuple, Union
 
 import hypothesis.strategies as st
 
-from myrtlespeech.protos import encoder_decoder_pb2
+from myrtlespeech.protos import speech_to_text_pb2
+from myrtlespeech.protos import ctc_greedy_decoder_pb2
+from tests.data.test_alphabet import random_alphabet
+from tests.protos.test_ctc_loss import ctc_losses
+from tests.protos.test_pre_process_step import pre_process_steps
+from tests.protos.test_ctc_beam_decoder import ctc_beam_decoders
+from tests.protos.test_encoder_decoder import encoder_decoders
 from tests.protos.utils import all_fields_set
-from tests.protos.test_decoder import decoders
-from tests.protos.test_encoder import encoders
 
 
 # Fixtures and Strategies -----------------------------------------------------
 
 
 @st.composite
-def encoder_decoders(
-    draw, return_kwargs: bool = False, valid_only: bool = False
+def speech_to_texts(
+    draw, return_kwargs: bool = False
 ) -> Union[
-    st.SearchStrategy[encoder_decoder_pb2.EncoderDecoder],
-    st.SearchStrategy[Tuple[encoder_decoder_pb2.EncoderDecoder, Dict]],
+    st.SearchStrategy[speech_to_text_pb2.SpeechToText],
+    st.SearchStrategy[Tuple[speech_to_text_pb2.SpeechToText, Dict]],
 ]:
-    """Returns a SearchStrategy for EncoderDecoder plus maybe the kwargs."""
-    kwargs = {}
-    kwargs["encoder"] = draw(encoders())
-    kwargs["decoder"] = draw(decoders(valid_only=valid_only))
+    """Returns a SearchStrategy for SpeechToText plus maybe the kwargs."""
+    kwargs: Dict = {}
+    kwargs["alphabet"] = "".join(draw(random_alphabet(min_size=2)).symbols)
 
-    # initialise encoder and return
-    all_fields_set(encoder_decoder_pb2.EncoderDecoder, kwargs)
-    encoder_decoder = encoder_decoder_pb2.EncoderDecoder(  # type: ignore
+    descript = speech_to_text_pb2.SpeechToText.DESCRIPTOR
+
+    # model
+    model_str = draw(
+        st.sampled_from(
+            [f.name for f in descript.oneofs_by_name["model"].fields]
+        )
+    )
+    if model_str == "encoder_decoder":
+        kwargs["encoder_decoder"] = draw(encoder_decoders(valid_only=True))
+    else:
+        raise ValueError(f"unknown model type {model_str}")
+
+    # record CTC blank index to share between CTC components
+    ctc_blank_index: Optional[int] = None
+
+    # loss
+    loss_str = draw(
+        st.sampled_from(
+            [f.name for f in descript.oneofs_by_name["loss"].fields]
+        )
+    )
+    if loss_str == "ctc_loss":
+        kwargs["ctc_loss"] = draw(
+            ctc_losses(alphabet_len=len(kwargs["alphabet"]))
+        )
+        ctc_blank_index = kwargs["ctc_loss"].blank_index
+    else:
+        raise ValueError(f"unknown loss type {loss_str}")
+
+    # preprocess step
+    kwargs["pre_process_step"] = []
+    if draw(st.booleans()):
+        kwargs["pre_process_step"].append(draw(pre_process_steps()))
+
+    # post process
+    post_str = draw(
+        st.sampled_from(
+            [f.name for f in descript.oneofs_by_name["post_process"].fields]
+        )
+    )
+    if post_str == "ctc_greedy_decoder":
+        if ctc_blank_index is None:
+            ctc_blank_index = draw(
+                st.integers(0, max(0, len(kwargs["alphabet"]) - 1))
+            )
+        kwargs["ctc_greedy_decoder"] = ctc_greedy_decoder_pb2.CTCGreedyDecoder(
+            blank_index=ctc_blank_index
+        )
+    elif post_str == "ctc_beam_decoder":
+        beam_kwargs = {"alphabet_len": len(kwargs["alphabet"])}
+        if ctc_blank_index is not None:
+            beam_kwargs["blank_index"] = ctc_blank_index
+        kwargs["ctc_beam_decoder"] = draw(ctc_beam_decoders(**beam_kwargs))
+    else:
+        raise ValueError(f"unknown post_process type {post_str}")
+
+    # initialise and return
+    all_fields_set(speech_to_text_pb2.SpeechToText, kwargs)
+    speech_to_text = speech_to_text_pb2.SpeechToText(  # type: ignore
         **kwargs
     )
     if not return_kwargs:
-        return encoder_decoder
-    return encoder_decoder, kwargs
+        return speech_to_text
+    return speech_to_text, kwargs
