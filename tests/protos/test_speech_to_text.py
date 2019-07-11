@@ -85,6 +85,7 @@ def speech_to_texts(
 
     # initialise and return
     all_fields_set(speech_to_text_pb2.SpeechToText, kwargs)
+    print(kwargs)
     speech_to_text = speech_to_text_pb2.SpeechToText(  # type: ignore
         **kwargs
     )

@@ -23,7 +23,13 @@ def random_alphabet(
     """Returns a SearchStrategy for an Alphabet plus maybe the kwargs."""
     kwargs = {
         "symbols": list(
-            draw(st.sets(elements=st.characters(), min_size=min_size))
+            draw(
+                st.sets(
+                    # Avoid "surrogate-related bugs" by excluding category (Cs)
+                    elements=st.characters(blacklist_categories=["Cs"]),
+                    min_size=min_size,
+                )
+            )
         )
     }
     alphabet = Alphabet(**kwargs)

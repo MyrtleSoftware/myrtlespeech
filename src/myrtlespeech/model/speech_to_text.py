@@ -8,7 +8,7 @@ from myrtlespeech.post_process.ctc_beam_decoder import CTCBeamDecoder
 from myrtlespeech.post_process.ctc_greedy_decoder import CTCGreedyDecoder
 
 
-class SpeechToText:
+class SpeechToText(torch.nn.Module):
     """A speech to text model.
 
     .. todo::
@@ -34,3 +34,6 @@ class SpeechToText:
         self.loss = loss
         self.pre_process_steps = pre_process_steps
         self.post_process = post_process
+
+    def forward(self, x: torch.Tensor):
+        pass
