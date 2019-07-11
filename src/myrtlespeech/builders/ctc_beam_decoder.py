@@ -42,6 +42,11 @@ def build(
     separator_index = None
     if ctc_beam_decoder_cfg.HasField("separator_index"):
         separator_index = ctc_beam_decoder_cfg.separator_index.value
+        if separator_index == ctc_beam_decoder_cfg.blank_index:
+            raise ValueError(
+                f"separator_index={separator_index} must not be equal to "
+                f"blank_index={ctc_beam_decoder_cfg.blank_index}"
+            )
 
     lm_weight = None
     if ctc_beam_decoder_cfg.HasField("lm_weight"):

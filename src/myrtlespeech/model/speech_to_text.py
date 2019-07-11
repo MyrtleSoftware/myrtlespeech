@@ -1,4 +1,4 @@
-from typing import Callable, List, Union
+from typing import Callable, List, Tuple, Union
 
 import torch
 
@@ -25,7 +25,7 @@ class SpeechToText:
         alphabet: Alphabet,
         model: EncoderDecoder,
         loss: torch.nn.CTCLoss,
-        pre_process_steps: List[Callable],
+        pre_process_steps: List[Tuple[Callable, bool]],
         post_process: Union[None, CTCGreedyDecoder, CTCBeamDecoder],
     ):
         super().__init__()
