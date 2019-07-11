@@ -39,11 +39,6 @@ def build(
     Raises:
         :py:class:`ValueError`: On invalid configuration.
     """
-    if not isinstance(encoder_decoder_cfg, encoder_decoder_pb2.EncoderDecoder):
-        raise ValueError(
-            "encoder_decoder_cfg not of type encoder_decoder_pb.EncoderDecoder"
-        )
-
     encoder, input_features = build_encoder(
         encoder_decoder_cfg.encoder,
         input_features=input_features,
