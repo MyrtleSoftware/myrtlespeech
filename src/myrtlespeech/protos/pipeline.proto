@@ -3,8 +3,8 @@ syntax = "proto3";
 package myrtlespeech.protos;
 
 import "myrtlespeech/protos/speech_to_text.proto";
-import "myrtlespeech/protos/eval.proto";
-import "myrtlespeech/protos/train.proto";
+import "myrtlespeech/protos/eval_config.proto";
+import "myrtlespeech/protos/train_config.proto";
 
 // Top-level training and evaluation configuration.  Allows all the parameters
 // to be specified in one `.config` file.

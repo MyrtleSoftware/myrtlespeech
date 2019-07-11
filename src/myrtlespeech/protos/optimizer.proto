@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+
+// See PyTorch ``torch.optim.SGD``.
+message SGD {
+  // Learning rate.
+  float learning_rate = 1;
+
+  // Momentum factor.
+  float momentum = 2;
+
+  // Weight decay (L2 penalty).
+  float l2_weight_decay = 3;
+
+  // Enable Nesterov momentum.
+  bool nesterov_momentum = 4;
+}

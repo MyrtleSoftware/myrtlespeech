@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "myrtlespeech/protos/optimizer.proto";
+
+
+// Configuration for training.
+message TrainConfig {
+  // Batch size of training.
+  uint32 batch_size = 1;
+
+  // Number of epochs to train for.
+  uint32 num_epochs = 3;
+
+  oneof supported_optimizers {
+    SGD sgd = 2;
+  }
+}
