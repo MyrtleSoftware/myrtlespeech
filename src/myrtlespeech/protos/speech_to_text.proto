@@ -13,17 +13,17 @@ message SpeechToText {
   // Output alphabet.
   string alphabet = 1;
 
+  repeated PreProcessStep pre_process_step = 2;
+
   // Supported models.
   oneof model {
-    EncoderDecoder encoder_decoder = 2;
+    EncoderDecoder encoder_decoder = 3;
   }
 
   // Supported loss functions.
   oneof loss {
-    CTCLoss ctc_loss = 3;
+    CTCLoss ctc_loss = 4;
   }
-
-  repeated PreProcessStep pre_process_step = 4;
 
   // Supported post processing of network output.
   oneof post_process {

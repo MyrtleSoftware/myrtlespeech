@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
+import "myrtlespeech/protos/dataset.proto";
 import "myrtlespeech/protos/optimizer.proto";
 
 
@@ -11,9 +12,11 @@ message TrainConfig {
   uint32 batch_size = 1;
 
   // Number of epochs to train for.
-  uint32 num_epochs = 3;
+  uint32 num_epochs = 2;
 
   oneof supported_optimizers {
-    SGD sgd = 2;
+    SGD sgd = 3;
   }
+
+  Dataset dataset = 4;
 }

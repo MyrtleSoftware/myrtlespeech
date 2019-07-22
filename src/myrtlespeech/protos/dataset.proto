@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "myrtlespeech/protos/range.proto";
+
+
+message Dataset {
+  message FakeSpeechToText {
+    uint32 dataset_len = 1;
+
+    Range audio_ms = 2;
+
+    string label_symbols = 3;
+
+    Range label_len = 4;
+  }
+
+  oneof supported_datasets {
+    FakeSpeechToText fake_speech_to_text = 1;
+  }
+}

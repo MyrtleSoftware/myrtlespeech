@@ -7,5 +7,5 @@
     :caption: Contents:
 
     alphabet
-    fake
+    dataset/index
     preprocess

@@ -8,7 +8,11 @@ import hypothesis.strategies as st
 import pytest
 import torch
 from hypothesis import assume, given
-from myrtlespeech.data.fake import FakeDataset, SpeechToTextGen, speech_to_text
+from myrtlespeech.data.dataset.fake import (
+    FakeDataset,
+    SpeechToTextGen,
+    speech_to_text,
+)
 
 
 # Setup/teardown --------------------------------------------------------------
