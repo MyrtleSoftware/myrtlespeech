@@ -15,17 +15,52 @@ def build(
     """Returns a :py:class:`torch.utils.data.Dataset` based on the config.
 
     Args:
-        dataset: A ``Dataset`` protobuf object containing the config for the
-            desired :py:class:`torch.utils.data.Dataset`.
+        dataset: A :py:class:`myrtlespeech.protos.dataset_pb2.Dataset` protobuf
+            object containing the config for the desired
+            :py:class:`torch.utils.data.Dataset`.
 
-        transform: TODO
+        transform: Transform to pass to the
+            :py:class:`torch.utils.data.Dataset`.
 
-        target_transform: TODO
+        target_transform: Target transform to pass to the
+            :py:class:`torch.utils.data.Dataset`.
 
-        add_seq_len_to_transforms: TODO
+        add_seq_len_to_transforms: If :py:data:`True`, an additional function
+            is applied after ``transform`` and ``target_transform`` that takes
+            a value and returns a tuple of ``(value,
+            torch.tensor(len(value)))``.
 
     Returns:
         A :py:class:`torch.utils.data.Dataset` based on the config.
+
+    Example:
+        >>> from google.protobuf import text_format
+        >>> dataset_cfg = text_format.Merge('''
+        ... fake_speech_to_text {
+        ...   dataset_len: 2;
+        ...   audio_ms {
+        ...     lower: 10;
+        ...     upper: 100;
+        ...   }
+        ...   label_symbols: "abcde";
+        ...   label_len {
+        ...     lower: 1;
+        ...     upper: 10;
+        ...   }
+        ... }
+        ... ''', dataset_pb2.Dataset())
+        >>> dataset = build(dataset_cfg, add_seq_len_to_transforms=True)
+        >>> len(dataset)
+        2
+        >>> (audio, audio_len), (label, label_len) = dataset[0]
+        >>> type(audio)
+        <class 'torch.Tensor'>
+        >>> bool(len(audio) == audio_len)
+        True
+        >>> type(label)
+        <class 'str'>
+        >>> bool(len(label) == label_len)
+        True
     """
     supported_dataset = dataset.WhichOneof("supported_datasets")
 
@@ -53,10 +88,10 @@ def build(
 
 def _add_seq_len(transform: Optional[Callable]) -> Callable:
     def new_transform(x, *args, **kwargs):
-        seq_len = torch.tensor(len(x), requires_grad=False)
         result = x
         if transform is not None:
-            result = transform(x, *args, **kwargs)
+            result = transform(result, *args, **kwargs)
+        seq_len = torch.tensor(len(result), requires_grad=False)
         return result, seq_len
 
     return new_transform
