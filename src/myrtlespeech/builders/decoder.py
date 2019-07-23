@@ -13,19 +13,20 @@ def build(
     decoder_cfg: decoder_pb2.Decoder,
     input_features: int,
     output_features: int,
-    seq_len_wrapper: bool = False,
+    seq_len_support: bool = False,
 ) -> torch.nn.Module:
     """Returns an :py:class:`torch.nn.Module` based on the given config.
 
     Args:
-        decoder_cfg: A ``Decoder`` protobuf object containing the config for
-            the desired :py:class:`.Decoder`.
+        decoder_cfg: A :py:class:`myrtlespeech.protos.decoder_pb2.Decoder`
+            protobuf object containing the config for the desired
+            :py:class:`.Decoder`.
 
         input_features: The number of features for the input.
 
         output_features: The number of features for the output.
 
-        seq_len_wrapper: TODO
+        seq_len_support: TODO
 
     Returns:
         A :py:class:`torch.nn.Module` based on the config.
@@ -36,7 +37,7 @@ def build(
             decoder_cfg.fully_connected,
             input_features,
             output_features,
-            seq_len_wrapper=seq_len_wrapper,
+            seq_len_support=seq_len_support,
         )
     else:
         raise ValueError(f"{decoder_choice} not supported")

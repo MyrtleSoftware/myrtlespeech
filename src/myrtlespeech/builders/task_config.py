@@ -16,7 +16,7 @@ def build(
 
 
     """
-    model = build_stt(task_config.model, seq_len_wrapper=seq_len_support)
+    model = build_stt(task_config.model, seq_len_support=seq_len_support)
 
     # create optimizer
     optim_str = task_config.train_config.WhichOneof("supported_optimizers")

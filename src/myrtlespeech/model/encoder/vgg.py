@@ -134,7 +134,7 @@ def make_layers(
     batch_norm: bool = False,
     initialize_weights: bool = True,
     use_output_from_block: Optional[int] = None,
-    seq_len_wrapper: bool = False,
+    seq_len_support: bool = False,
 ) -> nn.Module:
     """Returns a :py:class:`torch.nn.Sequential` module for the given `cfg`.
 
@@ -223,7 +223,7 @@ def make_layers(
                   (3): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
                 )
 
-        seq_len_wrapper: TODO
+        seq_len_support: TODO
 
     Returns:
         A :py:class:`torch.nn.Sequential` :py:class:`torch.nn.Module`
@@ -290,7 +290,7 @@ def make_layers(
 
     module = nn.Sequential(*layers)
 
-    if not seq_len_wrapper:
+    if not seq_len_support:
         return module
 
     def seq_lens_fn(seq_lens: torch.Tensor):

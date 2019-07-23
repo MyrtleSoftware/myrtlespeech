@@ -6,7 +6,7 @@ from myrtlespeech.protos import rnn_pb2
 
 
 def build(
-    rnn_cfg: rnn_pb2.RNN, input_features: int, seq_len_wrapper: bool = False
+    rnn_cfg: rnn_pb2.RNN, input_features: int, seq_len_support: bool = False
 ) -> torch.nn.Module:
     """Returns a :py:class:`torch.nn.Module` based on the config.
 
@@ -16,7 +16,7 @@ def build(
 
         input_features: The number of features for the input.
 
-        seq_len_wrapper: TODO
+        seq_len_support: TODO
 
     Returns:
         A :py:class:`torch.nn.Module` based on the config.
@@ -55,7 +55,7 @@ def build(
         bidirectional=rnn_cfg.bidirectional,
     )
 
-    if not seq_len_wrapper:
+    if not seq_len_support:
         return rnn
 
     return SeqLenWrapper(module=rnn, seq_lens_fn=lambda seq_lens: seq_lens)

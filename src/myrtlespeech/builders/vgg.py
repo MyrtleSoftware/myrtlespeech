@@ -10,7 +10,7 @@ from myrtlespeech.protos import vgg_pb2
 
 
 def build(
-    vgg_cfg: vgg_pb2.VGG, input_channels: int, seq_len_wrapper: bool = False
+    vgg_cfg: vgg_pb2.VGG, input_channels: int, seq_len_support: bool = False
 ) -> torch.nn.Module:
     """Returns a :py:class:`torch.nn.Module` based on the VGG config.
 
@@ -21,7 +21,7 @@ def build(
         input_channels: The number of channels -- not features! -- for the
             input.
 
-        seq_len_wrapper: TODO
+        seq_len_support: TODO
 
     Returns:
         A :py:class:`torch.nn.Module` based on the config.
@@ -66,7 +66,7 @@ def build(
         in_channels=input_channels,
         batch_norm=vgg_cfg.batch_norm,
         use_output_from_block=vgg_cfg.use_output_from_block + 1,
-        seq_len_wrapper=seq_len_wrapper,
+        seq_len_support=seq_len_support,
     )
 
     return vgg
