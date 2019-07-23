@@ -10,13 +10,15 @@ from myrtlespeech.builders.pre_process_step import (
     build as build_pre_process_step,
 )
 from myrtlespeech.data.alphabet import Alphabet
-from myrtlespeech.data.preprocess import MFCC
+from myrtlespeech.data.preprocess import AddSequenceLength, MFCC
 from myrtlespeech.model.speech_to_text import SpeechToText
 from myrtlespeech.post_process.ctc_greedy_decoder import CTCGreedyDecoder
 from myrtlespeech.protos import speech_to_text_pb2
 
 
-def build(stt_cfg: speech_to_text_pb2.SpeechToText,) -> SpeechToText:
+def build(
+    stt_cfg: speech_to_text_pb2.SpeechToText, seq_len_wrapper: bool = False
+) -> SpeechToText:
     """Returns a :py:class:`.SpeechToText` model based on the config.
 
     .. note::
@@ -27,6 +29,8 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText,) -> SpeechToText:
     Args:
         stt_cfg: A ``SpeechToText`` protobuf object containing the config for
             the desired :py:class:`.SpeechToText`.
+
+        seq_len_wrapper: TODO
 
     Returns:
         An :py:class:`.SpeechToText` based on the config.
@@ -50,7 +54,7 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText,) -> SpeechToText:
         if isinstance(step[0], MFCC):
             input_features = step[0].numcep
         else:
-            raise ValueError(f"unknown step={type(step)}")
+            raise ValueError(f"unknown step={step[0]}")
         pre_process_steps.append(step)
 
     # model
@@ -66,6 +70,7 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText,) -> SpeechToText:
             input_features=input_features,
             output_features=len(alphabet),
             input_channels=input_channels,
+            seq_len_wrapper=seq_len_wrapper,
         )
     else:
         raise ValueError(f"model={model_type} not supported")

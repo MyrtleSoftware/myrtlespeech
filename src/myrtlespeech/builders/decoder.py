@@ -10,7 +10,10 @@ from myrtlespeech.protos import decoder_pb2
 
 
 def build(
-    decoder_cfg: decoder_pb2.Decoder, input_features: int, output_features: int
+    decoder_cfg: decoder_pb2.Decoder,
+    input_features: int,
+    output_features: int,
+    seq_len_wrapper: bool = False,
 ) -> torch.nn.Module:
     """Returns an :py:class:`torch.nn.Module` based on the given config.
 
@@ -22,13 +25,18 @@ def build(
 
         output_features: The number of features for the output.
 
+        seq_len_wrapper: TODO
+
     Returns:
         A :py:class:`torch.nn.Module` based on the config.
     """
     decoder_choice = decoder_cfg.WhichOneof("supported_decoders")
     if decoder_choice == "fully_connected":
         decoder = build_fully_connected(
-            decoder_cfg.fully_connected, input_features, output_features
+            decoder_cfg.fully_connected,
+            input_features,
+            output_features,
+            seq_len_wrapper=seq_len_wrapper,
         )
     else:
         raise ValueError(f"{decoder_choice} not supported")

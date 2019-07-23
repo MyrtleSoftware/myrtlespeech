@@ -37,10 +37,13 @@ that is licensed under the BSD 3-Clause:
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import math
+from functools import partial
 from typing import Tuple, List, Union, Optional
 
 import torch
 import torch.nn as nn
+
+from myrtlespeech.model.seq_len_wrapper import SeqLenWrapper
 
 
 VGGConfig = List[Union[int, str]]
@@ -131,6 +134,7 @@ def make_layers(
     batch_norm: bool = False,
     initialize_weights: bool = True,
     use_output_from_block: Optional[int] = None,
+    seq_len_wrapper: bool = False,
 ) -> nn.Module:
     """Returns a :py:class:`torch.nn.Sequential` module for the given `cfg`.
 
@@ -219,6 +223,8 @@ def make_layers(
                   (3): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
                 )
 
+        seq_len_wrapper: TODO
+
     Returns:
         A :py:class:`torch.nn.Sequential` :py:class:`torch.nn.Module`
         containing the :py:class:`torch.nn.Conv2d`,
@@ -282,7 +288,19 @@ def make_layers(
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
 
-    return nn.Sequential(*layers)
+    module = nn.Sequential(*layers)
+
+    if not seq_len_wrapper:
+        return module
+
+    def seq_lens_fn(seq_lens: torch.Tensor):
+        result = torch.empty_like(seq_lens)
+        for i, seq_len in enumerate(seq_lens):
+            input_size = torch.Size([1, 1, 1, seq_len])
+            result[i] = vgg_output_size(module, input_size)[3]
+        return result
+
+    return SeqLenWrapper(module=module, seq_lens_fn=seq_lens_fn)
 
 
 def vgg_output_size(
@@ -308,6 +326,10 @@ def vgg_output_size(
                 4. Sequence length.
 
             i.e. NCHW format.
+
+    Returns:
+        A 4-dimensional :py:class:`torch.Size` object representing the size of
+        the output.
 
     Raises:
         :py:class:`ValueError`: if ``vgg`` contains unsupported layers.

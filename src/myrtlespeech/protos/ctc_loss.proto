@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
+
 message CTCLoss {
   enum REDUCTION {
     // No reduction will be applied.

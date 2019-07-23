@@ -6,6 +6,7 @@ import "myrtlespeech/protos/speech_to_text.proto";
 import "myrtlespeech/protos/eval_config.proto";
 import "myrtlespeech/protos/train_config.proto";
 
+
 // Top-level model, training, evaluation and dataset configuration. Should not
 // be aware of any state such as log file location.
 message TaskConfig {

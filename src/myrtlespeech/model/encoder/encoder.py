@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple, Union
 
 import torch
 
@@ -22,41 +22,77 @@ class Encoder(torch.nn.Module):
 
         self.cnn_to_rnn: Optional[Lambda] = None
         if cnn is not None:
-            self.cnn_to_rnn = Lambda(lambda h: conv_to_rnn_size)
+            self.cnn_to_rnn = Lambda(lambda h: conv_to_rnn_size(h))
 
         self.rnn = rnn
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor, seq_lens: Optional[torch.Tensor] = None
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         r"""Returns the result of applying ``cnn`` and ``rnn`` to ``x``.
 
+        TODO: redocument
+
         Args:
-            x: :py:class:`torch.Tensor`.
+            x: :py:class:`torch.Tensor` or ``Tuple[torch.Tensor, torch.Tensor]``.
 
-               If ``cnn is not None`` then ``x`` must have size ``[batch,
-               channels, features, seq_len]`` that is valid for ``cnn``. The
-               output of ``cnn`` will be changed to have size
-               ``[cnn_out_seq_len, batch, cnn_out_features]``. If ``rnn is not
-               None`` then this must be valid for input to ``rnn``.
+                At a high level, the single argument :py:class:`torch.Tensor`
+                or first element of the Tuple argument must be valid input for
+                the encoder. The second argument of the Tuple must contain the
+                sequence length of each input.
 
-               If ``cnn is None and rnn is not None`` then ``x`` must have size
-               ``[seq_len, batch, features]``.
+                In more detail, for the single :py:class:`torch.Tensor`
+                argument or the first argument of the Tuple:
 
-               If ``cnn is None and rnn is None`` then the :py:class:`.Encoder`
-               is the identity function that returns ``x`` so size does not
-               matter.
+                If ``cnn is not None`` then this must have size ``[batch,
+                channels, features, max_in_seq_len]`` that is valid for
+                ``cnn``. The output of ``cnn`` will be changed to have size
+                ``[max_cnn_out_seq_len, batch, cnn_out_features]``. If ``rnn is
+                not None`` then this must be valid for input to ``rnn``.
+
+                If ``cnn is None and rnn is not None`` then this must have size
+                ``[max_seq_len, batch, features]``.
+
+                If ``cnn is None and rnn is None`` then the
+                :py:class:`.Encoder` is the identity function that returns this
+                result so size does not matter.
+
+                For the second argument of the Tuple:
+
+                This must have size ``[batch]`` where each entry represents the
+                sequence length of the corresponding *input* sequence.
 
         Returns:
-            The :py:class:`torch.Tensor` after applying both ``cnn`` and
-            ``rnn`` if not None. If ``cnn is not None or rnn is not None`` then
-            it will have size ``[out_seq_len, batch, out_features]``. Otherwise
-            the returned :py:class:`torch.Tensor` is ``x``.
+            The single return value or first element of the Tuple return value
+            is the result after applying ``cnn`` and ``rnn`` if either, or
+            both, are not None.  If ``cnn is not None or rnn is not None`` then
+            it will have size ``[max_out_seq_len, batch, out_features]``.
+            Otherwise it has size equal to the single argument
+            :py:class:`torch.Tensor` or first element of the Tuple argument as
+            the :py:class:`Encoder` acts as the identity function.
+
+            The second element of the Tuple return value is a
+            :py:class:`torch.Tensor` with size ``[batch]`` where each entry
+            represents the sequence length of the corresponding *output*
+            sequence. Each of these will be less than or equal to
+            ``max_out_seq_len``.
         """
         h = x
+        if seq_lens is not None:
+            if self.cnn:
+                h, seq_lens = self.cnn(h, seq_lens=seq_lens)
+                assert self.cnn_to_rnn is not None
+                h = self.cnn_to_rnn(h)
+            if self.rnn:
+                (h, _), seq_lens = self.rnn(h, seq_lens=seq_lens)
+            return h, seq_lens
+
         if self.cnn:
             h = self.cnn(h)
-            h = self.cnn_to_rnn(h)  # type: ignore
+            assert self.cnn_to_rnn is not None
+            h = self.cnn_to_rnn(h)
         if self.rnn:
-            h = self.rnn(h)
+            h, _ = self.rnn(h)
         return h
 
 

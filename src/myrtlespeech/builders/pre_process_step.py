@@ -29,4 +29,4 @@ def build(
     else:
         raise ValueError("unknown pre_process_step '{step_type}'")
 
-    return (step, pre_process_step_cfg.train_only)
+    return step, pre_process_step_cfg.train_only

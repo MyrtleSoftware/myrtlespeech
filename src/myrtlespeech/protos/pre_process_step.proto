@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
+
 // Preprocessing steps to apply to the input data.
 message PreProcessStep {
   bool train_only = 1;

@@ -1,7 +1,7 @@
 """Utilities for generating fake data to test out interfaces."""
 import math
 import random
-from typing import Callable, Generic, Union, Tuple, TypeVar, Sequence
+from typing import Callable, Generic, Optional, Sequence, Tuple, TypeVar, Union
 
 import torch
 from dataclasses import dataclass
@@ -20,6 +20,8 @@ def speech_to_text(
     audio_device: torch.device = torch.device("cpu"),
     audio_pin_memory: bool = False,
     audio_sample_rate: int = 16000,
+    audio_transform: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
+    label_transform: Optional[Callable[[str], str]] = None,
 ) -> SpeechToTextGen:
     r"""Returns a function that returns random ``(audio data, string)`` tuples.
 
@@ -88,6 +90,12 @@ def speech_to_text(
 
         audio_sample_rate: Sample rate specified in Hz.
 
+        audio_transform: If not :py:data:`None` it is a :py:class:`Callable`
+            that is applied to the generated audio signal
+            (:py:class:`torch.Tensor`) before it is returned.
+
+        label_transform: If not :py:data:`None` it is a :py:class:`Callable`
+            that is applied to the generated string before it is returned.
 
     Returns:
 
@@ -95,6 +103,12 @@ def speech_to_text(
         ``audio data`` is a :py:class:`torch.Tensor` with size
         ``(audio_channels, length)`` if ``audio_channels > 1`` else
         ``(length)`` and ``string`` is a ``str``.
+
+        .. Note::
+
+            ``audio_transform`` and ``label_transform`` are applied to ``audio
+            data`` and ``string`` respectively provided they are not
+            :py:data:`None`.
 
     Raises:
 
@@ -166,6 +180,12 @@ def speech_to_text(
             audio.random_(-2 ** 15, 2 ** 15)  # random_ subtracts 1 from upper
         else:
             audio.random_(-2 ** 31, 2 ** 31)  # random_ subtracts 1 from upper
+
+        if audio_transform is not None:
+            audio = audio_transform(audio)
+
+        if label_transform is not None:
+            label = label_transform(label)
 
         return audio, label
 

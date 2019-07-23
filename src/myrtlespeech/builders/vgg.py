@@ -9,7 +9,9 @@ from myrtlespeech.model.encoder.vgg import cfgs, make_layers
 from myrtlespeech.protos import vgg_pb2
 
 
-def build(vgg_cfg: vgg_pb2.VGG, input_channels: int) -> torch.nn.Module:
+def build(
+    vgg_cfg: vgg_pb2.VGG, input_channels: int, seq_len_wrapper: bool = False
+) -> torch.nn.Module:
     """Returns a :py:class:`torch.nn.Module` based on the VGG config.
 
     Args:
@@ -18,6 +20,8 @@ def build(vgg_cfg: vgg_pb2.VGG, input_channels: int) -> torch.nn.Module:
 
         input_channels: The number of channels -- not features! -- for the
             input.
+
+        seq_len_wrapper: TODO
 
     Returns:
         A :py:class:`torch.nn.Module` based on the config.
@@ -62,6 +66,7 @@ def build(vgg_cfg: vgg_pb2.VGG, input_channels: int) -> torch.nn.Module:
         in_channels=input_channels,
         batch_norm=vgg_cfg.batch_norm,
         use_output_from_block=vgg_cfg.use_output_from_block + 1,
+        seq_len_wrapper=seq_len_wrapper,
     )
 
     return vgg

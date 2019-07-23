@@ -18,6 +18,7 @@ def build(
     encoder_cfg: encoder_pb2.Encoder,
     input_features: int,
     input_channels: Optional[int] = None,
+    seq_len_wrapper: bool = False,
 ) -> Tuple[Encoder, int]:
     """Returns an :py:class:`.Encoder` based on the given config.
 
@@ -29,6 +30,8 @@ def build(
 
         input_channels: The number of channels for the input. May be ``None``
             if ``encoder_cfg`` does not use a ``cnn``.
+
+        seq_len_wrapper: TODO
 
     Returns:
         A tuple containing an :py:class:`.Encoder` based on the config and the
@@ -81,10 +84,13 @@ def build(
     if cnn_choice == "no_cnn":
         cnn = None
     elif cnn_choice == "vgg":
-        cnn = build_vgg(encoder_cfg.vgg, input_channels)  # type: ignore
+        cnn = build_vgg(  # type: ignore
+            encoder_cfg.vgg, input_channels, seq_len_wrapper=seq_len_wrapper
+        )
         # update number of features based on vgg output
         out_size = vgg_output_size(
-            cnn, torch.Size([-1, input_channels, input_features, -1])
+            cnn if not seq_len_wrapper else cnn.module,
+            torch.Size([-1, input_channels, input_features, -1]),
         )
         input_features = out_size[1] * out_size[2]
     else:
@@ -96,9 +102,14 @@ def build(
         rnn = None
         output_features = input_features
     elif rnn_choice == "rnn":
-        rnn = build_rnn(encoder_cfg.rnn, input_features)
-        output_features = rnn.hidden_size
-        if rnn.bidirectional:
+        rnn = build_rnn(
+            encoder_cfg.rnn, input_features, seq_len_wrapper=seq_len_wrapper
+        )
+
+        rnn_module = rnn if not seq_len_wrapper else rnn.module
+
+        output_features = rnn_module.hidden_size
+        if rnn_module.bidirectional:
             output_features *= 2
     else:
         raise ValueError(f"{rnn_choice} not supported")

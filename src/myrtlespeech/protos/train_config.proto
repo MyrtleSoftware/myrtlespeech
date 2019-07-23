@@ -12,7 +12,7 @@ message TrainConfig {
   uint32 batch_size = 1;
 
   // Number of epochs to train for.
-  uint32 num_epochs = 2;
+  uint32 epochs = 2;
 
   oneof supported_optimizers {
     SGD sgd = 3;

@@ -1,4 +1,4 @@
-from typing import Callable, List, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 import torch
 
@@ -35,5 +35,30 @@ class SpeechToText(torch.nn.Module):
         self.pre_process_steps = pre_process_steps
         self.post_process = post_process
 
-    def forward(self, x: torch.Tensor):
+    def forward(
+        self, x: torch.Tensor, seq_lens: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """TODO
+
+        Arguments:
+            x: Tuple of [input, input lengths]
+
+        Returns:
+            Tuple of [unnorm log probs, unnorm log prob lengths]
+        """
         pass
+
+    def get_transform(self) -> Callable:
+        """
+        TODO
+
+        """
+
+        def transform(x):
+            for step, train_only in self.pre_process_steps:
+                if train_only and not self.training:
+                    continue
+                x = step(x)
+            return x
+
+        return transform

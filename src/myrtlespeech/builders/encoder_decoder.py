@@ -21,6 +21,7 @@ def build(
     input_features: int,
     output_features: int,
     input_channels: Optional[int],
+    seq_len_wrapper: bool = False,
 ) -> EncoderDecoder:
     """Returns a :py:class:`.EncoderDecoder` model based on the model config.
 
@@ -33,6 +34,8 @@ def build(
         input_channels: The number of channels for the input. May be ``None``
             if encoder does require it.
 
+        seq_len_wrapper: TODO
+
     Returns:
         An :py:class:`.EncoderDecoder` based on the config.
 
@@ -43,12 +46,14 @@ def build(
         encoder_decoder_cfg.encoder,
         input_features=input_features,
         input_channels=input_channels,
+        seq_len_wrapper=seq_len_wrapper,
     )
 
     decoder = build_decoder(
         encoder_decoder_cfg.decoder,
         input_features=input_features,
         output_features=output_features,
+        seq_len_wrapper=seq_len_wrapper,
     )
 
     return EncoderDecoder(encoder=encoder, decoder=decoder)

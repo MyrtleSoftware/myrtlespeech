@@ -1,6 +1,8 @@
 """
 Utilities for preprocessing audio data.
 """
+from typing import Tuple
+
 import torch
 import python_speech_features
 
@@ -35,7 +37,7 @@ class MFCC:
         self.winstep = winstep
         self.sample_rate = sample_rate
 
-    def __call__(self, audiodata: torch.Tensor):
+    def __call__(self, audiodata: torch.Tensor) -> torch.Tensor:
         """Returns the MFCC for ``audiodata``.
 
         Args:
@@ -61,10 +63,33 @@ class MFCC:
             requires_grad=audiodata.requires_grad,
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             self.__class__.__name__ + f"(numcep={self.numcep}, "
             f"winlen={self.winlen}, "
             f"winstep={self.winstep}, "
             f"sample_rate={self.sample_rate})"
         )
+
+
+class AddSequenceLength:
+    """Adds sequence length information to ``data``.
+
+    TODO: add tests for this
+
+    Example:
+
+        >>> AddSequenceLength(length_dim=0)
+        AddSequenceLength(length_dim=0)
+    """
+
+    def __init__(self, length_dim=0):
+        self.length_dim = length_dim
+
+    def __call__(self, data: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """TODO: document"""
+        size = data.size()
+        return data, torch.tensor([size[self.length_dim]], requires_grad=False)
+
+    def __repr__(self) -> str:
+        return self.__class__.__name__ + f"(length_dim={self.length_dim})"

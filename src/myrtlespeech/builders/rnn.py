@@ -1,10 +1,13 @@
 """Builds an RNN :py:class:`torch.nn.Module` from a configuration."""
 import torch
 
+from myrtlespeech.model.seq_len_wrapper import SeqLenWrapper
 from myrtlespeech.protos import rnn_pb2
 
 
-def build(rnn_cfg: rnn_pb2.RNN, input_features: int) -> torch.nn.Module:
+def build(
+    rnn_cfg: rnn_pb2.RNN, input_features: int, seq_len_wrapper: bool = False
+) -> torch.nn.Module:
     """Returns a :py:class:`torch.nn.Module` based on the config.
 
     Args:
@@ -12,6 +15,8 @@ def build(rnn_cfg: rnn_pb2.RNN, input_features: int) -> torch.nn.Module:
             desired :py:class:`torch.nn.Module`.
 
         input_features: The number of features for the input.
+
+        seq_len_wrapper: TODO
 
     Returns:
         A :py:class:`torch.nn.Module` based on the config.
@@ -50,4 +55,7 @@ def build(rnn_cfg: rnn_pb2.RNN, input_features: int) -> torch.nn.Module:
         bidirectional=rnn_cfg.bidirectional,
     )
 
-    return rnn
+    if not seq_len_wrapper:
+        return rnn
+
+    return SeqLenWrapper(module=rnn, seq_lens_fn=lambda seq_lens: seq_lens)
