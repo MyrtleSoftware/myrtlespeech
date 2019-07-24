@@ -28,6 +28,10 @@ class FullyConnected(torch.nn.Module):
             :py:class:`torch.nn.Linear` if ``num_hidden_layers == 0`` otherwise
             it is an instance of :py:class:`torch.nn.Sequential`.
 
+        in_features: See Args.
+
+        out_features: See Args.
+
     Raises:
         :py:class:`ValueError`: If ``num_hidden_layers < 0``.
 
@@ -58,7 +62,8 @@ class FullyConnected(torch.nn.Module):
                 )
 
         super().__init__()
-
+        self.in_features = in_features
+        self.out_features = out_features
         self.fully_connected = self._build_fully_connected(
             in_features,
             out_features,

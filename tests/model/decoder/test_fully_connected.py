@@ -73,6 +73,33 @@ def test_fully_connected_module_structure_correct_for_valid_kwargs(
 
 
 @given(
+    fully_connected=fully_connecteds(),
+    batch_size=st.integers(min_value=1, max_value=16),
+    max_seq_len=st.integers(min_value=1, max_value=64),
+)
+def test_fully_connected_module_returns_correct_seq_lens(
+    fully_connected: FullyConnected, batch_size: int, max_seq_len: int
+):
+    """Ensures FullyConnected returns correct seq_lens when support enabled."""
+    tensor = torch.empty(
+        [max_seq_len, batch_size, fully_connected.in_features],
+        requires_grad=False,
+    ).normal_()
+
+    in_seq_lens = torch.randint(
+        low=1,
+        high=max_seq_len + 1,
+        size=[batch_size],
+        dtype=torch.int32,
+        requires_grad=False,
+    )
+
+    _, act_seq_lens = fully_connected(tensor, seq_lens=in_seq_lens)
+
+    assert torch.all(act_seq_lens == in_seq_lens)
+
+
+@given(
     fully_connected_kwargs=fully_connecteds(return_kwargs=True),
     num_hidden_layers=st.integers(-1000, -1),
 )

@@ -152,9 +152,9 @@ def test_make_layers_returns_correct_module_structure_for_valid_cfg(
     batch_norm=st.booleans(),
     initialize_weights=st.booleans(),
     use_output_from_block=st.one_of(st.none(), st.integers(1, 5)),
-    batch_size=st.integers(min_value=1, max_value=18),
+    batch_size=st.integers(min_value=1, max_value=16),
     features=st.integers(min_value=1, max_value=32),
-    max_seq_len=st.integers(min_value=1, max_value=99),
+    max_seq_len=st.integers(min_value=1, max_value=64),
 )
 def test_make_layers_returned_module_returns_correct_seq_len(
     cfg: VGGConfig,
