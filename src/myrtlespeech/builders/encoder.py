@@ -1,8 +1,3 @@
-"""
-.. todo::
-
-    * add examples in the docstrings for each to make onboarding easier?
-"""
 from typing import Tuple, Optional
 
 import torch
@@ -23,19 +18,23 @@ def build(
     """Returns an :py:class:`.Encoder` based on the given config.
 
     Args:
-        encoder_cfg: A ``Encoder`` protobuf object containing the config for
-            the desired :py:class:`.Encoder`.
+        encoder_cfg: A :py:class:`myrtlespeech.protos.encoder_pb2.Encoder`
+            protobuf object containing the config for the desired
+            :py:class:`.Encoder`.
 
         input_features: The number of features for the input.
 
         input_channels: The number of channels for the input. May be ``None``
             if ``encoder_cfg`` does not use a ``cnn``.
 
-        seq_len_support: TODO
+        seq_len_support: If :py:data:`True`, the returned encoder's
+            :py:meth:`torch.nn.Module.forward` method must optionally accept a
+            ``seq_lens`` kwarg. See :py:meth:`.Encoder.forward` for more
+            information.
 
     Returns:
         A tuple containing an :py:class:`.Encoder` based on the config and the
-            number of output features.
+        number of output features.
 
     Example:
 

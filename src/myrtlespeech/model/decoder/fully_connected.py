@@ -2,8 +2,6 @@ from typing import Optional, Tuple, Union
 
 import torch
 
-from myrtlespeech.model.seq_len_wrapper import SeqLenWrapper
-
 
 class FullyConnected(torch.nn.Module):
     r"""A fully connected neural network.
@@ -22,8 +20,6 @@ class FullyConnected(torch.nn.Module):
 
         hidden_activation_fn: The activation function applied after each hidden
             layer, if any.
-
-        seq_len_support: TODO
 
     Attributes:
         fully_connected (Union[:py:class:`torch.nn.Linear`, :py:class:`torch.nn.Sequential`]):
@@ -47,7 +43,6 @@ class FullyConnected(torch.nn.Module):
         num_hidden_layers: int,
         hidden_size: Optional[int],
         hidden_activation_fn: Optional[torch.nn.Module],
-        seq_len_support: bool = False,
     ):
         if num_hidden_layers < 0:
             raise ValueError("num_hidden_layers must be >= 0")
@@ -70,7 +65,6 @@ class FullyConnected(torch.nn.Module):
             num_hidden_layers,
             hidden_size,
             hidden_activation_fn,
-            seq_len_support,
         )
 
     def _build_fully_connected(
@@ -80,7 +74,6 @@ class FullyConnected(torch.nn.Module):
         num_hidden_layers: int,
         hidden_size: Optional[int],
         hidden_activation_fn: Optional[torch.nn.Module],
-        seq_len_support: bool,
     ) -> Union[torch.nn.Linear, torch.nn.Sequential]:
         hidden_layers = []
         for _ in range(num_hidden_layers):
@@ -95,15 +88,10 @@ class FullyConnected(torch.nn.Module):
         if hidden_layers:
             module = torch.nn.Sequential(*hidden_layers, module)
 
-        if not seq_len_support:
-            return module
-
-        return SeqLenWrapper(
-            module=module, seq_lens_fn=lambda seq_lens: seq_lens
-        )
+        return module
 
     def forward(
-        self, x: torch.Tensor
+        self, x: torch.Tensor, seq_lens: Optional[torch.Tensor] = None
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         r"""Returns the result of applying ``fully_connected`` to ``x``.
 
@@ -111,9 +99,13 @@ class FullyConnected(torch.nn.Module):
             x: :py:class:`torch.Tensor` with shape ``[batch, *, in_features]``
                where ``*`` means any number of additional dimensions.
 
+            seq_lens: TODO
 
         Returns:
             A :py:class:`torch.Tensor` with shape ``[batch, *, out_features]``
             where ``*`` means any number of additional dimensions.
         """
-        return self.fully_connected(x)
+        result = self.fully_connected(x)
+        if seq_lens is not None:
+            return result, seq_lens
+        return result

@@ -30,7 +30,10 @@ def build(
         stt_cfg: A ``SpeechToText`` protobuf object containing the config for
             the desired :py:class:`.SpeechToText`.
 
-        seq_len_support: TODO
+        seq_len_support: If :py:data:`True`, the
+            :py:meth:`torch.nn.Module.forward` method of the returned
+            :py:class:`.SpeechToText` model must optionally accept a
+            ``seq_lens`` kwarg.
 
     Returns:
         An :py:class:`.SpeechToText` based on the config.

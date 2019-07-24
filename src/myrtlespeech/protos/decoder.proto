@@ -4,7 +4,7 @@ package myrtlespeech.protos;
 
 import "myrtlespeech/protos/fully_connected.proto";
 
-// Configuration for the Decoder part of an Encoder-Decoder model.
+// Configuration for the decoder part of an encoder-decoder model.
 message Decoder {
   oneof supported_decoders {
     FullyConnected fully_connected = 1;

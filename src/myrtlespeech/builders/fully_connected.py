@@ -13,7 +13,6 @@ def build(
     fully_connected_cfg: fully_connected_pb2.FullyConnected,
     input_features: int,
     output_features: int,
-    seq_len_support: bool = False,
 ) -> FullyConnected:
     """Returns a :py:class:`.FullyConnected` based on the config.
 
@@ -24,8 +23,6 @@ def build(
         input_features: The number of features for the input.
 
         output_features: The number of output features.
-
-        seq_len_support: TODO
 
     Returns:
         A :py:class:`torch.nn.Module` based on the config.
@@ -48,5 +45,4 @@ def build(
         num_hidden_layers=fully_connected_cfg.num_hidden_layers,
         hidden_size=hidden_size,
         hidden_activation_fn=hidden_activation_fn,
-        seq_len_support=seq_len_support,
     )

@@ -2,6 +2,8 @@
  Encoder
 =========
 
+The encoder part of an encoder-decoder model.
+
 .. toctree::
     :hidden:
 

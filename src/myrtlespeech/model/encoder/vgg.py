@@ -136,7 +136,7 @@ def make_layers(
     use_output_from_block: Optional[int] = None,
     seq_len_support: bool = False,
 ) -> nn.Module:
-    """Returns a :py:class:`torch.nn.Sequential` module for the given `cfg`.
+    """Returns a :py:class:`torch.nn.Module` for the given `cfg`.
 
     Example:
         >>> cfgs['A']
@@ -174,7 +174,6 @@ def make_layers(
           (28): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
         )
 
-
     Args:
         cfg: A *"ConvNet"* configuration specified as a list of :py:class:`int`
             and :py:class:`str`.
@@ -182,9 +181,10 @@ def make_layers(
             Each :py:class:`int` will be converted to a
             :py:class:`torch.nn.Conv2d` where the :py:class:`int` denotes the
             number of ``out_channels``. The other :py:class:`torch.nn.Conv2d`
-            parameters are set the defaults except ``kernel_size=3, padding=1``
-            and ``in_channels`` equals the previous :py:class:`int` in the list
-            or the ``in_channels`` argument if the first :py:class:`int`.
+            parameters are set to the defaults except ``kernel_size=3,
+            padding=1`` and ``in_channels`` equals the previous :py:class:`int`
+            in the list or the ``in_channels`` argument if the first
+            :py:class:`int`.
 
             :py:class:`torch.nn.ReLU` layers with ``inplace=True`` will be
             inserted after each :py:class:`torch.nn.Conv2d`.
@@ -223,22 +223,36 @@ def make_layers(
                   (3): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
                 )
 
-        seq_len_support: TODO
+        seq_len_support: If :py:data:`True`, the returned module's
+            :py:meth:`torch.nn.Module.forward` method optionally accepts a
+            ``seq_lens`` kwarg. The value of this argument must either be
+            :py:data:`None` (the default) or be a :py:class:`torch.Tensor` of
+            size ``[batch]`` where each entry is an integer that gives the
+            sequence length of the corresponding *input* sequence.
+
+            When the ``seq_lens`` argument is not :py:data:`None` the module
+            will return a tuple of ``(output, output_seq_lens)``. Here
+            ``output`` is the result of applying the module to the input
+            sequence (see Returns section) and ``output_seq_lens`` is a
+            :py:class:`torch.Tensor` of size ``[batch]`` where each entry is an
+            integer that gives the sequence length of the corresponding
+            *output* sequence.
 
     Returns:
-        A :py:class:`torch.nn.Sequential` :py:class:`torch.nn.Module`
-        containing the :py:class:`torch.nn.Conv2d`,
-        :py:class:`torch.nn.BatchNorm2d` and :py:class:`torch.nn.ReLU`
-        :py:class:`torch.nn.Module`'s.
+        A :py:class:`torch.nn.Module` based on the config. This will be a
+        :py:class:`torch.nn.Sequential` module that is wrapped in a
+        :py:class:`.SeqLenWrapper` if ``seq_len_support`` is :py:data:`True`.
 
-        The :py:class:`torch.nn.Sequential` :py:class:`torch.nn.Module`
-        expects input of size ``[batch, channels, features, seq_len]`` and
-        produces output with size ``[batch, out_channels, out_features,
-        out_seq_len]`` where each ``out_*`` will depend on the exact network
-        configuration and input size.
+        The module's :py:meth:`torch.nn.Module.forward` method accepts
+        accepts :py:class:`torch.Tensor` input of size ``[batch, channels,
+        features, seq_len]`` and produces output with size ``[batch,
+        out_channels, out_features, out_seq_len]`` where each ``out_*`` will
+        depend on the exact network configuration and input size.  Exact values
+        can be found using :py:func:`vgg_output_size`.
 
-        Exact values can be found using :py:func:`vgg_output_size`.
-
+        If ``seq_len_support=True`` and the ``seq_lens`` argument is passed to
+        :py:class:`torch.nn.Module.forward` then the return value will be a
+        tuple as described in the ``seq_len_support`` part of the Args section.
 
     Raises:
         :py:class:`ValueError`: If ``cfg`` contains values other than ``"M"``
@@ -303,13 +317,11 @@ def make_layers(
     return SeqLenWrapper(module=module, seq_lens_fn=seq_lens_fn)
 
 
-def vgg_output_size(
-    vgg: torch.nn.Sequential, input_size: torch.Size
-) -> torch.Size:
+def vgg_output_size(vgg: torch.nn.Module, input_size: torch.Size) -> torch.Size:
     """Returns the output size after ``vgg`` is applied to ``input_size``.
 
     Args:
-        vgg: A :py:class:`torch.nn.Sequential` module produced by
+        vgg: A :py:class:`torch.nn.Module` module produced by
             :py:func:`make_layers`.
 
             This function only supports :py:class:`torch.nn.Conv2d`,
@@ -334,6 +346,9 @@ def vgg_output_size(
     Raises:
         :py:class:`ValueError`: if ``vgg`` contains unsupported layers.
     """
+    if isinstance(vgg, SeqLenWrapper):
+        vgg = vgg.module
+
     batch, channels, features, seq_len = input_size
     for layer in vgg:
         if isinstance(layer, (nn.Conv2d, nn.MaxPool2d)):

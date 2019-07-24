@@ -33,6 +33,18 @@ class Encoder(torch.nn.Module):
 
         TODO: redocument
 
+            The value of this argument must either be
+            :py:data:`None` or be a :py:class:`torch.Tensor` of size
+            ``[batch]`` where each entry is an integer that gives the sequence
+            length of the corresponding *input* sequence.
+
+            When the ``seq_lens`` argument is not :py:data:`None` the encoder
+            will return a tuple of ``(output, output_seq_lens)``. Here
+            ``output`` is the result of applying the decoder to the input
+            sequence and ``output_seq_lens`` is a :py:class:`torch.Tensor` of
+            size ``[batch]`` where each entry is an integer that gives the
+            sequence length of the corresponding *output* sequence.
+
         Args:
             x: :py:class:`torch.Tensor` or ``Tuple[torch.Tensor, torch.Tensor]``.
 

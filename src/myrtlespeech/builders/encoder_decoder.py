@@ -1,13 +1,4 @@
-"""Builds an :py:class:`.EncoderDecoder` model from a configuration.
-
-.. todo::
-
-    * type all the _cfg parameters?
-
-    * add examples in the docstrings for each to make onboarding easier?
-
-    * how to configure input_size for _build_rnn?
-"""
+"""Builds an :py:class:`.EncoderDecoder` model from a configuration."""
 from typing import Optional
 
 from myrtlespeech.builders.decoder import build as build_decoder
@@ -34,7 +25,9 @@ def build(
         input_channels: The number of channels for the input. May be ``None``
             if encoder does require it.
 
-        seq_len_support: TODO
+        seq_len_support: If :py:data:`True`, the returned encoder and decoder
+            :py:meth:`torch.nn.Module.forward` methods must optionally accept a
+            ``seq_lens`` kwarg.
 
     Returns:
         An :py:class:`.EncoderDecoder` based on the config.

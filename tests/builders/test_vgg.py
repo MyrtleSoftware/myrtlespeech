@@ -3,20 +3,28 @@ import torch
 import hypothesis.strategies as st
 from hypothesis import assume, given
 
-from myrtlespeech.model.encoder.vgg import cfgs, make_layers
-from myrtlespeech.protos import vgg_pb2
 from myrtlespeech.builders.vgg import build
+from myrtlespeech.model.encoder.vgg import cfgs, make_layers
+from myrtlespeech.model.seq_len_wrapper import SeqLenWrapper
+from myrtlespeech.protos import vgg_pb2
 from tests.protos.test_vgg import vggs
 
 
 # Utilities -------------------------------------------------------------------
 
 
-def vgg_module_match_cfg(
-    vgg: torch.nn.Sequential, vgg_cfg: vgg_pb2.VGG, input_channels: int
+def vgg_match_cfg(
+    vgg: torch.nn.Module,
+    vgg_cfg: vgg_pb2.VGG,
+    input_channels: int,
+    seq_len_support: bool,
 ) -> None:
-    """Ensures VGG module matches protobuf configuration."""
-    assert isinstance(vgg, torch.nn.Sequential)
+    """Ensures VGG matches protobuf configuration."""
+    if seq_len_support:
+        assert isinstance(vgg, SeqLenWrapper)
+        vgg = vgg.module
+    else:
+        assert isinstance(vgg, torch.nn.Sequential)
 
     c_map = {index: letter for letter, index in vgg_pb2.VGG.VGG_CONFIG.items()}
     expected = make_layers(
@@ -59,22 +67,30 @@ def vgg_module_match_cfg(
 # Tests -----------------------------------------------------------------------
 
 
-@given(vgg_cfg=vggs(), input_channels=st.integers(min_value=1, max_value=8))
-def test_build_vgg_returns_correct_module_structure(
-    vgg_cfg: vgg_pb2.VGG, input_channels: int
+@given(
+    vgg_cfg=vggs(),
+    input_channels=st.integers(min_value=1, max_value=8),
+    seq_len_support=st.booleans(),
+)
+def test_build_vgg_returns_correct_structure(
+    vgg_cfg: vgg_pb2.VGG, input_channels: int, seq_len_support: bool
 ) -> None:
     """Ensures Module returned by ``build`` has correct structure."""
-    actual = build(vgg_cfg, input_channels)
-    vgg_module_match_cfg(actual, vgg_cfg, input_channels)
+    actual = build(vgg_cfg, input_channels, seq_len_support)
+    vgg_match_cfg(actual, vgg_cfg, input_channels, seq_len_support)
 
 
 @given(
     vgg_cfg=vggs(),
     input_channels=st.integers(1, 128),
     invalid_vgg_config=st.integers(0, 128),
+    seq_len_support=st.booleans(),
 )
 def test_unknown_vgg_config_raises_value_error(
-    vgg_cfg: vgg_pb2.VGG, input_channels: int, invalid_vgg_config: int
+    vgg_cfg: vgg_pb2.VGG,
+    input_channels: int,
+    invalid_vgg_config: int,
+    seq_len_support: bool,
 ) -> None:
     """Ensures ValueError is raised when vgg_config not supported.
 
@@ -83,4 +99,8 @@ def test_unknown_vgg_config_raises_value_error(
     assume(invalid_vgg_config not in vgg_pb2.VGG.VGG_CONFIG.values())
     vgg_cfg.vgg_config = invalid_vgg_config  # type: ignore
     with pytest.raises(ValueError):
-        build(vgg_cfg, input_channels=input_channels)
+        build(
+            vgg_cfg,
+            input_channels=input_channels,
+            seq_len_support=seq_len_support,
+        )

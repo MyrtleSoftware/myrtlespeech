@@ -4,6 +4,7 @@ import hypothesis.strategies as st
 from hypothesis import assume, given
 
 from myrtlespeech.builders.rnn import build
+from myrtlespeech.model.seq_len_wrapper import SeqLenWrapper
 from myrtlespeech.protos import rnn_pb2
 from tests.protos.test_rnn import rnns
 from tests.utils.utils import tensors
@@ -12,10 +13,17 @@ from tests.utils.utils import tensors
 # Utilities -------------------------------------------------------------------
 
 
-def rnn_module_match_cfg(
-    rnn: torch.nn.Module, rnn_cfg: rnn_pb2.RNN, input_features: int
+def rnn_match_cfg(
+    rnn: torch.nn.Module,
+    rnn_cfg: rnn_pb2.RNN,
+    input_features: int,
+    seq_len_support: bool,
 ) -> None:
     """Ensures RNN matches protobuf configuration."""
+    if seq_len_support:
+        assert isinstance(rnn, SeqLenWrapper)
+        rnn = rnn.module
+
     if rnn_cfg.rnn_type == rnn_pb2.RNN.LSTM:
         assert isinstance(rnn, torch.nn.LSTM)
     elif rnn_cfg.rnn_type == rnn_pb2.RNN.GRU:
@@ -34,22 +42,30 @@ def rnn_module_match_cfg(
 # Tests -----------------------------------------------------------------------
 
 
-@given(rnn_cfg=rnns(), input_features=st.integers(1, 128))
+@given(
+    rnn_cfg=rnns(),
+    input_features=st.integers(1, 128),
+    seq_len_support=st.booleans(),
+)
 def test_build_rnn_returns_correct_rnn_with_valid_params(
-    rnn_cfg: rnn_pb2.RNN, input_features: int
+    rnn_cfg: rnn_pb2.RNN, input_features: int, seq_len_support: bool
 ) -> None:
     """Test that build_rnn returns the correct RNN with valid params."""
-    rnn = build(rnn_cfg, input_features)
-    rnn_module_match_cfg(rnn, rnn_cfg, input_features)
+    rnn = build(rnn_cfg, input_features, seq_len_support)
+    rnn_match_cfg(rnn, rnn_cfg, input_features, seq_len_support)
 
 
-@given(rnn_cfg=rnns(), tensor=tensors(min_n_dims=3, max_n_dims=3))
+@given(
+    rnn_cfg=rnns(),
+    tensor=tensors(min_n_dims=3, max_n_dims=3),
+    seq_len_support=st.booleans(),
+)
 def test_build_rnn_rnn_forward_output_correct_size(
-    rnn_cfg: rnn_pb2.RNN, tensor: torch.Tensor
+    rnn_cfg: rnn_pb2.RNN, tensor: torch.Tensor, seq_len_support: bool
 ) -> None:
     """Ensures returned RNN forward produces output with correct size."""
     seq_len, batch, input_features = tensor.size()
-    rnn = build(rnn_cfg, input_features)
+    rnn = build(rnn_cfg, input_features, seq_len_support)
 
     out, _ = rnn(tensor)
     out_seq_len, out_batch, out_features = out.size()
@@ -67,9 +83,13 @@ def test_build_rnn_rnn_forward_output_correct_size(
     rnn_cfg=rnns(),
     input_features=st.integers(1, 128),
     invalid_rnn_type=st.integers(0, 128),
+    seq_len_support=st.booleans(),
 )
 def test_unknown_rnn_type_raises_value_error(
-    rnn_cfg: rnn_pb2.RNN, input_features: int, invalid_rnn_type: int
+    rnn_cfg: rnn_pb2.RNN,
+    input_features: int,
+    invalid_rnn_type: int,
+    seq_len_support: bool,
 ) -> None:
     """Ensures ValueError is raised when rnn_type not supported.
 
@@ -78,4 +98,8 @@ def test_unknown_rnn_type_raises_value_error(
     assume(invalid_rnn_type not in rnn_pb2.RNN.RNN_TYPE.values())
     rnn_cfg.rnn_type = invalid_rnn_type  # type: ignore
     with pytest.raises(ValueError):
-        build(rnn_cfg, input_features=input_features)
+        build(
+            rnn_cfg,
+            input_features=input_features,
+            seq_len_support=seq_len_support,
+        )

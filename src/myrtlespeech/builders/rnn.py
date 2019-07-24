@@ -11,18 +11,39 @@ def build(
     """Returns a :py:class:`torch.nn.Module` based on the config.
 
     Args:
-        rnn_cfg: A ``RNN`` protobuf object containing the config for the
-            desired :py:class:`torch.nn.Module`.
+        rnn_cfg: A :py:class:`myrtlespeech.protos.rnn_pb2.RNN` protobuf object
+            containing the config for the desired :py:class:`torch.nn.Module`.
 
         input_features: The number of features for the input.
 
-        seq_len_support: TODO
+        seq_len_support: If :py:data:`True`, the returned module's
+            :py:meth:`torch.nn.Module.forward` method optionally accepts a
+            ``seq_lens`` kwarg. The value of this argument must either be
+            :py:data:`None` (the default) or be a :py:class:`torch.Tensor` of
+            size ``[batch]`` where each entry is an integer that gives the
+            sequence length of the corresponding *input* sequence.
+
+            When the ``seq_lens`` argument is not :py:data:`None` the module
+            will return a tuple of ``(output, output_seq_lens)``. Here
+            ``output`` is the result of applying the module to the input
+            sequence and ``output_seq_lens`` is a :py:class:`torch.Tensor` of
+            size ``[batch]`` where each entry is an integer that gives the
+            sequence length of the corresponding *output* sequence.
 
     Returns:
-        A :py:class:`torch.nn.Module` based on the config.
+        A :py:class:`torch.nn.Module` based on the config. This will be a
+        :py:class:`torch.nn.RNN`, :py:class:`torch.nn.LSTM` or
+        :py:class:`torch.nn.GRU` module that is wrapped in a
+        :py:class:`.SeqLenWrapper` if ``seq_len_support`` is :py:data:`True`.
 
-        The :py:class:`torch.nn.Module` accepts :py:class:`torch.Tensor` input
-        of size `[seq_len, batch, input_features]`.
+        The module's :py:meth:`torch.nn.Module.forward` method accepts
+        :py:class:`torch.Tensor` input with size ``[max_input_seq_len, batch,
+        input_features]`` and produces a :py:class:`torch.Tensor` with size
+        ``[max_output_seq_len, batch, output_features]``.
+
+        If ``seq_len_support=True`` and the ``seq_lens`` argument is passed to
+        :py:class:`torch.nn.Module.forward` then the return value will be a
+        tuple as described in the ``seq_len_support`` part of the Args section.
 
     Example:
 

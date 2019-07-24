@@ -2,17 +2,12 @@
  Decoder
 =========
 
+The decoder part of an encoder-decoder model.
+
 .. toctree::
     :hidden:
 
     fully_connected
-
-Python
-------
-
-.. todo::
-
-    Does this need a Python wrapper?
 
 Protobuf
 --------

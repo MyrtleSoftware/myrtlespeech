@@ -1,8 +1,3 @@
-"""
-.. todo::
-
-    * add examples in the docstrings for each to make onboarding easier?
-"""
 import torch
 
 from myrtlespeech.model.encoder.vgg import cfgs, make_layers
@@ -21,10 +16,16 @@ def build(
         input_channels: The number of channels -- not features! -- for the
             input.
 
-        seq_len_support: TODO
+        See :py:func:`.make_layers` for more information.
+
+        seq_len_support: See :py:func:`.make_layers`.
 
     Returns:
-        A :py:class:`torch.nn.Module` based on the config.
+        A :py:class:`torch.nn.Module` based on the config. This will be a
+        :py:class:`torch.nn.Sequential` module that is wrapped in a
+        :py:class:`.SeqLenWrapper` if ``seq_len_support`` is :py:data:`True`.
+
+        See :py:func:`.make_layers` for more information.
 
     Example:
 

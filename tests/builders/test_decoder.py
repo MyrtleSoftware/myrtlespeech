@@ -1,10 +1,10 @@
-import torch
 import hypothesis.strategies as st
-from hypothesis import assume, given
+import pytest
+import torch
+from hypothesis import given
 
-from myrtlespeech.builders.decoder import build as build_decoder
+from myrtlespeech.builders.decoder import build
 from myrtlespeech.protos import decoder_pb2
-from myrtlespeech.protos import fully_connected_pb2
 from tests.protos.test_decoder import decoders
 from tests.builders.test_fully_connected import fully_connected_module_match_cfg
 
@@ -39,12 +39,39 @@ def decoder_module_match_cfg(
     decoder_cfg=decoders(valid_only=True),
     input_features=st.integers(min_value=1, max_value=32),
     output_features=st.integers(min_value=1, max_value=32),
+    seq_len_support=st.booleans(),
 )
 def test_build_decoder_returns_correct_module_structure(
-    decoder_cfg: decoder_pb2.Decoder, input_features: int, output_features: int
+    decoder_cfg: decoder_pb2.Decoder,
+    input_features: int,
+    output_features: int,
+    seq_len_support: bool,
 ) -> None:
     """Ensures Module returned by ``build`` has correct structure."""
-    decoder = build_decoder(decoder_cfg, input_features, output_features)
+    decoder = build(
+        decoder_cfg, input_features, output_features, seq_len_support
+    )
     decoder_module_match_cfg(
         decoder, decoder_cfg, input_features, output_features
     )
+
+
+@given(
+    decoder_cfg=decoders(valid_only=True),
+    input_features=st.integers(min_value=1, max_value=32),
+    output_features=st.integers(min_value=1, max_value=32),
+    seq_len_support=st.booleans(),
+)
+def test_unknown_decoder_raises_value_error(
+    decoder_cfg: decoder_pb2.Decoder,
+    input_features: int,
+    output_features: int,
+    seq_len_support: bool,
+) -> None:
+    """Ensures ValueError is raised when decoder is not supported.
+
+    This can occur when the protobuf is updated and build is not.
+    """
+    decoder_cfg.ClearField(decoder_cfg.WhichOneof("supported_decoders"))
+    with pytest.raises(ValueError):
+        build(decoder_cfg, input_features, output_features, seq_len_support)

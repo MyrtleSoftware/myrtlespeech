@@ -8,7 +8,7 @@ import "myrtlespeech/protos/rnn.proto";
 import "myrtlespeech/protos/vgg.proto";
 
 
-// Configuration for the Encoder part of an Encoder-Decoder model.
+// Configuration for the encoder part of an encoder-decoder model.
 //
 // Convolutional layers are applied before any recurrent layers.
 message Encoder {
