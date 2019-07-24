@@ -5,6 +5,7 @@ import torch
 import pytest
 from hypothesis import given, assume
 
+from myrtlespeech.model.seq_len_wrapper import SeqLenWrapper
 from myrtlespeech.model.encoder.vgg import (
     VGGConfig,
     make_layers,
@@ -83,6 +84,7 @@ def vgg_input_sizes(
     batch_norm=st.booleans(),
     initialize_weights=st.booleans(),
     use_output_from_block=st.one_of(st.none(), st.integers(1, 5)),
+    seq_len_support=st.booleans(),
 )
 def test_make_layers_returns_correct_module_structure_for_valid_cfg(
     cfg: VGGConfig,
@@ -90,13 +92,23 @@ def test_make_layers_returns_correct_module_structure_for_valid_cfg(
     batch_norm: bool,
     initialize_weights: bool,
     use_output_from_block: Optional[int],
+    seq_len_support: bool,
 ) -> None:
     """Ensures Module returned by ``make_layers`` has correct structure."""
     module = make_layers(
-        cfg, in_channels, batch_norm, initialize_weights, use_output_from_block
+        cfg,
+        in_channels,
+        batch_norm,
+        initialize_weights,
+        use_output_from_block,
+        seq_len_support,
     )
 
-    assert isinstance(module, torch.nn.Sequential)
+    if seq_len_support:
+        assert isinstance(module, SeqLenWrapper)
+        module = module.module
+    else:
+        assert isinstance(module, torch.nn.Sequential)
 
     m_idx = 0  # iterate through torch.nn.Sequential module using index from 0
     n_blocks = 0  # track blocks to test use_output_from_block
@@ -132,6 +144,60 @@ def test_make_layers_returns_correct_module_structure_for_valid_cfg(
             assert m.inplace is True
 
         m_idx += 1
+
+
+@given(
+    cfg=random_cfg(),
+    in_channels=st.integers(min_value=1, max_value=128),
+    batch_norm=st.booleans(),
+    initialize_weights=st.booleans(),
+    use_output_from_block=st.one_of(st.none(), st.integers(1, 5)),
+    batch_size=st.integers(min_value=1, max_value=18),
+    features=st.integers(min_value=1, max_value=32),
+    max_seq_len=st.integers(min_value=1, max_value=99),
+)
+def test_make_layers_returned_module_returns_correct_seq_len(
+    cfg: VGGConfig,
+    in_channels: int,
+    batch_norm: bool,
+    initialize_weights: bool,
+    use_output_from_block: Optional[int],
+    batch_size: int,
+    features: int,
+    max_seq_len: int,
+) -> None:
+    """Ensures Module returns correct seq_lens when seq_len_support=True."""
+    module = make_layers(
+        cfg,
+        in_channels,
+        batch_norm,
+        initialize_weights,
+        use_output_from_block,
+        seq_len_support=True,
+    )
+
+    # create input and seq_lens tensors
+    input_size = [batch_size, in_channels, features, max_seq_len]
+    tensor = torch.empty(input_size, requires_grad=False).normal_()
+
+    in_seq_lens = torch.randint(
+        low=1,
+        high=max_seq_len + 1,
+        size=[batch_size],
+        dtype=torch.int32,
+        requires_grad=False,
+    )
+
+    # compute output and check
+    _, act_seq_lens = module(tensor, seq_lens=in_seq_lens)
+
+    exp_seq_lens = []
+    for seq_len in in_seq_lens:
+        exp_seq_lens.append(
+            vgg_output_size(module, torch.Size([1, 1, 1, seq_len]))[3]
+        )
+
+    assert act_seq_lens.tolist() == exp_seq_lens
 
 
 @given(cfg=random_invalid_cfg())
