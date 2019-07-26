@@ -177,6 +177,8 @@ def test_make_layers_returned_module_returns_correct_seq_len(
     )
 
     # create input and seq_lens tensors
+    # ensure > 1 feature exists at all layers to prevent BN throwing error
+    features = max(2 * len([layer == "M" for layer in cfg]), features)
     input_size = [batch_size, in_channels, features, max_seq_len]
     tensor = torch.empty(input_size, requires_grad=False).normal_()
 
