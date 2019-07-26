@@ -55,7 +55,7 @@ def fit(
             if not cb_handler.on_step_end():
                 optim.zero_grad()
 
-            if cb_handler.on_batch_end(loss):
+            if cb_handler.on_batch_end():
                 break
 
         if cb_handler.on_epoch_end():
