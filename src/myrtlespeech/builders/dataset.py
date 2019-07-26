@@ -55,7 +55,7 @@ def build(
         >>> (audio, audio_len), (label, label_len) = dataset[0]
         >>> type(audio)
         <class 'torch.Tensor'>
-        >>> bool(len(audio) == audio_len)
+        >>> bool(audio.size(-1) == audio_len)
         True
         >>> type(label)
         <class 'str'>
@@ -65,8 +65,8 @@ def build(
     supported_dataset = dataset.WhichOneof("supported_datasets")
 
     if add_seq_len_to_transforms:
-        transform = _add_seq_len(transform)
-        target_transform = _add_seq_len(target_transform)
+        transform = _add_seq_len(transform, len_fn=lambda x: x.size(-1))
+        target_transform = _add_seq_len(target_transform, len_fn=len)
 
     if supported_dataset == "fake_speech_to_text":
         cfg = dataset.fake_speech_to_text
@@ -86,12 +86,12 @@ def build(
     return dataset
 
 
-def _add_seq_len(transform: Optional[Callable]) -> Callable:
+def _add_seq_len(transform: Optional[Callable], len_fn: Callable) -> Callable:
     def new_transform(x, *args, **kwargs):
         result = x
         if transform is not None:
             result = transform(result, *args, **kwargs)
-        seq_len = torch.tensor(len(result), requires_grad=False)
+        seq_len = torch.tensor(len_fn(result), requires_grad=False)
         return result, seq_len
 
     return new_transform
