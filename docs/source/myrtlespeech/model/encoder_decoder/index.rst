@@ -2,6 +2,14 @@
  encoder_decoder
 =================
 
+.. toctree::
+    :maxdepth: 1
+    :caption: Contents:
+
+    encoder/index
+    decoder/index
+
+
 Python
 ------
 
