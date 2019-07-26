@@ -1,5 +1,5 @@
 =====
- RNN
+ rnn
 =====
 
 Python

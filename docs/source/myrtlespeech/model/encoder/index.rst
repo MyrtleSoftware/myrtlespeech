@@ -1,5 +1,5 @@
 =========
- Encoder
+ encoder
 =========
 
 The encoder part of an encoder-decoder model.

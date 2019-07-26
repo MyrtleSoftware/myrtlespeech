@@ -1,5 +1,5 @@
 ==================
- CTCBeamDecoder
+ ctc_beam_decoder
 ==================
 
 Python

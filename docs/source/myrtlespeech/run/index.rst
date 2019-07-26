@@ -1,5 +1,5 @@
 =====
- Run
+ run
 =====
 
 .. toctree::

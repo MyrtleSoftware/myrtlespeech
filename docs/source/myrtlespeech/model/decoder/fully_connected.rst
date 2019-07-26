@@ -1,5 +1,5 @@
 =================
- Fully Connected
+ fully_connected
 =================
 
 Python

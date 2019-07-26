@@ -1,5 +1,5 @@
 ==========
- Alphabet
+ alphabet
 ==========
 
 .. automodule:: myrtlespeech.data.alphabet

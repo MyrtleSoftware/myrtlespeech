@@ -1,5 +1,5 @@
 ============
- Preprocess
+ preprocess
 ============
 
 .. autoclass:: myrtlespeech.data.preprocess.MFCC

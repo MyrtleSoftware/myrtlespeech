@@ -1,5 +1,5 @@
 ==========
- CTC Loss
+ ctc_loss
 ==========
 
 Python

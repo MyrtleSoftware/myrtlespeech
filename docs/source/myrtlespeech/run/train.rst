@@ -1,5 +1,5 @@
 =======
- Train
+ train
 =======
 
 .. autofunction:: myrtlespeech.run.train.fit

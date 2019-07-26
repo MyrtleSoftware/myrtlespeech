@@ -1,5 +1,5 @@
 ======
- Loss
+ loss
 ======
 
 .. toctree::

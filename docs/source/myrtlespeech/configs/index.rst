@@ -1,5 +1,5 @@
 =========
- Configs
+ configs
 =========
 
 A collection of known configurations and their results for various datasets.
