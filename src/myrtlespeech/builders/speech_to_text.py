@@ -51,7 +51,9 @@ def build(
     # preprocessing
     input_channels = None
     input_features = 1
-    pre_process_steps: List[Tuple[Callable, bool]] = []
+    pre_process_steps: List[Tuple[Callable, bool]] = [
+        (lambda x: x.float(), False)
+    ]
     for step_cfg in stt_cfg.pre_process_step:
         step = build_pre_process_step(step_cfg)
         if isinstance(step[0], MFCC):
@@ -59,6 +61,11 @@ def build(
         else:
             raise ValueError(f"unknown step={step[0]}")
         pre_process_steps.append(step)
+
+    if input_channels is None:
+        # data after all other steps has size [features, seq_len], convert to
+        # [channels (1), features, seq_len]
+        pre_process_steps.append((lambda x: x.unsqueeze(0), False))
 
     # model
     model_type = stt_cfg.WhichOneof("model")

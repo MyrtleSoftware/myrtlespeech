@@ -46,7 +46,7 @@ class MFCC:
                 :py:class:`torch.Tensor`.
 
         Returns:
-            ``torch.Tensor`` with size ``(T', numcep)``.
+            ``torch.Tensor`` with size ``(numcep, T')``.
         """
         mfcc = python_speech_features.mfcc(
             audiodata.numpy(),
@@ -57,7 +57,7 @@ class MFCC:
             nfilt=self.numcep,
         )
         return torch.tensor(
-            mfcc,
+            mfcc.T,
             dtype=audiodata.dtype,
             device=audiodata.device,
             requires_grad=audiodata.requires_grad,

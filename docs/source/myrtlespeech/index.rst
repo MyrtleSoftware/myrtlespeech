@@ -6,8 +6,9 @@
     :maxdepth: 1
     :caption: Contents:
 
-    data/index
     configs/index
+    data/index
+    loss/index
     model/index
     post_process/index
-    loss/index
+    run/index

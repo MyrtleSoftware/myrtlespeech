@@ -81,7 +81,7 @@ def test_MFCC_output_size_correct(data, mfcc):
     with warnings.catch_warnings():
         # generated mfcc paramter combinations may be odd and cause warnings
         warnings.simplefilter("ignore")
-        actual_mfcc_len, actual_mfcc_features = mfcc(audiodata).size()
+        actual_mfcc_features, actual_mfcc_len = mfcc(audiodata).size()
 
     assert expected_mfcc_len == actual_mfcc_len
     assert expected_mfcc_features == actual_mfcc_features

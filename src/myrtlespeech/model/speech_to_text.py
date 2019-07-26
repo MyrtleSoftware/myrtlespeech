@@ -18,6 +18,8 @@ class SpeechToText(torch.nn.Module):
     Args:
         encoder:
         decoder:
+        loss: Callable that takes [log_probs, targets, input_lengths,
+            target_lengths]?
     """
 
     def __init__(
@@ -36,8 +38,8 @@ class SpeechToText(torch.nn.Module):
         self.post_process = post_process
 
     def forward(
-        self, x: torch.Tensor, seq_lens: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self, x: torch.Tensor, seq_lens: Optional[torch.Tensor] = None
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """TODO
 
         Arguments:
@@ -46,12 +48,16 @@ class SpeechToText(torch.nn.Module):
         Returns:
             Tuple of [unnorm log probs, unnorm log prob lengths]
         """
-        pass
+        return self.model(x, seq_lens=seq_lens)
 
-    def get_transform(self) -> Callable:
+    @property
+    def transform(self) -> Callable:
         """
         TODO
 
+        Returns a callable that takes a tensor of size [audio_len], dtype int
+        of audio data and returns tensor of size [channels, features, seq_len],
+        dtype float32
         """
 
         def transform(x):
