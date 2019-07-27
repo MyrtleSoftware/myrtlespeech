@@ -32,3 +32,7 @@ gitlab-runner:
       memoryLimit: 10Gi
       cpuRequests: 3000m
       memoryRequest: 10Gi
+
+    env:
+      # hotfix for https://gitlab.com/gitlab-org/gitlab-ce/issues/64959
+      DOCKER_TLS_CERTDIR: ""
