@@ -4,7 +4,7 @@ import torch
 
 from myrtlespeech.builders.dataset import build as build_dataset
 from myrtlespeech.builders.speech_to_text import build as build_stt
-from myrtlespeech.data.batch import collate_fn
+from myrtlespeech.data.batch import seq_to_seq_collate_fn
 from myrtlespeech.protos import task_config_pb2
 
 
@@ -56,7 +56,7 @@ def build(
     loader = torch.utils.data.DataLoader(
         dataset=dataset,
         batch_size=task_config.train_config.batch_size,
-        collate_fn=collate_fn,
+        collate_fn=seq_to_seq_collate_fn,
     )
 
     return model, task_config.train_config.epochs, optim, loader

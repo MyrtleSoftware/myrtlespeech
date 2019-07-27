@@ -41,14 +41,48 @@ def pad_sequence(
     return out_tensor
 
 
-def collate_fn(
+def seq_to_seq_collate_fn(
     batch: List[
         Tuple[
             Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]
         ]
     ]
 ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
-    """TODO: refactor/document/test/move to appropriate place"""
+    r"""Collates a list of ``((tensor, tensor_len), (target, target_len))``.
+
+    A ``collate_fn`` for sequence-to-sequence tasks.
+
+    Args:
+        batch: A list of ``((tensor, tensor_len), (target, target_len))`` where:
+
+            tensor:
+                A :py:class:`torch.Tensor` of input for a model. The sequence
+                length dimension must be last.
+
+            tensor_len:
+                A scalar, integer :py:class:`torch.Tensor` giving the length of
+                ``tensor``.
+
+            target:
+                A :py:class:`torch.Tensor` target for the model. The sequence
+                length dimension must be last.
+
+            target_len:
+                A scalar, integer :py:class:`torch.Tensor` giving the length of
+                ``target``.
+
+    Returns:
+        A tuple of two dictionaries.
+
+        The first dictionary has two keys, ``x`` and ``seq_lens``. ``x`` is the
+        result of applying :py:func:`.pad_sequence` to all ``tensor``\s and
+        ``seq_lens`` is the result of stacking all ``tensor_len``\s.
+
+        The second dictionary has two keys, ``targets`` and ``target_lengths``.
+        ``targets`` is the result of appying :py:func:`.pad_sequence` to all
+        ``target``\s and ``target_lengths`` is the result of stacking all
+        ``target_len``\s.
+    """
     inputs, in_seq_lens = [], []
     targets, target_seq_lens = [], []
 
@@ -63,7 +97,7 @@ def collate_fn(
     targets = pad_sequence(targets)
     target_seq_lens = torch.tensor(target_seq_lens, requires_grad=False)
 
-    xb = {"x": inputs, "seq_lens": in_seq_lens}
-    yb = {"targets": targets, "target_lengths": target_seq_lens}
+    x = {"x": inputs, "seq_lens": in_seq_lens}
+    y = {"targets": targets, "target_lengths": target_seq_lens}
 
-    return xb, yb
+    return x, y

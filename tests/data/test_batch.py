@@ -5,8 +5,9 @@ import hypothesis.strategies as st
 import numpy as np
 import torch
 from hypothesis import given
+from torch import rand, tensor
 
-from myrtlespeech.data.batch import pad_sequence
+from myrtlespeech.data.batch import pad_sequence, seq_to_seq_collate_fn
 from tests.utils.utils import torch_np_dtypes
 from tests.utils.utils import tensors
 
@@ -35,14 +36,14 @@ def tensor_sequences(draw) -> st.SearchStrategy[List[torch.Tensor]]:
         size[-1] = draw(st.integers(1, max_seq_len))
 
         # create new tensor and append to sequences
-        tensor = base_tensor.new().resize_(size)
+        seq = base_tensor.new().resize_(size)
         # fill with random values
         if dtype == np.float16:
-            tensor = tensor.to(torch.float32).random_().to(torch.float16)
+            seq = seq.to(torch.float32).random_().to(torch.float16)
         else:
-            tensor.random_()
+            seq.random_()
 
-        sequences.append(tensor)
+        sequences.append(seq)
 
     # shuffle to ensure tensor with maximum sequence length is not always first
     random.shuffle(sequences)
@@ -96,3 +97,28 @@ def test_pad_sequences_returns_tensor_with_correct_values(
 
 
 # collate_fn ----------------------------------------
+
+
+def test_seq_to_seq_collate_fn() -> None:
+    """Unit test to ensure seq_to_seq_collate_fn returns correct values."""
+    inputs = [rand([1, 2, 3]), rand([1, 2, 5])]
+    seq_lens = tensor([3, 5])
+
+    targets = [rand([10]), rand([7])]
+    target_lengths = tensor([10, 7])
+
+    batch = [
+        ((inputs[0], seq_lens[0]), (targets[0], target_lengths[0])),
+        ((inputs[1], seq_lens[1]), (targets[1], target_lengths[1])),
+    ]
+
+    x, y = seq_to_seq_collate_fn(batch)
+
+    assert set(x.keys()) == {"x", "seq_lens"}
+    assert set(y.keys()) == {"targets", "target_lengths"}
+
+    assert torch.all(x["x"] == pad_sequence(inputs))
+    assert torch.all(x["seq_lens"] == seq_lens)
+
+    assert torch.all(y["targets"] == pad_sequence(targets))
+    assert torch.all(y["target_lengths"] == target_lengths)
