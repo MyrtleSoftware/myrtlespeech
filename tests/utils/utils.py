@@ -1,18 +1,27 @@
-"""Common utilities used in tests.
-
-TODO: Mention that some of these functions are based on PyTorch's testing
-
-TODO: Mention that this is from
-https://github.com/samgd/repaper/blob/9c874f81eaffdc7e8096b46ee44b36b6dc6153b8/tests/utils/utils.py
-
-"""
-from typing import Callable, Optional
+"""Common utilities used in tests."""
+from typing import Callable, Optional, Union
 
 import hypothesis
 import hypothesis.extra.numpy
 import hypothesis.strategies as st
 import numpy as np
 import torch
+
+
+def torch_np_dtypes() -> st.SearchStrategy[np.dtype]:
+    """Returns a strategy which generates numpy variant of torch data types."""
+    return st.sampled_from(
+        [
+            np.float16,
+            np.float32,
+            np.float64,
+            np.uint8,
+            np.int8,
+            np.int16,
+            np.int32,
+            np.int64,
+        ]
+    )
 
 
 def n_dims(
@@ -23,25 +32,35 @@ def n_dims(
 
 
 def elements_of_type(
-    dtype: np.dtype = np.float32, filter_: Optional[Callable] = None
+    dtype: Union[np.dtype, torch.dtype] = np.float32,
+    filter_: Optional[Callable] = None,
 ) -> st.SearchStrategy:
-    """Returns a strategy which generates elements of the given numpy dtype."""
+    """Returns a strategy which generates elements of numpy/torch dtype."""
     elems = None
-    if dtype in (np.float16, np.float32, np.float64):
+    if dtype in (
+        np.float16,
+        np.float32,
+        np.float64,
+        torch.float16,
+        torch.float32,
+        torch.float64,
+    ):
         elems = st.floats(min_value=-1.0, max_value=1.0)
-    elif dtype is np.uint8:
+    elif dtype in (np.uint8, torch.uint8):
         elems = st.integers(min_value=0, max_value=2 ** 8 - 1)
     elif dtype is np.uint32:
         elems = st.integers(min_value=0, max_value=2 ** 32 - 1)
     elif dtype is np.uint64:
         elems = st.integers(min_value=0, max_value=2 ** 64 - 1)
-    elif dtype is np.int8:
+    elif dtype in (np.int8, torch.int8):
         elems = st.integers(min_value=-2 ** 7, max_value=2 ** 7 - 1)
-    elif dtype is np.int32:
+    elif dtype in (np.int16, torch.int16):
+        elems = st.integers(min_value=-2 ** 15, max_value=2 ** 15 - 1)
+    elif dtype in (np.int32, torch.int32):
         elems = st.integers(min_value=-2 ** 31, max_value=2 ** 31 - 1)
-    elif dtype is np.int64:
+    elif dtype in (np.int64, torch.int64):
         elems = st.integers(min_value=-2 ** 63, max_value=2 ** 63 - 1)
-    elif dtype is np.bool:
+    elif dtype in (np.bool, torch.bool):
         elems = st.booleans()
     else:
         raise ValueError("Unexpected dtype without elements provided")

@@ -7,15 +7,15 @@ import "myrtlespeech/protos/eval_config.proto";
 import "myrtlespeech/protos/train_config.proto";
 
 
-// Top-level model, training, evaluation and dataset configuration. Should not
-// be aware of any state such as log file location.
+// Top-level model, training and evaluation configuration. Should not be aware
+// of any state such as log file location.
 message TaskConfig {
-  // TODO
+  // Speech to text model configuration.
   SpeechToText model = 1;
 
-  // TODO
+  // Training configuration.
   TrainConfig train_config = 2;
 
-  // TODO
+  // Validation configuration.
   EvalConfig eval_config = 3;
 }
