@@ -20,7 +20,6 @@ class MFCC:
         sample_rate: Sample rate of the audio signal.
 
     Example:
-
         >>> MFCC(numcep=26, winlen=0.02, winstep=0.01, sample_rate=8000)
         MFCC(numcep=26, winlen=0.02, winstep=0.01, sample_rate=8000)
     """
@@ -75,21 +74,26 @@ class MFCC:
 class AddSequenceLength:
     """Adds sequence length information to ``data``.
 
-    TODO: add tests for this
+    Args:
+        length_dim: Index of sequence length dimension.
 
     Example:
-
-        >>> AddSequenceLength(length_dim=0)
-        AddSequenceLength(length_dim=0)
+        >>> add_seq_len = AddSequenceLength(length_dim=0)
+        >>> x = torch.rand([5, 10])
+        >>> x_prime, x_len = add_seq_len(x)
+        >>> bool(torch.all(x_prime == x))
+        True
+        >>> bool(x_len == torch.tensor(5))
+        True
     """
 
     def __init__(self, length_dim=0):
         self.length_dim = length_dim
 
     def __call__(self, data: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """TODO: document"""
-        size = data.size()
-        return data, torch.tensor([size[self.length_dim]], requires_grad=False)
+        """Returns tuple of ``data`` and a tensor containing its length."""
+        seq_len = data.size(self.length_dim)
+        return data, torch.tensor([seq_len], requires_grad=False)
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + f"(length_dim={self.length_dim})"
