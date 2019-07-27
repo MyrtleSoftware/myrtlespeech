@@ -104,7 +104,12 @@ class FullyConnected(torch.nn.Module):
             x: :py:class:`torch.Tensor` with shape ``[batch, *, in_features]``
                where ``*`` means any number of additional dimensions.
 
-            seq_lens: TODO
+            seq_lens: An optional argument that, if not :py:data:`None` it must
+                be a :py:class:`torch.Tensor` of size ``[batch]`` where each
+                entry is an integer that gives the sequence length of the
+                corresponding sequence in ``x``. If not :py:data:`None`, the
+                function will also return this value (layer does not change
+                sequence lengths).
 
         Returns:
             A :py:class:`torch.Tensor` with shape ``[batch, *, out_features]``
