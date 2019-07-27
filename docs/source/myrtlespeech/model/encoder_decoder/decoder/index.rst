@@ -5,9 +5,11 @@
 The decoder part of an encoder-decoder model.
 
 .. toctree::
-    :hidden:
+    :maxdepth: 1
+    :caption: Contents:
 
     fully_connected
+
 
 Protobuf
 --------
