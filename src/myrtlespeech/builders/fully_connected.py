@@ -1,8 +1,3 @@
-"""
-.. todo::
-
-    * add examples in the docstrings for each to make onboarding easier?
-"""
 import torch
 
 from myrtlespeech.model.decoder.fully_connected import FullyConnected
@@ -26,6 +21,28 @@ def build(
 
     Returns:
         A :py:class:`torch.nn.Module` based on the config.
+
+    Example:
+        >>> from google.protobuf import text_format
+        >>> cfg_text = '''
+        ... num_hidden_layers: 2;
+        ... hidden_size: 64;
+        ... hidden_activation_fn: RELU;
+        ... '''
+        >>> cfg = text_format.Merge(
+        ...     cfg_text,
+        ...     fully_connected_pb2.FullyConnected()
+        ... )
+        >>> build(cfg, input_features=32, output_features=16)
+        FullyConnected(
+          (fully_connected): Sequential(
+            (0): Linear(in_features=32, out_features=64, bias=True)
+            (1): ReLU()
+            (2): Linear(in_features=64, out_features=64, bias=True)
+            (3): ReLU()
+            (4): Linear(in_features=64, out_features=16, bias=True)
+          )
+        )
     """
     pb2_fc = fully_connected_pb2.FullyConnected
     if fully_connected_cfg.hidden_activation_fn == pb2_fc.RELU:
