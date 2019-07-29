@@ -87,3 +87,6 @@ class CTCGreedyDecoder(torch.nn.Module):
             out.append(sentence)
 
         return out
+
+    def extra_repr(self) -> str:
+        return f"blank_index={self.blank_index}"

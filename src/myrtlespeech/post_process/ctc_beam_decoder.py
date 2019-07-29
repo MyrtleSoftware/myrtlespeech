@@ -250,12 +250,14 @@ class CTCBeamDecoder(torch.nn.Module):
         return out
 
     def extra_repr(self) -> str:
-        return (
-            f"blank_index={self.blank_index}, "
-            f"beam_width={self.beam_width}, "
-            f"prune_threshold={self.prune_threshold}, "
-            f"language_model={self.language_model}, "
-            f"lm_weight={self.lm_weight}, "
-            f"separator_index={self.separator_index}, "
-            f"word_weight={self.word_weight}"
+        return ",\n".join(
+            [
+                f"blank_index={self.blank_index}",
+                f"beam_width={self.beam_width}",
+                f"prune_threshold={self.prune_threshold}",
+                f"language_model={self.language_model}",
+                f"lm_weight={self.lm_weight}",
+                f"separator_index={self.separator_index}",
+                f"word_weight={self.word_weight}",
+            ]
         )
