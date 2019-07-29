@@ -180,6 +180,14 @@ def test_make_layers_returned_module_returns_correct_seq_len(
     # ensure > 1 feature exists at all layers to prevent BN throwing error
     features = max(2 * len([layer == "M" for layer in cfg]), features)
     input_size = [batch_size, in_channels, features, max_seq_len]
+    # BN expects more than 1 value per channel when training or err thrown
+    # https://github.com/pytorch/pytorch/blob/34aee933f9f38f80adaa38b52f4cd5a59cb47e48/torch/nn/functional.py#L1704
+    for idx, m in enumerate(module.module.modules()):
+        if isinstance(m, torch.nn.BatchNorm2d):
+            bn_input_size = vgg_output_size(
+                module.module[: max(0, idx - 1)], input_size
+            )
+            assume(bn_input_size[2] > 1 and bn_input_size[3] > 1)
     tensor = torch.empty(input_size, requires_grad=False).normal_()
 
     in_seq_lens = torch.randint(
