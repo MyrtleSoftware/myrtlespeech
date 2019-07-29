@@ -234,7 +234,7 @@ class LibriSpeech(Dataset):
         self.durations.append(duration)
 
     def _process_transcript(self, transcript: str) -> None:
-        transcript = transcript.strip().upper()
+        transcript = transcript.strip().lower()
         self.transcriptions.append(transcript)
 
     def _sort_by_duration(self) -> None:

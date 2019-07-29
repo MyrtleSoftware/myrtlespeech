@@ -47,7 +47,9 @@ def build(
     # create dataloader
     def target_transform(target):
         return torch.tensor(
-            model.alphabet.get_indices(target), requires_grad=False
+            model.alphabet.get_indices(target),
+            dtype=torch.int32,
+            requires_grad=False,
         )
 
     # training
