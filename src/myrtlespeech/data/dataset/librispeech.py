@@ -17,13 +17,20 @@ class LibriSpeech(Dataset):
 
     Args:
         root: Root directory of the dataset. This should contain the
-            LibriSpeech directory which itself contains one directory per
+            ``LibriSpeech`` directory which itself contains one directory per
             subset in subsets.  These will be created if they do not exist, or
             are corrupt, and download is True.
 
         subsets: List of subsets to create the dataset from.  Subset names must
-            be in: ``['train-clean-100', 'train-clean-360', 'train-other-500',
-            'dev-clean', 'dev-other', 'test-clean', 'test-other']``.
+            be one of:
+
+                ``'train-clean-100'``
+                ``'train-clean-360'``
+                ``'train-other-500'``
+                ``'dev-clean'``
+                ``'dev-other'``
+                ``'test-clean``
+                ``'test-other'``
 
         audio_transform: A function that returns a transformed piece of audio
             data.
@@ -31,9 +38,9 @@ class LibriSpeech(Dataset):
         label_transform: A function that returns a transformed target.
 
         download: If :py:data:`True`, downloads the dataset from the internet
-            and puts it in root directory. If dataset is already downloaded, it
-            is not downloaded again. See the :py:meth:`LibriSpeech.download`
-            method for more information.
+            and extracts it in the ``root`` directory. If the dataset is
+            already downloaded, it is not downloaded again. See the
+            :py:meth:`LibriSpeech.download` method for more information.
 
         skip_integrity_check: If :py:data:`True` the integrity check is skipped.
             This is useful when doing quick experiments on the larger subsets
@@ -149,7 +156,7 @@ class LibriSpeech(Dataset):
             1. The ``LibriSpeech/subset`` directory exists and is valid making
                this function a noop.
 
-            2. If not 1. but the ``subset.tar.gz` archive file exists and is
+            2. If not 1. but the ``subset.tar.gz`` archive file exists and is
                valid then its contents are extracted.
 
             3. If not 2. then ``subset.tar.gz`` is downloaded, checksum
@@ -160,7 +167,7 @@ class LibriSpeech(Dataset):
 
         for subset in self.subsets:
             if self._check_subset_integrity(subset):
-                print("{subset} already downloaded and verified")
+                print(f"{subset} already downloaded and verified")
                 continue
             path = os.path.join(self.root, subset + ".tar.gz")
 
@@ -174,7 +181,7 @@ class LibriSpeech(Dataset):
 
             archive_md5 = self.data_files[subset]["archive_md5"]
             if utils.checksum_file(path, "md5") != archive_md5:
-                raise utils.DownloadError("invalid checksum for {path}")
+                raise utils.DownloadError(f"invalid checksum for {path}")
 
             with tarfile.open(path, mode="r|gz") as tar:
                 tar.extractall(self.root)
@@ -191,7 +198,7 @@ class LibriSpeech(Dataset):
         return actual_md5 == self.data_files[subset]["dir_md5"]
 
     def check_integrity(self) -> None:
-        """Returns True if each subset is valid."""
+        """Returns True if each subset in ``self.subsets`` is valid."""
         for subset in self.subsets:
             if not self._check_subset_integrity(subset):
                 raise ValueError(f"subset {subset} not found or corrupt")
