@@ -14,7 +14,14 @@ class Callback:
     dictionary is present in the :py:data:`CallbackHandler.state_dict` then the
     ``state_dict`` will be updated with the corresponding value. An error is
     raised if not.
+
+    Attributes:
+        training: :py:data:`True` when the :py:class:`CallbackHandler` is in
+            training mode.
     """
+
+    def __init__(self):
+        self.training = True
 
     def on_train_begin(self, **kwargs) -> Optional[Dict]:
         ...
@@ -46,6 +53,15 @@ class Callback:
     def on_train_end(self, **kwargs) -> Optional[Dict]:
         ...
 
+    def train(self, mode=True):
+        """Sets the callback in training mode.
+
+        Returns:
+            self
+        """
+        self.training = mode
+        return self
+
 
 class CallbackHandler:
     r"""Manages all registered :py:class:`Callback`\s.
@@ -56,6 +72,9 @@ class CallbackHandler:
     Attributes:
         state_dict: A dictionary containing the state of the
             :py:class:`CallbackHandler`.
+
+        training: :py:data:`True` when the :py:class:`CallbackHandler` is in
+            training mode.
     """
 
     def __init__(self, callbacks: Collection[Callback]):
@@ -401,3 +420,14 @@ class CallbackHandler:
     def on_train_end(self) -> None:
         """Runs all ``on_train_end`` callbacks."""
         self("on_train_end")
+
+    def train(self, mode=True):
+        """Sets the handler and all registered callbacks in training mode.
+
+        Returns:
+            self
+        """
+        self.training = mode
+        for callback in self.callbacks:
+            callback.train(mode=mode)
+        return self

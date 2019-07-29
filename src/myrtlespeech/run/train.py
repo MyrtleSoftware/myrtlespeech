@@ -1,4 +1,5 @@
-from typing import Collection
+from contextlib import ExitStack
+from typing import Collection, Optional
 
 import torch
 from torch.utils.data import DataLoader
@@ -10,8 +11,9 @@ def fit(
     model: torch.nn.Module,
     epochs: int,
     optim: torch.optim.Optimizer,
-    loader: DataLoader,
-    callbacks: Collection[Callback],
+    train_loader: DataLoader,
+    eval_loader: Optional[DataLoader] = None,
+    callbacks: Optional[Collection[Callback]] = None,
 ) -> None:
     r"""Fits the ``model`` for ``epochs`` iters over ``loader`` using ``optim``.
 
@@ -25,7 +27,11 @@ def fit(
         optim: A :py:class:`torch.optim.Optimizer` initialized with ``model``
             params.
 
-        loader: A :py:class:`torch.utils.data.DataLoader`.
+        train_loader: A :py:class:`torch.utils.data.DataLoader` for the
+            training data.
+
+        eval_loader: An optional :py:class:`torch.utils.data.DataLoader` for
+            the validation data.
 
         callbacks: A collection of :py:class:`.Callback`\s.
     """
@@ -34,29 +40,43 @@ def fit(
     cb_handler.on_train_begin(epochs)
 
     for epoch in range(epochs):
-        model.train()
         cb_handler.on_epoch_begin()
 
-        for x, y in loader:
+        modes = [True]
+        if eval_loader is not None:
+            modes.append(False)  # eval after every epoch
+            if epoch == 0:
+                modes.insert(0, False)  # eval before training starts
 
-            x, y = cb_handler.on_batch_begin(x, y)
-            out = model(**x)
+        for is_training in modes:
+            model.train(mode=is_training)
+            cb_handler.train(mode=is_training)
 
-            out = cb_handler.on_loss_begin(out)
-            loss = model.loss(**out, **y)
+            with ExitStack() as stack:
+                if not is_training:
+                    stack.enter_context(torch.no_grad())
 
-            loss, skip_bwd = cb_handler.on_backward_begin(loss)
-            if not skip_bwd:
-                loss.backward()
+                loader = train_loader if is_training else eval_loader
+                for x, y in loader:
+                    x, y = cb_handler.on_batch_begin(x, y)
+                    out = model(**x)
 
-            if not cb_handler.on_backward_end():
-                optim.step()
+                    out = cb_handler.on_loss_begin(out)
+                    loss = model.loss(**out, **y)
+                    loss, skip_bwd = cb_handler.on_backward_begin(loss)
 
-            if not cb_handler.on_step_end():
-                optim.zero_grad()
+                    if is_training:
+                        if not skip_bwd:
+                            loss.backward()
 
-            if cb_handler.on_batch_end():
-                break
+                        if not cb_handler.on_backward_end():
+                            optim.step()
+
+                        if not cb_handler.on_step_end():
+                            optim.zero_grad()
+
+                    if cb_handler.on_batch_end():
+                        break
 
         if cb_handler.on_epoch_end():
             break
