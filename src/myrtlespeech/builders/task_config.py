@@ -11,7 +11,11 @@ from myrtlespeech.protos import task_config_pb2
 def build(
     task_config: task_config_pb2.TaskConfig, seq_len_support: bool = True
 ) -> Tuple[
-    torch.nn.Module, int, torch.optim.Optimizer, torch.utils.data.DataLoader
+    torch.nn.Module,
+    int,
+    torch.optim.Optimizer,
+    torch.utils.data.DataLoader,
+    torch.utils.data.DataLoader,
 ]:
     """TODO
 
@@ -46,17 +50,36 @@ def build(
             model.alphabet.get_indices(target), requires_grad=False
         )
 
-    dataset = build_dataset(
+    # training
+    train_dataset = build_dataset(
         task_config.train_config.dataset,
         transform=model.transform,
         target_transform=target_transform,
         add_seq_len_to_transforms=seq_len_support,
     )
-
-    loader = torch.utils.data.DataLoader(
-        dataset=dataset,
+    train_loader = torch.utils.data.DataLoader(
+        dataset=train_dataset,
         batch_size=task_config.train_config.batch_size,
         collate_fn=seq_to_seq_collate_fn,
     )
 
-    return model, task_config.train_config.epochs, optim, loader
+    # eval
+    eval_dataset = build_dataset(
+        task_config.eval_config.dataset,
+        transform=model.transform,
+        target_transform=target_transform,
+        add_seq_len_to_transforms=seq_len_support,
+    )
+    eval_loader = torch.utils.data.DataLoader(
+        dataset=eval_dataset,
+        batch_size=task_config.eval_config.batch_size,
+        collate_fn=seq_to_seq_collate_fn,
+    )
+
+    return (
+        model,
+        task_config.train_config.epochs,
+        optim,
+        train_loader,
+        eval_loader,
+    )

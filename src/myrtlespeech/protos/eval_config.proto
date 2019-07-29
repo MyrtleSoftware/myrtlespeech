@@ -2,7 +2,13 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
+import "myrtlespeech/protos/dataset.proto";
+
 
 // Configuration for evaluation.
 message EvalConfig {
+  // Batch size for evaluation.
+  uint32 batch_size = 1;
+
+  Dataset dataset = 4;
 }
