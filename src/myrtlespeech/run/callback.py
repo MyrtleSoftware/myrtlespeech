@@ -66,6 +66,22 @@ class Callback:
         return self
 
 
+class ModelCallback(Callback):
+    """Base class for callbacks that need access to the model.
+
+    Args:
+        See Attributes.
+
+    Attributes:
+        model: A :py:class:`torch.nn.Module`.
+        training: See :py:class:`.Callback`.
+    """
+
+    def __init__(self, model: torch.nn.Module, training: bool = True):
+        super().__init__(training=training)
+        self.model = model
+
+
 class CallbackHandler:
     r"""Manages all registered :py:class:`Callback`\s.
 
