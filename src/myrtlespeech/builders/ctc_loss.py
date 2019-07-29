@@ -13,7 +13,6 @@ def build(ctc_loss_cfg: ctc_loss_pb2.CTCLoss) -> CTCLoss:
         A :py:class:`.CTCLoss` based on the config.
 
     Example:
-
         >>> from google.protobuf import text_format
         >>> ctc_loss_cfg_text = '''
         ... blank_index: 0;
@@ -24,7 +23,10 @@ def build(ctc_loss_cfg: ctc_loss_pb2.CTCLoss) -> CTCLoss:
         ...     ctc_loss_pb2.CTCLoss()
         ... )
         >>> build(ctc_loss_cfg)
-        CTCLoss()
+        CTCLoss(
+          (log_softmax): LogSoftmax()
+          (ctc_loss): CTCLoss()
+        )
     """
     reduction_map = {
         ctc_loss_pb2.CTCLoss.NONE: "none",

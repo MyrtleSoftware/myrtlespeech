@@ -16,7 +16,6 @@ def build(
         A :py:class:`CTCBeamDecoder` based on the config.
 
     Example:
-
         >>> from google.protobuf import text_format
         >>> ctc_beam_decoder_cfg_text = '''
         ... blank_index: 0;
@@ -35,7 +34,15 @@ def build(
         ...     ctc_beam_decoder_pb2.CTCBeamDecoder()
         ... )
         >>> build(ctc_beam_decoder_cfg)
-        CTCBeamDecoder(blank_index=0, beam_width=20, prune_threshold=0.009999999776482582, language_model=None, lm_weight=None, separator_index=1, word_weight=1.0)
+        CTCBeamDecoder(
+          blank_index=0,
+          beam_width=20,
+          prune_threshold=0.009999999776482582,
+          language_model=None,
+          lm_weight=None,
+          separator_index=1,
+          word_weight=1.0
+        )
     """
     lm = build_lm(ctc_beam_decoder_cfg.language_model)
 
