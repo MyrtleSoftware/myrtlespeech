@@ -15,13 +15,16 @@ class Callback:
     ``state_dict`` will be updated with the corresponding value. An error is
     raised if not.
 
+    Args:
+        training: See Attributes.
+
     Attributes:
         training: :py:data:`True` when the :py:class:`CallbackHandler` is in
             training mode.
     """
 
-    def __init__(self):
-        self.training = True
+    def __init__(self, training: bool = True):
+        self.training = training
 
     def on_train_begin(self, **kwargs) -> Optional[Dict]:
         ...
@@ -342,8 +345,8 @@ class CallbackHandler:
         All :py:meth:`Callback.on_batch_end` methods are then ran. These may
         modify the ``stop_epoch`` :py:data:`CallbackHandler.state_dict` value.
 
-        The following keys are then modified in
-        :py:data:`CallbackHandler.state_dict`:
+        If :py:data:`CallbackHandler.training` then the following keys are then
+        modified in :py:data:`CallbackHandler.state_dict`:
 
             iteration:
                 Incremented by 1.
@@ -370,8 +373,9 @@ class CallbackHandler:
         """
         self.state_dict["stop_epoch"] = False
         self("on_batch_end")
-        self.state_dict["iteration"] += 1
-        self.state_dict["num_batch"] += 1
+        if self.training:
+            self.state_dict["iteration"] += 1
+            self.state_dict["num_batch"] += 1
         return self.state_dict["stop_epoch"]
 
     def on_epoch_end(self) -> bool:
