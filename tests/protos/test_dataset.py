@@ -1,6 +1,8 @@
+import warnings
 from typing import Union, Tuple, Dict
 
 import hypothesis.strategies as st
+from hypothesis import assume
 
 from myrtlespeech.protos import dataset_pb2
 from myrtlespeech.protos import range_pb2
@@ -50,6 +52,9 @@ def datasets(
             label_symbols=label_symbols,
             label_len=label_len,
         )
+    elif dataset_type_str == "librispeech":
+        warnings.warn("librispeech dataset not supported")
+        assume(False)
     else:
         raise ValueError(
             f"test does not support generation of {dataset_type_str}"

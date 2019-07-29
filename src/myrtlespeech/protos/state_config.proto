@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+
+// Top-level state configuration.
+message StateConfig {
+
+}

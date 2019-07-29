@@ -3,6 +3,7 @@ from typing import Callable, Optional
 import torch
 
 from myrtlespeech.data.dataset.fake import FakeDataset, speech_to_text
+from myrtlespeech.data.dataset.librispeech import LibriSpeech
 from myrtlespeech.protos import dataset_pb2
 
 
@@ -11,6 +12,7 @@ def build(
     transform: Optional[Callable] = None,
     target_transform: Optional[Callable] = None,
     add_seq_len_to_transforms: bool = False,
+    download: bool = False,
 ) -> torch.utils.data.Dataset:
     """Returns a :py:class:`torch.utils.data.Dataset` based on the config.
 
@@ -29,6 +31,9 @@ def build(
             is applied after ``transform`` and ``target_transform`` that takes
             a value and returns a tuple of ``(value,
             torch.tensor(len(value)))``.
+
+        download: If :py:data:`True` and dataset does not exist, download it
+            if possible.
 
     Returns:
         A :py:class:`torch.utils.data.Dataset` based on the config.
@@ -79,6 +84,20 @@ def build(
                 label_transform=target_transform,
             ),
             dataset_len=cfg.dataset_len,
+        )
+    elif supported_dataset == "librispeech":
+        cfg = dataset.librispeech
+        dataset = LibriSpeech(
+            root=cfg.root,
+            subsets=[
+                cfg.SUBSET.DESCRIPTOR.values_by_number[subset_idx]
+                .name.lower()
+                .replace("_", "-")
+                for subset_idx in cfg.subset
+            ],
+            download=download,
+            audio_transform=transform,
+            label_transform=target_transform,
         )
     else:
         raise ValueError(f"{supported_dataset} not supported")

@@ -16,7 +16,26 @@ message Dataset {
     Range label_len = 4;
   }
 
+  message LibriSpeech {
+    enum SUBSET {
+      DEV_CLEAN = 0;
+      DEV_OTHER = 1;
+      TEST_CLEAN = 2;
+      TEST_OTHER = 3;
+      TRAIN_CLEAN_100 = 4;
+      TRAIN_CLEAN_360 = 5;
+      TRAIN_OTHER_500 = 6;
+    }
+
+    // TODO
+    string root = 1;
+
+    // TODO
+    repeated SUBSET subset = 2;
+  }
+
   oneof supported_datasets {
     FakeSpeechToText fake_speech_to_text = 1;
+    LibriSpeech librispeech = 2;
   }
 }

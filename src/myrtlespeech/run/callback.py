@@ -88,6 +88,8 @@ class CallbackHandler:
     Args:
         callbacks: A collection of :py:class:`Callback`\s.
 
+        training: See Attributes.
+
     Attributes:
         state_dict: A dictionary containing the state of the
             :py:class:`CallbackHandler`.
@@ -96,9 +98,10 @@ class CallbackHandler:
             training mode.
     """
 
-    def __init__(self, callbacks: Collection[Callback]):
+    def __init__(self, callbacks: Collection[Callback], training: bool = True):
         self.callbacks = callbacks
         self.state_dict: Dict = {}
+        self.training = training
 
     def __call__(self, stage_name: str) -> None:
         r"""Runs the ``stage_name`` method of all :py:class:`Callback`\s.
