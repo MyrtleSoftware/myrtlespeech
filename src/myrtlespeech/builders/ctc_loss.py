@@ -1,17 +1,16 @@
-import torch
-
+from myrtlespeech.loss.ctc_loss import CTCLoss
 from myrtlespeech.protos import ctc_loss_pb2
 
 
-def build(ctc_loss_cfg: ctc_loss_pb2.CTCLoss) -> torch.nn.CTCLoss:
-    """Returns a :py:class:`torch.nn.CTCLoss` based on the config.
+def build(ctc_loss_cfg: ctc_loss_pb2.CTCLoss) -> CTCLoss:
+    """Returns a :py:class:`.CTCLoss` based on the config.
 
     Args:
         ctc_loss_cfg: A ``CTCLoss`` protobuf object containing the config for
-            the desired :py:class:`torch.nn.CTCLoss`.
+            the desired :py:class:`.CTCLoss`.
 
     Returns:
-        A :py:class:`torch.nn.CTCLoss` based on the config.
+        A :py:class:`.CTCLoss` based on the config.
 
     Example:
 
@@ -37,8 +36,6 @@ def build(ctc_loss_cfg: ctc_loss_pb2.CTCLoss) -> torch.nn.CTCLoss:
     except KeyError:
         raise ValueError(f"reduction={ctc_loss_cfg.reduction} not supported")
 
-    ctc_loss = torch.nn.CTCLoss(
-        blank=ctc_loss_cfg.blank_index, reduction=reduction
-    )
+    ctc_loss = CTCLoss(blank=ctc_loss_cfg.blank_index, reduction=reduction)
 
     return ctc_loss

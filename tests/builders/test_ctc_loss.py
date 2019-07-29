@@ -1,21 +1,26 @@
 import pytest
-import torch
 import hypothesis.strategies as st
 from hypothesis import assume, given
 
 from myrtlespeech.builders.ctc_loss import build
+from myrtlespeech.loss.ctc_loss import CTCLoss
 from myrtlespeech.protos import ctc_loss_pb2
 from tests.protos.test_ctc_loss import ctc_losses
-from tests.utils.utils import tensors
 
 
 # Utilities -------------------------------------------------------------------
 
 
 def ctc_loss_module_match_cfg(
-    ctc_loss: torch.nn.CTCLoss, ctc_loss_cfg: ctc_loss_pb2.CTCLoss
+    ctc_loss: CTCLoss, ctc_loss_cfg: ctc_loss_pb2.CTCLoss
 ) -> None:
     """Ensures CTCLoss matches protobuf configuration."""
+    assert isinstance(ctc_loss, CTCLoss)
+    assert hasattr(ctc_loss, "ctc_loss")
+    assert hasattr(ctc_loss, "log_softmax")
+
+    # verify torch module attributes
+    ctc_loss = ctc_loss.ctc_loss
     assert ctc_loss.blank == ctc_loss_cfg.blank_index
 
     if ctc_loss_cfg.reduction == ctc_loss_pb2.CTCLoss.NONE:
@@ -25,7 +30,7 @@ def ctc_loss_module_match_cfg(
     elif ctc_loss_cfg.reduction == ctc_loss_pb2.CTCLoss.SUM:
         assert ctc_loss.reduction == "sum"
     else:
-        raise ValueError(f"unknownreduction {ctc_loss.reduction}")
+        raise ValueError(f"unknown reduction {ctc_loss.reduction}")
 
 
 # Tests -----------------------------------------------------------------------
