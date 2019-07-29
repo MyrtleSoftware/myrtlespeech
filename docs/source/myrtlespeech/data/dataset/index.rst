@@ -7,6 +7,7 @@
     :caption: Supported Datasets:
 
     fake
+    librispeech
 
 
 Protobuf
