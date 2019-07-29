@@ -5,9 +5,7 @@
 Python
 ------
 
-The PyTorch CTCLoss implementation is used.
-
-.. autoclass:: torch.nn.CTCLoss
+.. automodule:: myrtlespeech.loss.ctc_loss
     :members:
     :show-inheritance:
 
