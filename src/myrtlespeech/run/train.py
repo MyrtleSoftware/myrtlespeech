@@ -42,7 +42,7 @@ def fit(
     for epoch in range(epochs):
         cb_handler.on_epoch_begin()
 
-        modes = [True]
+        modes = [True]  # always train for an epoch
         if eval_loader is not None:
             modes.append(False)  # eval after every epoch
             if epoch == 0:
