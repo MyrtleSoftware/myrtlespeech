@@ -59,6 +59,7 @@ def build(
         dataset=train_dataset,
         batch_size=task_config.train_config.batch_size,
         collate_fn=seq_to_seq_collate_fn,
+        shuffle=True,
     )
 
     # eval
