@@ -116,9 +116,9 @@ class CTCBeamDecoder(torch.nn.Module):
 
         Args:
             x: A 3D :py:class:`torch.Tensor` of size ``(seq_len, batch,
-                alphabet_len)`` where each entry contains the normalized or
-                unnormalized probability of a given symbol in the alphabet at a
-                given timestep for a specific batch element.
+                alphabet_len)`` where each entry contains the normalized
+                probability of a given symbol in the alphabet at a given
+                timestep for a specific batch element.
 
             lengths: A 1D :py:class:`torch.Tensor` giving the sequence length
                 of each element in the batch. Must be an integer datatype.
@@ -166,6 +166,7 @@ class CTCBeamDecoder(torch.nn.Module):
             )
 
         # each element in batch processed sequentially
+        out: List[List[int]] = []
         for i in range(x_batch):
             # Pb[t][l]: an estimate of the probability of *prefix* l, at step
             #           t, based on paths ending in a blank that map to l
@@ -183,7 +184,6 @@ class CTCBeamDecoder(torch.nn.Module):
             A_prev.append(())
 
             ctc = x[:, i, :]
-            out: List[List[int]] = []
             for t in range(lengths[i]):
                 for l in A_prev:
                     for c in range(symbols):

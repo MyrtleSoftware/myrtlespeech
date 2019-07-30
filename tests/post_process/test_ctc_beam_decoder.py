@@ -102,6 +102,18 @@ def test_simple_lanaguage_model() -> None:
         assert ctc_decoder(x, lengths) == [[alphabet[c] for c in target + " "]]
 
 
+def test_prediction_returned_for_each_element_in_batch() -> None:
+    """Ensures a prediction is returned for each element in the batch."""
+    seq_len, n_batch, symbols = 10, 5, 30
+    batch = torch.empty([seq_len, n_batch, symbols], requires_grad=False)
+    batch = torch.nn.functional.softmax(batch, dim=-1)
+    lengths = torch.tensor([8, 3, 9, 7, 2])
+
+    ctc_decoder = CTCBeamDecoder(blank_index=0, beam_width=8)
+
+    assert len(ctc_decoder(batch, lengths)) == n_batch
+
+
 @given(dtype=st.sampled_from([torch.half, torch.float, torch.double]))
 def test_ctc_beam_decoder_raises_value_error_for_float_dtypes(
     dtype: torch.dtype
