@@ -3,6 +3,7 @@ from typing import Callable, List, Optional, Tuple, Union
 import torch
 
 from myrtlespeech.data.alphabet import Alphabet
+from myrtlespeech.loss.ctc_loss import CTCLoss
 from myrtlespeech.model.encoder_decoder import EncoderDecoder
 from myrtlespeech.post_process.ctc_beam_decoder import CTCBeamDecoder
 from myrtlespeech.post_process.ctc_greedy_decoder import CTCGreedyDecoder
@@ -10,6 +11,9 @@ from myrtlespeech.post_process.ctc_greedy_decoder import CTCGreedyDecoder
 
 class SpeechToText(torch.nn.Module):
     """A speech to text model.
+
+    All ``model`` parameters and buffers are moved to the GPU with
+    :py:meth:`torch.nn.Module.cuda` if :py:func:`torch.cuda.is_available`.
 
     .. todo::
 
@@ -26,7 +30,7 @@ class SpeechToText(torch.nn.Module):
         self,
         alphabet: Alphabet,
         model: EncoderDecoder,
-        loss: torch.nn.CTCLoss,
+        loss: CTCLoss,
         pre_process_steps: List[Tuple[Callable, bool]],
         post_process: Union[None, CTCGreedyDecoder, CTCBeamDecoder],
     ):
@@ -37,10 +41,18 @@ class SpeechToText(torch.nn.Module):
         self.pre_process_steps = pre_process_steps
         self.post_process = post_process
 
+        self.use_cuda = torch.cuda.is_available()
+        if self.use_cuda:
+            self.model = self.model.cuda()
+
     def forward(
         self, x: torch.Tensor, seq_lens: Optional[torch.Tensor] = None
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """TODO
+
+        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
+        :py:func:`torch.cuda.is_available` was :py:data:`True` on
+        initialisation.
 
         Arguments:
             x: Tuple of [input, input lengths]
@@ -48,6 +60,11 @@ class SpeechToText(torch.nn.Module):
         Returns:
             Tuple of [unnorm log probs, unnorm log prob lengths]
         """
+        if self.use_cuda:
+            x = x.cuda()
+            if seq_lens is not None:
+                seq_lens = seq_lens.cuda()
+
         return self.model(x, seq_lens=seq_lens)
 
     @property

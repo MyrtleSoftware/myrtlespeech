@@ -46,6 +46,7 @@ class CTCLoss(torch.nn.Module):
         self.ctc_loss = torch.nn.CTCLoss(
             blank=blank, reduction=reduction, zero_infinity=zero_infinity
         )
+        self.use_cuda = torch.cuda.is_available()
 
     def forward(
         self,
@@ -55,6 +56,10 @@ class CTCLoss(torch.nn.Module):
         target_lengths: Union[Tuple, torch.Tensor],
     ) -> torch.Tensor:
         """Computes CTC loss.
+
+        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
+        :py:func:`torch.cuda.is_available` was :py:data:`True` on
+        initialisation.
 
         Much of the following documentation is from
         :py:class:`torch.nn.CTCLoss`.
@@ -81,6 +86,14 @@ class CTCLoss(torch.nn.Module):
                 each sequence to achieve masking under the assumption that
                 sequences are padded to equal lengths.
         """
+        if self.use_cuda:
+            inputs = inputs.cuda()
+            targets = targets.cuda()
+            if torch.is_tensor(input_lengths):
+                input_lengths = input_lengths.cuda()  # type: ignore
+            if torch.is_tensor(target_lengths):
+                target_lengths = target_lengths.cuda()  # type: ignore
+
         log_probs = self.log_softmax(inputs)
         return self.ctc_loss(
             log_probs=log_probs,

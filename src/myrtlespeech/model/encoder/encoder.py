@@ -12,6 +12,9 @@ class Encoder(torch.nn.Module):
 
         * Document this! with examples
 
+    All ``cnn`` and ``rnn`` parameters and buffers are moved to the GPU with
+    :py:meth:`torch.nn.Module.cuda` if :py:func:`torch.cuda.is_available`.
+
     """
 
     def __init__(
@@ -26,10 +29,21 @@ class Encoder(torch.nn.Module):
 
         self.rnn = rnn
 
+        self.use_cuda = torch.cuda.is_available()
+        if self.use_cuda:
+            if self.cnn is not None:
+                self.cnn = self.cnn.cuda()
+            if self.rnn is not None:
+                self.rnn = self.rnn.cuda()
+
     def forward(
         self, x: torch.Tensor, seq_lens: Optional[torch.Tensor] = None
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         r"""Returns the result of applying ``cnn`` and ``rnn`` to ``x``.
+
+        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
+        :py:func:`torch.cuda.is_available` was :py:data:`True` on
+        initialisation.
 
         TODO: redocument
 
@@ -89,6 +103,11 @@ class Encoder(torch.nn.Module):
             sequence. Each of these will be less than or equal to
             ``max_out_seq_len``.
         """
+        if self.use_cuda:
+            x = x.cuda()
+            if seq_lens is not None:
+                seq_lens = seq_lens.cuda()
+
         h = x
         if seq_lens is not None:
             if self.cnn:

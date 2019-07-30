@@ -6,6 +6,9 @@ import torch
 class FullyConnected(torch.nn.Module):
     r"""A fully connected neural network.
 
+    All parameters and buffers are moved to the GPU with
+    :py:meth:`torch.nn.Module.cuda` if :py:func:`torch.cuda.is_available`.
+
     Args:
         in_features: Size of each input sample.
 
@@ -72,6 +75,10 @@ class FullyConnected(torch.nn.Module):
             hidden_activation_fn,
         )
 
+        self.use_cuda = torch.cuda.is_available()
+        if self.use_cuda:
+            self.fully_connected = self.fully_connected.cuda()
+
     def _build_fully_connected(
         self,
         in_features: int,
@@ -100,6 +107,10 @@ class FullyConnected(torch.nn.Module):
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         r"""Returns the result of applying ``fully_connected`` to ``x``.
 
+        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
+        :py:func:`torch.cuda.is_available` was :py:data:`True` on
+        initialisation.
+
         Args:
             x: :py:class:`torch.Tensor` with shape ``[batch, *, in_features]``
                where ``*`` means any number of additional dimensions.
@@ -115,6 +126,11 @@ class FullyConnected(torch.nn.Module):
             A :py:class:`torch.Tensor` with shape ``[batch, *, out_features]``
             where ``*`` means any number of additional dimensions.
         """
+        if self.use_cuda:
+            x = x.cuda()
+            if seq_lens is not None:
+                seq_lens = seq_lens.cuda()
+
         result = self.fully_connected(x)
         if seq_lens is not None:
             return result, seq_lens
