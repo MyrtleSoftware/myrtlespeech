@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Sequence, Tuple
 
 import torch
 
@@ -6,6 +6,7 @@ from myrtlespeech.builders.dataset import build as build_dataset
 from myrtlespeech.builders.speech_to_text import build as build_stt
 from myrtlespeech.data.batch import seq_to_seq_collate_fn
 from myrtlespeech.protos import task_config_pb2
+from myrtlespeech.run.callback import Callback
 
 
 def build(
@@ -16,13 +17,14 @@ def build(
     torch.optim.Optimizer,
     torch.utils.data.DataLoader,
     torch.utils.data.DataLoader,
+    Sequence[Callback],
 ]:
     """TODO
 
+    Returns:
 
-    TODO: Where to put target_transform? Currently it's shoe-horned in here.
-
-
+        Sequence[Callback]: minimal set of callbacks to pass to fit function to
+            make training loop work
     """
     model = build_stt(task_config.model, seq_len_support=seq_len_support)
 
@@ -78,10 +80,20 @@ def build(
         collate_fn=seq_to_seq_collate_fn,
     )
 
+    # callbacks
+    class LossCallback(Callback):
+        """Renames model output to pass to model loss function."""
+
+        def on_loss_begin(self, **kwargs):
+            out = kwargs["last_output"]
+            last_output = {"inputs": out[0], "input_lengths": out[1]}
+            return {"last_output": last_output}
+
     return (
         model,
         task_config.train_config.epochs,
         optim,
         train_loader,
         eval_loader,
+        [LossCallback()],
     )
