@@ -5,17 +5,7 @@
 Python
 ------
 
-The PyTorch LSTM, GRU, and RNN implementations are used.
-
-.. autoclass:: torch.nn.LSTM
-    :members:
-    :show-inheritance:
-
-.. autoclass:: torch.nn.GRU
-    :members:
-    :show-inheritance:
-
-.. autoclass:: torch.nn.RNN
+.. automodule:: myrtlespeech.model.encoder.rnn
     :members:
     :show-inheritance:
 

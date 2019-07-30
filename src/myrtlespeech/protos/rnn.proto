@@ -2,6 +2,9 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
+import "google/protobuf/wrappers.proto";
+
+
 // Recurrent neural network configuration.
 message RNN {
   enum RNN_TYPE {
@@ -24,4 +27,8 @@ message RNN {
 
   // If true then each recurrent layer is bidirectional.
   bool bidirectional = 5;
+
+  // When using an LSTM and bias is True then, if set, the total forget gate
+  // bias will be initialised to this value.
+  google.protobuf.FloatValue forget_gate_bias = 6;
 }

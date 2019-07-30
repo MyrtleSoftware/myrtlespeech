@@ -1,17 +1,23 @@
-from typing import Dict
+from typing import Dict, Iterable, Optional
 
 
-def all_fields_set(proto, kwargs: Dict) -> None:
+def all_fields_set(
+    proto, kwargs: Dict, to_ignore: Optional[Iterable[str]] = None
+) -> None:
     """Crude check to ensure kwargs.keys() sets all fields for proto.
 
     Args:
         proto: A Python class for a protobuf message.
         kwargs: *All* kwargs to initialise class.
+        to_ignore: kwarg keys to ignore when checking.
 
     Raises:
         :py:class:`ValueErrorr`: if all fields not populated.
     """
     expected_fields = set(proto.DESCRIPTOR.fields_by_name.keys())
+
+    if to_ignore:
+        expected_fields -= set(to_ignore)
 
     for oneof in proto.DESCRIPTOR.oneofs_by_name.values():
         oneof_names = set(f.name for f in oneof.fields)
@@ -28,7 +34,6 @@ def all_fields_set(proto, kwargs: Dict) -> None:
                 )
             )
         expected_fields -= oneof_names
-        kwargs
 
     if not (expected_fields <= set(kwargs.keys())):
         raise ValueError(
