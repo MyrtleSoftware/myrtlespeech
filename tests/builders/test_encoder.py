@@ -45,9 +45,7 @@ def encoder_match_cfg(
     if encoder_cfg.HasField("no_rnn"):
         assert encoder.rnn is None
     elif encoder_cfg.HasField("rnn"):
-        rnn_match_cfg(
-            encoder.rnn, encoder_cfg.rnn, input_features, seq_len_support
-        )
+        rnn_match_cfg(encoder.rnn, encoder_cfg.rnn, input_features)
     else:
         raise ValueError("expected either no_rnn or rnn to be set")
 

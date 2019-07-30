@@ -27,7 +27,6 @@ def build(rnn_cfg: rnn_pb2.RNN, input_features: int) -> torch.nn.Module:
         ``seq_lens``.
 
     Example:
-
         >>> from google.protobuf import text_format
         >>> rnn_cfg_text = '''
         ... rnn_type: LSTM;
@@ -41,7 +40,9 @@ def build(rnn_cfg: rnn_pb2.RNN, input_features: int) -> torch.nn.Module:
         ...     rnn_pb2.RNN()
         ... )
         >>> build(rnn_cfg, input_features=512)
-        LSTM(512, 1024, num_layers=5, bidirectional=True)
+        RNN(
+          (rnn): LSTM(512, 1024, num_layers=5, bidirectional=True)
+        )
     """
     rnn_type_map = {
         rnn_pb2.RNN.LSTM: RNNType.LSTM,

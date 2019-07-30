@@ -6,8 +6,8 @@ from google.protobuf import empty_pb2
 from myrtlespeech.protos import encoder_pb2
 from myrtlespeech.protos import rnn_pb2
 from myrtlespeech.protos import vgg_pb2
-from tests.protos import test_rnn
 from tests.protos import test_vgg
+from tests.protos.test_rnn import rnns
 from tests.protos.utils import all_fields_set
 
 
@@ -34,7 +34,7 @@ def encoders(
         raise ValueError(f"unknown cnn type {type(cnn)}")
 
     # initialise oneof supported_rnns
-    rnn = draw(_supported_rnns())
+    rnn = draw(rnns())
     if isinstance(rnn, empty_pb2.Empty):
         kwargs["no_rnn"] = rnn
     elif isinstance(rnn, rnn_pb2.RNN):
@@ -85,39 +85,3 @@ def _supported_cnns(
     if not return_kwargs:
         return cnn
     return cnn, kwargs
-
-
-@st.composite
-def _supported_rnns(
-    draw, return_kwargs: bool = False
-) -> Union[
-    st.SearchStrategy[empty_pb2.Empty],
-    st.SearchStrategy[Tuple[empty_pb2.Empty, Dict]],
-    st.SearchStrategy[rnn_pb2.RNN],
-    st.SearchStrategy[Tuple[rnn_pb2.RNN, Dict]],
-]:
-    """Returns a SearchStrategy for supported_rnns plus maybe the kwargs."""
-    kwargs: Dict = {}
-
-    descript = encoder_pb2.Encoder.DESCRIPTOR
-    rnn_type_str = draw(
-        st.sampled_from(
-            [f.name for f in descript.oneofs_by_name["supported_rnns"].fields]
-        )
-    )
-
-    # get kwargs for chosen rnn_type
-    if rnn_type_str == "no_rnn":
-        rnn_type = empty_pb2.Empty
-    elif rnn_type_str == "rnn":
-        rnn_type = rnn_pb2.RNN  # type: ignore
-        _, kwargs = draw(test_rnn.rnns(return_kwargs=True))
-    else:
-        raise ValueError(f"test does not support generation of {rnn_type}")
-
-    # initialise rnn_type and return
-    all_fields_set(rnn_type, kwargs)
-    rnn = rnn_type(**kwargs)  # type: ignore
-    if not return_kwargs:
-        return rnn
-    return rnn, kwargs

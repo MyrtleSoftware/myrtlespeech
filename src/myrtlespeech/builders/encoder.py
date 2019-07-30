@@ -37,7 +37,6 @@ def build(
         number of output features.
 
     Example:
-
         >>> from google.protobuf import text_format
         >>> encoder_cfg_text = '''
         ... vgg {
@@ -73,7 +72,9 @@ def build(
             (10): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
           )
           (cnn_to_rnn): Lambda()
-          (rnn): LSTM(256, 1024, num_layers=5, bidirectional=True)
+          (rnn): RNN(
+            (rnn): LSTM(256, 1024, num_layers=5, bidirectional=True)
+          )
         ), 2048)
     """
     # build cnn, if any
@@ -101,14 +102,9 @@ def build(
         rnn = None
         output_features = input_features
     elif rnn_choice == "rnn":
-        rnn = build_rnn(
-            encoder_cfg.rnn, input_features, seq_len_support=seq_len_support
-        )
-
-        rnn_module = rnn if not seq_len_support else rnn.module
-
-        output_features = rnn_module.hidden_size
-        if rnn_module.bidirectional:
+        rnn = build_rnn(encoder_cfg.rnn, input_features)
+        output_features = rnn.rnn.hidden_size
+        if rnn.rnn.bidirectional:
             output_features *= 2
     else:
         raise ValueError(f"{rnn_choice} not supported")
