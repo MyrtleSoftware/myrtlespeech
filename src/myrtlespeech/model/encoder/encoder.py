@@ -115,7 +115,7 @@ class Encoder(torch.nn.Module):
                 assert self.cnn_to_rnn is not None
                 h = self.cnn_to_rnn(h)
             if self.rnn:
-                (h, _), seq_lens = self.rnn(h, seq_lens=seq_lens)
+                h, seq_lens = self.rnn(h, seq_lens=seq_lens)
             return h, seq_lens
 
         if self.cnn:
@@ -123,7 +123,7 @@ class Encoder(torch.nn.Module):
             assert self.cnn_to_rnn is not None
             h = self.cnn_to_rnn(h)
         if self.rnn:
-            h, _ = self.rnn(h)
+            h = self.rnn(h)
         return h
 
 
