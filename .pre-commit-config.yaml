@@ -33,6 +33,13 @@ repos:
   hooks:
     - id: helmlint
 
+  # nbstripout: remove notebook output before commit to prevent VCS bloat
+- repo: https://github.com/kynan/nbstripout
+  rev: master
+  hooks:
+    - id: nbstripout
+      files: ".ipynb"
+
   # pre-commit built-in hooks
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v2.2.3
