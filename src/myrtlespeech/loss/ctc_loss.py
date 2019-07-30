@@ -38,7 +38,7 @@ class CTCLoss(torch.nn.Module):
         self,
         blank: int = 0,
         reduction: str = "mean",
-        zero_infinity: bool = False,
+        zero_infinity: bool = True,
         dim: int = -1,
     ):
         super().__init__()
