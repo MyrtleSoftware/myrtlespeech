@@ -1,6 +1,4 @@
 """Builds an :py:class:`.EncoderDecoder` model from a configuration."""
-from typing import Optional
-
 from myrtlespeech.builders.decoder import build as build_decoder
 from myrtlespeech.builders.encoder import build as build_encoder
 from myrtlespeech.model.encoder_decoder import EncoderDecoder
@@ -11,7 +9,7 @@ def build(
     encoder_decoder_cfg: encoder_decoder_pb2.EncoderDecoder,
     input_features: int,
     output_features: int,
-    input_channels: Optional[int],
+    input_channels: int = 1,
     seq_len_support: bool = False,
 ) -> EncoderDecoder:
     """Returns a :py:class:`.EncoderDecoder` model based on the model config.

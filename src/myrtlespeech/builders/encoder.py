@@ -4,6 +4,7 @@ import torch
 
 from myrtlespeech.builders.rnn import build as build_rnn
 from myrtlespeech.builders.vgg import build as build_vgg
+from myrtlespeech.model.encoder.cnn_rnn_encoder import CNNRNNEncoder
 from myrtlespeech.model.encoder.encoder import Encoder
 from myrtlespeech.model.encoder.vgg import vgg_output_size
 from myrtlespeech.protos import encoder_pb2
@@ -12,7 +13,7 @@ from myrtlespeech.protos import encoder_pb2
 def build(
     encoder_cfg: encoder_pb2.Encoder,
     input_features: int,
-    input_channels: Optional[int] = None,
+    input_channels: int = 1,
     seq_len_support: bool = False,
 ) -> Tuple[Encoder, int]:
     """Returns an :py:class:`.Encoder` based on the given config.
@@ -24,8 +25,7 @@ def build(
 
         input_features: The number of features for the input.
 
-        input_channels: The number of channels for the input. May be ``None``
-            if ``encoder_cfg`` does not use a ``cnn``.
+        input_channels: The number of channels for the input.
 
         seq_len_support: If :py:data:`True`, the returned encoder's
             :py:meth:`torch.nn.Module.forward` method must optionally accept a
@@ -39,17 +39,19 @@ def build(
     Example:
         >>> from google.protobuf import text_format
         >>> encoder_cfg_text = '''
-        ... vgg {
-        ...   vgg_config: A;
-        ...   batch_norm: false;
-        ...   use_output_from_block: 2;
-        ... }
-        ... rnn {
-        ...   rnn_type: LSTM;
-        ...   hidden_size: 1024;
-        ...   num_layers: 5;
-        ...   bias: true;
-        ...   bidirectional: true;
+        ... cnn_rnn_encoder {
+        ...   vgg {
+        ...     vgg_config: A;
+        ...     batch_norm: false;
+        ...     use_output_from_block: 2;
+        ...   }
+        ...   rnn {
+        ...     rnn_type: LSTM;
+        ...     hidden_size: 1024;
+        ...     num_layers: 5;
+        ...     bias: true;
+        ...     bidirectional: true;
+        ...   }
         ... }
         ... '''
         >>> encoder_cfg = text_format.Merge(
@@ -57,7 +59,7 @@ def build(
         ...     encoder_pb2.Encoder()
         ... )
         >>> build(encoder_cfg, input_features=10, input_channels=3)
-        (Encoder(
+        (CNNRNNEncoder(
           (cnn): Sequential(
             (0): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
             (1): ReLU(inplace)
@@ -77,10 +79,26 @@ def build(
           )
         ), 2048)
     """
+    encoder_choice = encoder_cfg.WhichOneof("supported_encoders")
+    if encoder_choice == "cnn_rnn_encoder":
+        return _build_cnn_rnn_encoder(
+            encoder_cfg=encoder_cfg.cnn_rnn_encoder,
+            input_features=input_features,
+            input_channels=input_channels,
+            seq_len_support=seq_len_support,
+        )
+    else:
+        raise ValueError(f"{encoder_choice} not supported")
+
+
+def _build_cnn_rnn_encoder(
+    encoder_cfg: encoder_pb2.Encoder,
+    input_features: int,
+    input_channels: int = 1,
+    seq_len_support: bool = False,
+) -> Tuple[Encoder, int]:
     # build cnn, if any
     cnn_choice = encoder_cfg.WhichOneof("supported_cnns")
-    if cnn_choice != "no_cnn" and input_channels is None:
-        raise ValueError("input_channels must not be None when cnn set")
     if cnn_choice == "no_cnn":
         cnn = None
     elif cnn_choice == "vgg":
@@ -109,4 +127,4 @@ def build(
     else:
         raise ValueError(f"{rnn_choice} not supported")
 
-    return Encoder(cnn=cnn, rnn=rnn), output_features
+    return CNNRNNEncoder(cnn=cnn, rnn=rnn), output_features

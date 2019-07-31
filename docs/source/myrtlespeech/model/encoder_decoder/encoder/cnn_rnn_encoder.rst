@@ -1,22 +1,11 @@
-=========
- encoder
-=========
-
-The encoder part of an encoder-decoder model.
-
-.. toctree::
-    :maxdepth: 1
-    :caption: Contents:
-
-    cnn_rnn_encoder
-    vgg
-    rnn
-
+=================
+ cnn_rnn_encoder
+=================
 
 Python
 ------
 
-.. automodule:: myrtlespeech.model.encoder.encoder
+.. automodule:: myrtlespeech.model.encoder.cnn_rnn_encoder
     :members:
     :show-inheritance:
 

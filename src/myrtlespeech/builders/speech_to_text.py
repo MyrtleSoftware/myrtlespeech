@@ -52,6 +52,8 @@ def build(
     input_channels = None
     input_features = 1
     pre_process_steps: List[Tuple[Callable, bool]] = [
+        # ensure raw audio signal is in floating-point format
+        # why? e.g. MFCC computation truncates when in integer format
         (lambda x: x.float(), False)
     ]
     for step_cfg in stt_cfg.pre_process_step:
@@ -66,15 +68,11 @@ def build(
         # data after all other steps has size [features, seq_len], convert to
         # [channels (1), features, seq_len]
         pre_process_steps.append((lambda x: x.unsqueeze(0), False))
+        input_channels = 1
 
     # model
     model_type = stt_cfg.WhichOneof("model")
     if model_type == "encoder_decoder":
-        # if CNN present and pre-processing not created channel dim set it to 1
-        cnn = stt_cfg.encoder_decoder.encoder.WhichOneof("supported_cnns")
-        if cnn != "no_cnn" and input_channels is None:
-            input_channels = 1
-
         model = build_encoder_decoder(
             encoder_decoder_cfg=stt_cfg.encoder_decoder,
             input_features=input_features,

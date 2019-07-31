@@ -6,6 +6,7 @@ import hypothesis.strategies as st
 from hypothesis import assume, given
 
 from myrtlespeech.builders.encoder import build
+from myrtlespeech.model.encoder.cnn_rnn_encoder import CNNRNNEncoder
 from myrtlespeech.model.encoder.encoder import Encoder
 from myrtlespeech.model.encoder.vgg import vgg_output_size
 from myrtlespeech.protos import encoder_pb2
@@ -21,12 +22,31 @@ def encoder_match_cfg(
     encoder: Encoder,
     encoder_cfg: encoder_pb2.Encoder,
     input_features: int,
-    input_channels: Optional[int],
+    input_channels: int,
     seq_len_support: bool,
 ) -> None:
     """Ensures Encoder matches protobuf configuration."""
     assert isinstance(encoder, Encoder)
 
+    if isinstance(encoder, CNNRNNEncoder):
+        cnn_rnn_encoder_match_cfg(
+            encoder,
+            encoder_cfg.cnn_rnn_encoder,
+            input_features,
+            input_channels,
+            seq_len_support,
+        )
+    else:
+        raise ValueError(f"unsupported encoder {type(encoder)}")
+
+
+def cnn_rnn_encoder_match_cfg(
+    encoder: CNNRNNEncoder,
+    encoder_cfg: encoder_pb2.Encoder.CNNRNNEncoder,
+    input_features: int,
+    input_channels: int,
+    seq_len_support: bool,
+) -> None:
     # check cnn config
     if encoder_cfg.HasField("no_cnn"):
         assert encoder.cnn is None
@@ -56,37 +76,22 @@ def encoder_match_cfg(
 @given(
     encoder_cfg=encoders(),
     input_features=st.integers(min_value=1, max_value=32),
-    input_channels=st.one_of(st.none(), st.integers(min_value=1, max_value=8)),
+    input_channels=st.integers(min_value=1, max_value=8),
     seq_len_support=st.booleans(),
 )
 def test_build_encoder_returns_correct_module_structure_and_out_features(
     encoder_cfg: encoder_pb2.Encoder,
     input_features: int,
-    input_channels: Optional[int],
+    input_channels: int,
     seq_len_support: bool,
 ) -> None:
     """Ensures tuple returned by ``build`` has correct structure."""
-    assume(encoder_cfg.HasField("no_cnn") or input_channels is not None)
     encoder, _ = build(
         encoder_cfg, input_features, input_channels, seq_len_support
     )
     encoder_match_cfg(
         encoder, encoder_cfg, input_features, input_channels, seq_len_support
     )
-
-
-@given(
-    encoder_cfg=encoders(),
-    input_features=st.integers(min_value=1, max_value=32),
-    seq_len_support=st.booleans(),
-)
-def test_input_channels_none_when_not_no_cnn_raises_value_error(
-    encoder_cfg: encoder_pb2.Encoder, input_features: int, seq_len_support: bool
-) -> None:
-    """Ensures ValueError raised when input_channels is None, cnn not None."""
-    assume(not encoder_cfg.HasField("no_cnn"))
-    with pytest.raises(ValueError):
-        build(encoder_cfg, input_features, None, seq_len_support)
 
 
 @given(
@@ -101,11 +106,14 @@ def test_unknown_cnn_raises_value_error(
     input_channels: int,
     seq_len_support: bool,
 ) -> None:
-    """Ensures ValueError is raised when encoder's cnn is not supported.
+    """Ensures ValueError is raised when cnn_rnn_encoder's cnn is not supported.
 
     This can occur when the protobuf is updated and build is not.
     """
-    encoder_cfg.ClearField(encoder_cfg.WhichOneof("supported_cnns"))
+    assume(encoder_cfg.WhichOneof("supported_encoders") == "cnn_rnn_encoder")
+    encoder_cfg.cnn_rnn_encoder.ClearField(
+        encoder_cfg.cnn_rnn_encoder.WhichOneof("supported_cnns")
+    )
     with pytest.raises(ValueError):
         build(encoder_cfg, input_features, input_channels, seq_len_support)
 
@@ -122,10 +130,13 @@ def test_unknown_rnn_raises_value_error(
     input_channels: int,
     seq_len_support: bool,
 ) -> None:
-    """Ensures ValueError is raised when encoder's rnn is not supported.
+    """Ensures ValueError is raised when cnn_rnn_encoder's rnn is not supported.
 
     This can occur when the protobuf is updated and build is not.
     """
-    encoder_cfg.ClearField(encoder_cfg.WhichOneof("supported_rnns"))
+    assume(encoder_cfg.WhichOneof("supported_encoders") == "cnn_rnn_encoder")
+    encoder_cfg.cnn_rnn_encoder.ClearField(
+        encoder_cfg.cnn_rnn_encoder.WhichOneof("supported_rnns")
+    )
     with pytest.raises(ValueError):
         build(encoder_cfg, input_features, input_channels, seq_len_support)
