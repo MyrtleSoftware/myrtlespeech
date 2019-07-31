@@ -37,7 +37,6 @@ that is licensed under the BSD 3-Clause:
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import math
-from functools import partial
 from typing import Tuple, List, Union, Optional
 
 import torch
