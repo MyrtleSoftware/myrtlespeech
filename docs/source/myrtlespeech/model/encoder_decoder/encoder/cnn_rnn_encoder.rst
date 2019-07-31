@@ -15,12 +15,12 @@ Protobuf
 Message
 ~~~~~~~
 
-.. literalinclude:: ../../../../../src/myrtlespeech/protos/encoder.proto
+.. literalinclude:: ../../../../../src/myrtlespeech/protos/cnn_rnn_encoder.proto
     :language: protobuf
 
 Builder
 ~~~~~~~
 
-.. automodule:: myrtlespeech.builders.encoder
+.. automodule:: myrtlespeech.builders.cnn_rnn_encoder
     :members:
     :show-inheritance:

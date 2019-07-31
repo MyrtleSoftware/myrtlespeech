@@ -1,12 +1,7 @@
-from typing import Tuple, Optional
+from typing import Tuple
 
-import torch
-
-from myrtlespeech.builders.rnn import build as build_rnn
-from myrtlespeech.builders.vgg import build as build_vgg
-from myrtlespeech.model.encoder.cnn_rnn_encoder import CNNRNNEncoder
+from myrtlespeech.builders.cnn_rnn_encoder import build as build_cnn_rnn_encoder
 from myrtlespeech.model.encoder.encoder import Encoder
-from myrtlespeech.model.encoder.vgg import vgg_output_size
 from myrtlespeech.protos import encoder_pb2
 
 
@@ -81,50 +76,11 @@ def build(
     """
     encoder_choice = encoder_cfg.WhichOneof("supported_encoders")
     if encoder_choice == "cnn_rnn_encoder":
-        return _build_cnn_rnn_encoder(
-            encoder_cfg=encoder_cfg.cnn_rnn_encoder,
+        return build_cnn_rnn_encoder(
+            cnn_rnn_encoder_cfg=encoder_cfg.cnn_rnn_encoder,
             input_features=input_features,
             input_channels=input_channels,
             seq_len_support=seq_len_support,
         )
     else:
         raise ValueError(f"{encoder_choice} not supported")
-
-
-def _build_cnn_rnn_encoder(
-    encoder_cfg: encoder_pb2.Encoder,
-    input_features: int,
-    input_channels: int = 1,
-    seq_len_support: bool = False,
-) -> Tuple[Encoder, int]:
-    # build cnn, if any
-    cnn_choice = encoder_cfg.WhichOneof("supported_cnns")
-    if cnn_choice == "no_cnn":
-        cnn = None
-    elif cnn_choice == "vgg":
-        cnn = build_vgg(  # type: ignore
-            encoder_cfg.vgg, input_channels, seq_len_support=seq_len_support
-        )
-        # update number of features based on vgg output
-        out_size = vgg_output_size(
-            cnn if not seq_len_support else cnn.module,
-            torch.Size([-1, input_channels, input_features, -1]),
-        )
-        input_features = out_size[1] * out_size[2]
-    else:
-        raise ValueError(f"{cnn_choice} not supported")
-
-    # build rnn, if any
-    rnn_choice = encoder_cfg.WhichOneof("supported_rnns")
-    if rnn_choice == "no_rnn":
-        rnn = None
-        output_features = input_features
-    elif rnn_choice == "rnn":
-        rnn = build_rnn(encoder_cfg.rnn, input_features)
-        output_features = rnn.rnn.hidden_size
-        if rnn.rnn.bidirectional:
-            output_features *= 2
-    else:
-        raise ValueError(f"{rnn_choice} not supported")
-
-    return CNNRNNEncoder(cnn=cnn, rnn=rnn), output_features

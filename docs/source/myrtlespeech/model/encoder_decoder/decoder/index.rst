@@ -11,6 +11,13 @@ The decoder part of an encoder-decoder model.
     fully_connected
 
 
+Python
+------
+
+.. automodule:: myrtlespeech.model.decoder.decoder
+    :members:
+    :show-inheritance:
+
 Protobuf
 --------
 

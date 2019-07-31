@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "google/protobuf/empty.proto";
+
+import "myrtlespeech/protos/rnn.proto";
+import "myrtlespeech/protos/vgg.proto";
+
+
+// An encoder with maybe CNN layers followed by maybe RNN layers.
+//
+// Convolutional layers are applied before any recurrent layers.
+message CNNRNNEncoder {
+ oneof supported_cnns {
+   // No convolutional layers.
+   google.protobuf.Empty no_cnn = 1;
+
+   // Apply (part of) a VGG "ConvNet" configuration.
+   VGG vgg = 2;
+ }
+
+ oneof supported_rnns {
+   // No recurrent layers.
+   google.protobuf.Empty no_rnn = 3;
+
+   // Apply a recurrent neural network.
+   RNN rnn = 4;
+ }
+}

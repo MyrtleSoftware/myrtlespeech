@@ -2,8 +2,10 @@ from typing import Optional, Tuple, Union
 
 import torch
 
+from myrtlespeech.model.decoder.decoder import Decoder
 
-class FullyConnected(torch.nn.Module):
+
+class FullyConnected(Decoder):
     r"""A fully connected neural network.
 
     All parameters and buffers are moved to the GPU with
@@ -111,26 +113,17 @@ class FullyConnected(torch.nn.Module):
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
         initialisation.
 
-        Args:
-            x: :py:class:`torch.Tensor` with shape ``[batch, *, in_features]``
-               where ``*`` means any number of additional dimensions.
-
-            seq_lens: An optional argument that, if not :py:data:`None` it must
-                be a :py:class:`torch.Tensor` of size ``[batch]`` where each
-                entry is an integer that gives the sequence length of the
-                corresponding sequence in ``x``. If not :py:data:`None`, the
-                function will also return this value (layer does not change
-                sequence lengths).
-
-        Returns:
-            A :py:class:`torch.Tensor` with shape ``[batch, *, out_features]``
-            where ``*`` means any number of additional dimensions.
+        See :py:meth:`.Decoder.forward`.
         """
         if self.use_cuda:
             x = x.cuda()
             if seq_lens is not None:
                 seq_lens = seq_lens.cuda()
 
+        # PyTorch linear layer documentation states batch must be the first
+        # dimension but applying with seq_len first and batch second achieves
+        # what we want without transposes (e.g. Linear applied to each timestep
+        # for each batch element)
         result = self.fully_connected(x)
         if seq_lens is not None:
             return result, seq_lens
