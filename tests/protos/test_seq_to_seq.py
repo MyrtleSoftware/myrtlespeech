@@ -2,7 +2,7 @@ from typing import Dict, Optional, Tuple, Union
 
 import hypothesis.strategies as st
 
-from myrtlespeech.protos import speech_to_text_pb2
+from myrtlespeech.protos import seq_to_seq_pb2
 from myrtlespeech.protos import ctc_greedy_decoder_pb2
 from tests.data.test_alphabet import random_alphabet
 from tests.protos.test_ctc_loss import ctc_losses
@@ -16,17 +16,17 @@ from tests.protos.utils import all_fields_set
 
 
 @st.composite
-def speech_to_texts(
+def seq_to_seqs(
     draw, return_kwargs: bool = False
 ) -> Union[
-    st.SearchStrategy[speech_to_text_pb2.SpeechToText],
-    st.SearchStrategy[Tuple[speech_to_text_pb2.SpeechToText, Dict]],
+    st.SearchStrategy[seq_to_seq_pb2.SeqToSeq],
+    st.SearchStrategy[Tuple[seq_to_seq_pb2.SeqToSeq, Dict]],
 ]:
-    """Returns a SearchStrategy for SpeechToText plus maybe the kwargs."""
+    """Returns a SearchStrategy for SeqToSeq plus maybe the kwargs."""
     kwargs: Dict = {}
     kwargs["alphabet"] = "".join(draw(random_alphabet(min_size=2)).symbols)
 
-    descript = speech_to_text_pb2.SpeechToText.DESCRIPTOR
+    descript = seq_to_seq_pb2.SeqToSeq.DESCRIPTOR
 
     # model
     model_str = draw(
@@ -84,8 +84,8 @@ def speech_to_texts(
         raise ValueError(f"unknown post_process type {post_str}")
 
     # initialise and return
-    all_fields_set(speech_to_text_pb2.SpeechToText, kwargs)
-    speech_to_text = speech_to_text_pb2.SpeechToText(  # type: ignore
+    all_fields_set(seq_to_seq_pb2.SeqToSeq, kwargs)
+    speech_to_text = seq_to_seq_pb2.SeqToSeq(  # type: ignore
         **kwargs
     )
     if not return_kwargs:

@@ -9,8 +9,8 @@ from myrtlespeech.post_process.ctc_beam_decoder import CTCBeamDecoder
 from myrtlespeech.post_process.ctc_greedy_decoder import CTCGreedyDecoder
 
 
-class SpeechToText(torch.nn.Module):
-    """A speech to text model.
+class SeqToSeq(torch.nn.Module):
+    """A sequence-to-sequence model.
 
     All ``model`` parameters and buffers are moved to the GPU with
     :py:meth:`torch.nn.Module.cuda` if :py:func:`torch.cuda.is_available`.
@@ -20,10 +20,16 @@ class SpeechToText(torch.nn.Module):
         Document this
 
     Args:
-        encoder:
-        decoder:
+        alphabet:
+
+        model:
+
         loss: Callable that takes [log_probs, targets, input_lengths,
             target_lengths]?
+
+        pre_process_steps:
+
+        post_process:
     """
 
     def __init__(

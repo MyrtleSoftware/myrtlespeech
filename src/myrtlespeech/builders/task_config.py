@@ -3,7 +3,7 @@ from typing import Tuple
 import torch
 
 from myrtlespeech.builders.dataset import build as build_dataset
-from myrtlespeech.builders.speech_to_text import build as build_stt
+from myrtlespeech.builders.seq_to_seq import build as build_s2s
 from myrtlespeech.data.batch import seq_to_seq_collate_fn
 from myrtlespeech.protos import task_config_pb2
 
@@ -20,7 +20,7 @@ def build(
     """TODO
 
     """
-    model = build_stt(task_config.model, seq_len_support=seq_len_support)
+    model = build_s2s(task_config.model, seq_len_support=seq_len_support)
 
     # create optimizer
     optim_str = task_config.train_config.WhichOneof("supported_optimizers")

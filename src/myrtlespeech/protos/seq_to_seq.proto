@@ -9,7 +9,7 @@ import "myrtlespeech/protos/encoder_decoder.proto";
 import "myrtlespeech/protos/pre_process_step.proto";
 
 
-message SpeechToText {
+message SeqToSeq {
   // Output alphabet.
   string alphabet = 1;
 
