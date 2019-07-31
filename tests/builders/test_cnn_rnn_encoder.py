@@ -1,14 +1,14 @@
+import hypothesis.strategies as st
 import pytest
 import torch
-import hypothesis.strategies as st
 from hypothesis import given
-
 from myrtlespeech.builders.cnn_rnn_encoder import build
 from myrtlespeech.model.encoder_decoder.encoder.cnn_rnn_encoder import (
     CNNRNNEncoder,
 )
 from myrtlespeech.model.encoder_decoder.encoder.vgg import vgg_output_size
 from myrtlespeech.protos import cnn_rnn_encoder_pb2
+
 from tests.builders.test_rnn import rnn_match_cfg
 from tests.builders.test_vgg import vgg_match_cfg
 from tests.protos.test_cnn_rnn_encoder import cnn_rnn_encoders

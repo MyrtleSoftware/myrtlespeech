@@ -1,9 +1,13 @@
-from typing import Callable, List, Union, Tuple, Dict
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Tuple
+from typing import Union
 
 import hypothesis.strategies as st
 from google.protobuf import empty_pb2
-
 from myrtlespeech.protos import language_model_pb2
+
 from tests.protos.utils import all_fields_set
 
 

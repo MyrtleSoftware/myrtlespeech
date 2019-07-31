@@ -1,5 +1,4 @@
 import torch
-
 from myrtlespeech.builders.fully_connected import build as build_fully_connected
 from myrtlespeech.protos import decoder_pb2
 

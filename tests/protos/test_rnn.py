@@ -1,9 +1,12 @@
-from typing import Union, Tuple, List, Dict
+from typing import Dict
+from typing import List
+from typing import Tuple
+from typing import Union
 
 import hypothesis.strategies as st
 from google.protobuf.wrappers_pb2 import FloatValue
-
 from myrtlespeech.protos import rnn_pb2
+
 from tests.protos.utils import all_fields_set
 
 

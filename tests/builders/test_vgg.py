@@ -1,12 +1,14 @@
+import hypothesis.strategies as st
 import pytest
 import torch
-import hypothesis.strategies as st
-from hypothesis import assume, given
-
+from hypothesis import assume
+from hypothesis import given
 from myrtlespeech.builders.vgg import build
-from myrtlespeech.model.encoder_decoder.encoder.vgg import cfgs, make_layers
+from myrtlespeech.model.encoder_decoder.encoder.vgg import cfgs
+from myrtlespeech.model.encoder_decoder.encoder.vgg import make_layers
 from myrtlespeech.model.seq_len_wrapper import SeqLenWrapper
 from myrtlespeech.protos import vgg_pb2
+
 from tests.protos.test_vgg import vggs
 
 

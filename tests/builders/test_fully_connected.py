@@ -1,12 +1,13 @@
-import torch
 import hypothesis.strategies as st
-from hypothesis import assume, given
-
+import torch
+from hypothesis import assume
+from hypothesis import given
 from myrtlespeech.builders.fully_connected import build
 from myrtlespeech.model.encoder_decoder.decoder.fully_connected import (
     FullyConnected,
 )
 from myrtlespeech.protos import fully_connected_pb2
+
 from tests.protos.test_fully_connected import fully_connecteds
 
 

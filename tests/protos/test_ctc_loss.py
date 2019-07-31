@@ -1,8 +1,11 @@
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict
+from typing import Optional
+from typing import Tuple
+from typing import Union
 
 import hypothesis.strategies as st
-
 from myrtlespeech.protos import ctc_loss_pb2
+
 from tests.protos.utils import all_fields_set
 
 

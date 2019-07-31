@@ -1,8 +1,8 @@
 import os
 
 from hypothesis import HealthCheck
-from hypothesis import unlimited
 from hypothesis import settings
+from hypothesis import unlimited
 from hypothesis import Verbosity
 
 

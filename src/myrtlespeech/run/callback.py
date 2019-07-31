@@ -1,4 +1,8 @@
-from typing import Any, Collection, Dict, Optional, Tuple
+from typing import Any
+from typing import Collection
+from typing import Dict
+from typing import Optional
+from typing import Tuple
 
 import torch
 

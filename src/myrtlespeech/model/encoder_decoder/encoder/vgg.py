@@ -37,11 +37,13 @@ that is licensed under the BSD 3-Clause:
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import math
-from typing import Tuple, List, Union, Optional
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import Union
 
 import torch
 import torch.nn as nn
-
 from myrtlespeech.model.seq_len_wrapper import SeqLenWrapper
 
 

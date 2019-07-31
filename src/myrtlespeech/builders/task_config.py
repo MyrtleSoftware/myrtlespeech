@@ -1,7 +1,6 @@
 from typing import Tuple
 
 import torch
-
 from myrtlespeech.builders.dataset import build as build_dataset
 from myrtlespeech.builders.seq_to_seq import build as build_s2s
 from myrtlespeech.data.batch import seq_to_seq_collate_fn
@@ -59,7 +58,7 @@ def build(
         dataset=train_dataset,
         batch_size=task_config.train_config.batch_size,
         collate_fn=seq_to_seq_collate_fn,
-        shuffle=True,
+        shuffle=False,
     )
 
     # eval

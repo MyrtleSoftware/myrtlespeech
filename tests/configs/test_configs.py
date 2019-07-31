@@ -1,9 +1,8 @@
 import os
 from glob import glob
 
-import pytest
 import google.protobuf.text_format as text_format  # weird import for mypy
-
+import pytest
 from myrtlespeech import configs
 from myrtlespeech.protos import task_config_pb2
 

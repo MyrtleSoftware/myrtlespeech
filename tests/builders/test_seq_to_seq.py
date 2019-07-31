@@ -1,10 +1,10 @@
 import warnings
 
 from hypothesis import given
-
 from myrtlespeech.builders.seq_to_seq import build
 from myrtlespeech.model.seq_to_seq import SeqToSeq
 from myrtlespeech.protos import seq_to_seq_pb2
+
 from tests.protos.test_seq_to_seq import seq_to_seqs
 
 

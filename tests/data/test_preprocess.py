@@ -1,12 +1,16 @@
 import decimal
 import math
 import warnings
-from typing import Dict, Tuple
+from typing import Dict
+from typing import Tuple
 
 import hypothesis.strategies as st
 import torch
-from hypothesis import note, given
-from myrtlespeech.data.preprocess import MFCC, AddSequenceLength
+from hypothesis import given
+from hypothesis import note
+from myrtlespeech.data.preprocess import AddSequenceLength
+from myrtlespeech.data.preprocess import MFCC
+
 from tests.utils.utils import tensors
 
 

@@ -3,9 +3,10 @@ from typing import Tuple
 import hypothesis.strategies as st
 import pytest
 import torch
-from hypothesis import assume, given
-
+from hypothesis import assume
+from hypothesis import given
 from myrtlespeech.post_process.ctc_greedy_decoder import CTCGreedyDecoder
+
 from tests.data.test_alphabet import random_alphabet
 
 

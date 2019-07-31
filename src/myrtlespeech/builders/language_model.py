@@ -1,4 +1,6 @@
-from typing import Callable, Tuple, Optional
+from typing import Callable
+from typing import Optional
+from typing import Tuple
 
 from myrtlespeech.protos import language_model_pb2
 

@@ -1,10 +1,14 @@
-from typing import Union, Tuple, Dict, Optional
+from typing import Dict
+from typing import Optional
+from typing import Tuple
+from typing import Union
 
 import hypothesis.strategies as st
 from google.protobuf import empty_pb2
-from google.protobuf.wrappers_pb2 import FloatValue, UInt32Value
-
+from google.protobuf.wrappers_pb2 import FloatValue
+from google.protobuf.wrappers_pb2 import UInt32Value
 from myrtlespeech.protos import ctc_beam_decoder_pb2
+
 from tests.protos.test_language_model import language_models
 from tests.protos.utils import all_fields_set
 

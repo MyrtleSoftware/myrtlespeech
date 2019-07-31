@@ -1,7 +1,7 @@
 import torch
-
+from myrtlespeech.model.encoder_decoder.encoder.rnn import RNN
+from myrtlespeech.model.encoder_decoder.encoder.rnn import RNNType
 from myrtlespeech.protos import rnn_pb2
-from myrtlespeech.model.encoder_decoder.encoder.rnn import RNN, RNNType
 
 
 def build(rnn_cfg: rnn_pb2.RNN, input_features: int) -> torch.nn.Module:

@@ -1,9 +1,9 @@
-from typing import Tuple, Callable
+from typing import Callable
+from typing import Tuple
 
-import torch
 import pytest
+import torch
 from hypothesis import given
-
 from myrtlespeech.model.utils import Lambda
 
 from tests.utils.utils import tensors

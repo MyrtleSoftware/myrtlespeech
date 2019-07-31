@@ -1,10 +1,12 @@
-from typing import Callable, Tuple, Optional
+from typing import Callable
+from typing import Optional
+from typing import Tuple
 
 import pytest
 from hypothesis import given
-
 from myrtlespeech.builders.language_model import build
 from myrtlespeech.protos import language_model_pb2
+
 from tests.protos.test_language_model import language_models
 
 

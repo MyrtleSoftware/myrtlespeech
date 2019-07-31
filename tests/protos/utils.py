@@ -1,4 +1,6 @@
-from typing import Dict, Iterable, Optional
+from typing import Dict
+from typing import Iterable
+from typing import Optional
 
 
 def all_fields_set(

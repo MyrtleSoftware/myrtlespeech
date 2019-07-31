@@ -1,10 +1,16 @@
 """Utilities for generating fake data to test out interfaces."""
 import math
 import random
-from typing import Callable, Generic, Optional, Sequence, Tuple, TypeVar, Union
+from dataclasses import dataclass
+from typing import Callable
+from typing import Generic
+from typing import Optional
+from typing import Sequence
+from typing import Tuple
+from typing import TypeVar
+from typing import Union
 
 import torch
-from dataclasses import dataclass
 from torch.utils.data import Dataset
 
 

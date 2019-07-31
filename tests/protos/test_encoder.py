@@ -1,8 +1,10 @@
-from typing import Union, Tuple, Dict
+from typing import Dict
+from typing import Tuple
+from typing import Union
 
 import hypothesis.strategies as st
-
 from myrtlespeech.protos import encoder_pb2
+
 from tests.protos.test_cnn_rnn_encoder import cnn_rnn_encoders
 from tests.protos.utils import all_fields_set
 

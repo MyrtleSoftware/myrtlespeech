@@ -1,11 +1,12 @@
+import hypothesis.strategies as st
 import pytest
 import torch
-import hypothesis.strategies as st
-from hypothesis import assume, given
-
+from hypothesis import assume
+from hypothesis import given
 from myrtlespeech.builders.rnn import build
 from myrtlespeech.model.encoder_decoder.encoder.rnn import RNN
 from myrtlespeech.protos import rnn_pb2
+
 from tests.protos.test_rnn import rnns
 from tests.utils.utils import tensors
 

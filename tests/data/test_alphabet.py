@@ -1,10 +1,11 @@
-from typing import Tuple, List, Union
+from typing import List
+from typing import Tuple
+from typing import Union
 
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
 from mypy_extensions import TypedDict
-
 from myrtlespeech.data.alphabet import Alphabet
 
 

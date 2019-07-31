@@ -1,10 +1,11 @@
-import pytest
 import hypothesis.strategies as st
-from hypothesis import assume, given
-
+import pytest
+from hypothesis import assume
+from hypothesis import given
 from myrtlespeech.builders.ctc_loss import build
 from myrtlespeech.loss.ctc_loss import CTCLoss
 from myrtlespeech.protos import ctc_loss_pb2
+
 from tests.protos.test_ctc_loss import ctc_losses
 
 

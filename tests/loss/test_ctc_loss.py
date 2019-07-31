@@ -4,9 +4,10 @@ import hypothesis.strategies as st
 import numpy as np
 import torch
 from hypothesis import given
-
 from myrtlespeech.loss.ctc_loss import CTCLoss
-from tests.utils.utils import arrays, tensors
+
+from tests.utils.utils import arrays
+from tests.utils.utils import tensors
 
 
 # Fixtures and Strategies -----------------------------------------------------

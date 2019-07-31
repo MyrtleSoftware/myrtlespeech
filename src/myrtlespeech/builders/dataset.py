@@ -1,8 +1,9 @@
-from typing import Callable, Optional
+from typing import Callable
+from typing import Optional
 
 import torch
-
-from myrtlespeech.data.dataset.fake import FakeDataset, speech_to_text
+from myrtlespeech.data.dataset.fake import FakeDataset
+from myrtlespeech.data.dataset.fake import speech_to_text
 from myrtlespeech.data.dataset.librispeech import LibriSpeech
 from myrtlespeech.protos import dataset_pb2
 

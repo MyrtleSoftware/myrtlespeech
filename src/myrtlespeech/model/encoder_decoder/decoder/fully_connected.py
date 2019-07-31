@@ -1,7 +1,8 @@
-from typing import Optional, Tuple, Union
+from typing import Optional
+from typing import Tuple
+from typing import Union
 
 import torch
-
 from myrtlespeech.model.encoder_decoder.decoder.decoder import Decoder
 
 

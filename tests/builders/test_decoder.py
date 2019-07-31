@@ -2,11 +2,11 @@ import hypothesis.strategies as st
 import pytest
 import torch
 from hypothesis import given
-
 from myrtlespeech.builders.decoder import build
 from myrtlespeech.protos import decoder_pb2
-from tests.protos.test_decoder import decoders
+
 from tests.builders.test_fully_connected import fully_connected_module_match_cfg
+from tests.protos.test_decoder import decoders
 
 
 # Utilities -------------------------------------------------------------------

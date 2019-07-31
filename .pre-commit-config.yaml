@@ -6,6 +6,12 @@ repos:
   hooks:
   - id: mypy
 
+# automatically re-order Python imports
+- repo: https://github.com/asottile/reorder_python_imports
+  rev: v1.6.1
+  hooks:
+  -   id: reorder-python-imports
+
   # automatic code formatting
 - repo: https://github.com/python/black
   rev: stable

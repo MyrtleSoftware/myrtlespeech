@@ -1,11 +1,13 @@
-from typing import Union, Tuple, Dict
+from typing import Dict
+from typing import Tuple
+from typing import Union
 
 import hypothesis.strategies as st
-
 from myrtlespeech.protos import encoder_decoder_pb2
-from tests.protos.utils import all_fields_set
+
 from tests.protos.test_decoder import decoders
 from tests.protos.test_encoder import encoders
+from tests.protos.utils import all_fields_set
 
 
 # Fixtures and Strategies -----------------------------------------------------

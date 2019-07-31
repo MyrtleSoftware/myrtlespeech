@@ -1,7 +1,8 @@
 """Common utilities used in tests."""
-from typing import Callable, Optional, Union
+from typing import Callable
+from typing import Optional
+from typing import Union
 
-import hypothesis
 import hypothesis.extra.numpy
 import hypothesis.strategies as st
 import numpy as np

@@ -5,11 +5,13 @@ import hypothesis.strategies as st
 import numpy as np
 import torch
 from hypothesis import given
-from torch import rand, tensor
+from myrtlespeech.data.batch import pad_sequence
+from myrtlespeech.data.batch import seq_to_seq_collate_fn
+from torch import rand
+from torch import tensor
 
-from myrtlespeech.data.batch import pad_sequence, seq_to_seq_collate_fn
-from tests.utils.utils import torch_np_dtypes
 from tests.utils.utils import tensors
+from tests.utils.utils import torch_np_dtypes
 
 
 # Fixtures and Strategies -----------------------------------------------------

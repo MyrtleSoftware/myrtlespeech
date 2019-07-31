@@ -1,15 +1,18 @@
-from typing import Callable, List, Optional, Sequence, Tuple
 import fnmatch
 import os
 import shutil
 import tarfile
+from typing import Callable
+from typing import List
+from typing import Optional
+from typing import Sequence
+from typing import Tuple
 
 import requests
 import soundfile
 import torch
-from torch.utils.data import Dataset
-
 from myrtlespeech.data.dataset import utils
+from torch.utils.data import Dataset
 
 
 class LibriSpeech(Dataset):

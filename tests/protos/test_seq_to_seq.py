@@ -1,14 +1,17 @@
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict
+from typing import Optional
+from typing import Tuple
+from typing import Union
 
 import hypothesis.strategies as st
-
-from myrtlespeech.protos import seq_to_seq_pb2
 from myrtlespeech.protos import ctc_greedy_decoder_pb2
+from myrtlespeech.protos import seq_to_seq_pb2
+
 from tests.data.test_alphabet import random_alphabet
-from tests.protos.test_ctc_loss import ctc_losses
-from tests.protos.test_pre_process_step import pre_process_steps
 from tests.protos.test_ctc_beam_decoder import ctc_beam_decoders
+from tests.protos.test_ctc_loss import ctc_losses
 from tests.protos.test_encoder_decoder import encoder_decoders
+from tests.protos.test_pre_process_step import pre_process_steps
 from tests.protos.utils import all_fields_set
 
 

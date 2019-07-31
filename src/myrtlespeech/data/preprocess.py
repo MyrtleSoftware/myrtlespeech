@@ -3,8 +3,8 @@ Utilities for preprocessing audio data.
 """
 from typing import Tuple
 
-import torch
 import python_speech_features
+import torch
 
 
 class MFCC:

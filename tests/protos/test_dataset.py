@@ -1,11 +1,13 @@
 import warnings
-from typing import Union, Tuple, Dict
+from typing import Dict
+from typing import Tuple
+from typing import Union
 
 import hypothesis.strategies as st
 from hypothesis import assume
-
 from myrtlespeech.protos import dataset_pb2
 from myrtlespeech.protos import range_pb2
+
 from tests.data.test_alphabet import random_alphabet
 from tests.protos.utils import all_fields_set
 

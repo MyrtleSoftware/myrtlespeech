@@ -1,11 +1,13 @@
-from typing import Union, Tuple, Dict
+from typing import Dict
+from typing import Tuple
+from typing import Union
 
 import hypothesis.strategies as st
 from google.protobuf import empty_pb2
-
 from myrtlespeech.protos import cnn_rnn_encoder_pb2
 from myrtlespeech.protos import rnn_pb2
 from myrtlespeech.protos import vgg_pb2
+
 from tests.protos import test_vgg
 from tests.protos.test_rnn import rnns
 from tests.protos.utils import all_fields_set

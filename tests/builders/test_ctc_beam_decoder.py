@@ -1,10 +1,11 @@
-import pytest
 import hypothesis.strategies as st
-from hypothesis import assume, given
-
+import pytest
+from hypothesis import assume
+from hypothesis import given
 from myrtlespeech.builders.ctc_beam_decoder import build
 from myrtlespeech.post_process.ctc_beam_decoder import CTCBeamDecoder
 from myrtlespeech.protos import ctc_beam_decoder_pb2
+
 from tests.builders.test_language_model import language_model_module_match_cfg
 from tests.protos.test_ctc_beam_decoder import ctc_beam_decoders
 

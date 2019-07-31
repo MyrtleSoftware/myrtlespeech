@@ -2,9 +2,9 @@ from typing import Optional
 
 import hypothesis.strategies as st
 from hypothesis import given
-
 from myrtlespeech.builders.encoder_decoder import build
 from myrtlespeech.protos import encoder_decoder_pb2
+
 from tests.protos.test_encoder_decoder import encoder_decoders
 
 
@@ -21,7 +21,7 @@ def test_build_returns_encoder_decoder(
     encoder_decoder_cfg: encoder_decoder_pb2.EncoderDecoder,
     input_features: int,
     output_features: int,
-    input_channels: Optional[int],
+    input_channels: int,
 ) -> None:
     """Test that build returns an EncoderDecoder.
 

@@ -1,10 +1,11 @@
 from contextlib import ExitStack
-from typing import Collection, Optional
+from typing import Collection
+from typing import Optional
 
 import torch
+from myrtlespeech.run.callback import Callback
+from myrtlespeech.run.callback import CallbackHandler
 from torch.utils.data import DataLoader
-
-from myrtlespeech.run.callback import Callback, CallbackHandler
 
 
 def fit(

@@ -1,6 +1,6 @@
 import torch
-
-from myrtlespeech.model.encoder_decoder.encoder.vgg import cfgs, make_layers
+from myrtlespeech.model.encoder_decoder.encoder.vgg import cfgs
+from myrtlespeech.model.encoder_decoder.encoder.vgg import make_layers
 from myrtlespeech.protos import vgg_pb2
 
 

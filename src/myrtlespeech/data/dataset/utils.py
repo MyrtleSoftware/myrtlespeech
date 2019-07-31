@@ -1,6 +1,7 @@
 import hashlib
 import os
-from typing import Callable, Union
+from typing import Callable
+from typing import Union
 
 
 INTEGRITY_ALGS = {"md5": hashlib.md5}

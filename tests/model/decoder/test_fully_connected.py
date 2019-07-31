@@ -1,13 +1,15 @@
-from typing import Tuple, Union, Dict
+from typing import Dict
+from typing import Tuple
+from typing import Union
 
+import hypothesis.strategies as st
 import pytest
 import torch
-import hypothesis.strategies as st
 from hypothesis import given
-
 from myrtlespeech.model.encoder_decoder.decoder.fully_connected import (
     FullyConnected,
 )
+
 from tests.utils.utils import tensors
 
 

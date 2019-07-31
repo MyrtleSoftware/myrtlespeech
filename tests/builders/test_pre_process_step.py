@@ -2,10 +2,10 @@ from typing import Tuple
 
 import pytest
 from hypothesis import given
-
 from myrtlespeech.builders.pre_process_step import build
 from myrtlespeech.data.preprocess import MFCC
 from myrtlespeech.protos import pre_process_step_pb2
+
 from tests.protos.test_pre_process_step import pre_process_steps
 
 

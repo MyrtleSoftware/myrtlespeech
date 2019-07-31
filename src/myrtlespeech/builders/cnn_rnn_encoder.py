@@ -1,7 +1,6 @@
 from typing import Tuple
 
 import torch
-
 from myrtlespeech.builders.rnn import build as build_rnn
 from myrtlespeech.builders.vgg import build as build_vgg
 from myrtlespeech.model.encoder_decoder.encoder.cnn_rnn_encoder import (

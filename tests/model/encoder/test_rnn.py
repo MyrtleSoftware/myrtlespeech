@@ -3,9 +3,10 @@ import math
 import hypothesis.strategies as st
 import pytest
 import torch
-from hypothesis import assume, given
-
-from myrtlespeech.model.encoder_decoder.encoder.rnn import RNNType, RNN
+from hypothesis import assume
+from hypothesis import given
+from myrtlespeech.model.encoder_decoder.encoder.rnn import RNN
+from myrtlespeech.model.encoder_decoder.encoder.rnn import RNNType
 
 
 # Fixtures and Strategies -----------------------------------------------------

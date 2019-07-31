@@ -2,17 +2,18 @@
 <https://github.com/samgd/repaper/blob/c7332d96ac8b0db0d92ec2dbed63496a5ce0ed5f/tests/data/test_fake.py>`_.
 """
 import warnings
-from typing import Dict, Tuple, Union
+from typing import Dict
+from typing import Tuple
+from typing import Union
 
 import hypothesis.strategies as st
 import pytest
 import torch
-from hypothesis import assume, given
-from myrtlespeech.data.dataset.fake import (
-    FakeDataset,
-    SpeechToTextGen,
-    speech_to_text,
-)
+from hypothesis import assume
+from hypothesis import given
+from myrtlespeech.data.dataset.fake import FakeDataset
+from myrtlespeech.data.dataset.fake import speech_to_text
+from myrtlespeech.data.dataset.fake import SpeechToTextGen
 
 
 # Setup/teardown --------------------------------------------------------------

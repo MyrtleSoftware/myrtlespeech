@@ -1,5 +1,7 @@
 """Builds an :py:class:`.SeqToSeq` model from a configuration."""
-from typing import Callable, List, Tuple
+from typing import Callable
+from typing import List
+from typing import Tuple
 
 from myrtlespeech.builders.ctc_beam_decoder import (
     build as build_ctc_beam_decoder,

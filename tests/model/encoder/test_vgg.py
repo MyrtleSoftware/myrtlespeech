@@ -1,16 +1,16 @@
-from typing import List, Optional, Tuple
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 import hypothesis.strategies as st
-import torch
 import pytest
-from hypothesis import given, assume
-
+import torch
+from hypothesis import assume
+from hypothesis import given
+from myrtlespeech.model.encoder_decoder.encoder.vgg import make_layers
+from myrtlespeech.model.encoder_decoder.encoder.vgg import vgg_output_size
+from myrtlespeech.model.encoder_decoder.encoder.vgg import VGGConfig
 from myrtlespeech.model.seq_len_wrapper import SeqLenWrapper
-from myrtlespeech.model.encoder_decoder.encoder.vgg import (
-    VGGConfig,
-    make_layers,
-    vgg_output_size,
-)
 
 
 # Fixtures and Strategies -----------------------------------------------------

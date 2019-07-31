@@ -1,8 +1,8 @@
-import torch
-import pytest
 import hypothesis.strategies as st
-from hypothesis import assume, given
-
+import pytest
+import torch
+from hypothesis import assume
+from hypothesis import given
 from myrtlespeech.post_process.ctc_beam_decoder import CTCBeamDecoder
 
 
