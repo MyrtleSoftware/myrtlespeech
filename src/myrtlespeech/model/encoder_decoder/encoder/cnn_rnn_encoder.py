@@ -2,7 +2,10 @@ from typing import Optional, Tuple, Union
 
 import torch
 
-from myrtlespeech.model.encoder.encoder import Encoder, conv_to_rnn_size
+from myrtlespeech.model.encoder_decoder.encoder.encoder import (
+    Encoder,
+    conv_to_rnn_size,
+)
 from myrtlespeech.model.utils import Lambda
 
 

@@ -13,7 +13,7 @@
 Python
 ------
 
-.. automodule:: myrtlespeech.model.encoder_decoder
+.. automodule:: myrtlespeech.model.encoder_decoder.encoder_decoder
     :members:
     :show-inheritance:
 
@@ -23,7 +23,7 @@ Protobuf
 Message
 ~~~~~~~
 
-.. literalinclude:: ../../../../src/myrtlespeech/protos/encoder_decoder.proto
+.. literalinclude:: ../../../../../src/myrtlespeech/protos/encoder_decoder.proto
     :language: protobuf
 
 Builder

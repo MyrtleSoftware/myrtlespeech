@@ -3,8 +3,10 @@ import hypothesis.strategies as st
 from hypothesis import given
 
 from myrtlespeech.builders.encoder import build
-from myrtlespeech.model.encoder.cnn_rnn_encoder import CNNRNNEncoder
-from myrtlespeech.model.encoder.encoder import Encoder
+from myrtlespeech.model.encoder_decoder.encoder.cnn_rnn_encoder import (
+    CNNRNNEncoder,
+)
+from myrtlespeech.model.encoder_decoder.encoder.encoder import Encoder
 from myrtlespeech.protos import encoder_pb2
 from tests.builders.test_cnn_rnn_encoder import cnn_rnn_encoder_match_cfg
 from tests.protos.test_encoder import encoders

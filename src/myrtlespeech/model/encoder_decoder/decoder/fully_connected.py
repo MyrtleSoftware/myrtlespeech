@@ -2,7 +2,7 @@ from typing import Optional, Tuple, Union
 
 import torch
 
-from myrtlespeech.model.decoder.decoder import Decoder
+from myrtlespeech.model.encoder_decoder.decoder.decoder import Decoder
 
 
 class FullyConnected(Decoder):

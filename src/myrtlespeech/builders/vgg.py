@@ -1,13 +1,13 @@
 import torch
 
-from myrtlespeech.model.encoder.vgg import cfgs, make_layers
+from myrtlespeech.model.encoder_decoder.encoder.vgg import cfgs, make_layers
 from myrtlespeech.protos import vgg_pb2
 
 
 def build(
     vgg_cfg: vgg_pb2.VGG, input_channels: int, seq_len_support: bool = False
 ) -> torch.nn.Module:
-    """Returns a :py:class:`torch.nn.Module` based on the VGG config.
+    r"""Returns a :py:class:`torch.nn.Module` based on the VGG config.
 
     Args:
         rnn_cfg: A ``RNN`` protobuf object containing the config for the

@@ -4,7 +4,7 @@ import torch
 
 
 class Callback:
-    """Base class for callbacks where all methods do nothing.
+    r"""Base class for callbacks where all methods do nothing.
 
     Each method is called by the :py:class:`CallbackHandler` at specific times
     during the training loop -- see :py:func:`.run.train.fit` -- with the
@@ -398,20 +398,20 @@ class CallbackHandler:
         return self.state_dict["stop_epoch"]
 
     def on_epoch_end(self) -> bool:
-        """Updates ``state_dict``, runs callbacks, and returns a bool.
+        r"""Updates ``state_dict``, runs callbacks, and returns a bool.
 
         The following key is first set in
-        :py:data:`CallbackHandler.state_dict`:
+        :py:data:`CallbackHandler.state_dict`\:
 
             stop_training:
                 Set to ``False``.
 
         All :py:meth:`Callback.on_epoch_end` methods are then ran. These may
-        modify the ``stop_training `` :py:data:`CallbackHandler.state_dict`
+        modify the ``stop_training`` :py:data:`CallbackHandler.state_dict`
         value.
 
         The following key is then modified in
-        :py:data:`CallbackHandler.state_dict`:
+        :py:data:`CallbackHandler.state_dict`\:
 
             epoch:
                 Incremented by 1.

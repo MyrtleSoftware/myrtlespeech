@@ -16,7 +16,7 @@ The encoder part of an encoder-decoder model.
 Python
 ------
 
-.. automodule:: myrtlespeech.model.encoder.encoder
+.. automodule:: myrtlespeech.model.encoder_decoder.encoder.encoder
     :members:
     :show-inheritance:
 
@@ -26,7 +26,7 @@ Protobuf
 Message
 ~~~~~~~
 
-.. literalinclude:: ../../../../../src/myrtlespeech/protos/encoder.proto
+.. literalinclude:: ../../../../../../src/myrtlespeech/protos/encoder.proto
     :language: protobuf
 
 Builder

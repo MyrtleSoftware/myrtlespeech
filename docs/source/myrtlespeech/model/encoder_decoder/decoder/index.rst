@@ -14,7 +14,7 @@ The decoder part of an encoder-decoder model.
 Python
 ------
 
-.. automodule:: myrtlespeech.model.decoder.decoder
+.. automodule:: myrtlespeech.model.encoder_decoder.decoder.decoder
     :members:
     :show-inheritance:
 
@@ -24,7 +24,7 @@ Protobuf
 Message
 ~~~~~~~
 
-.. literalinclude:: ../../../../../src/myrtlespeech/protos/decoder.proto
+.. literalinclude:: ../../../../../../src/myrtlespeech/protos/decoder.proto
     :language: protobuf
 
 Builder

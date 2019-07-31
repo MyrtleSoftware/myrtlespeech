@@ -2,7 +2,8 @@ from typing import Optional, Tuple, Union
 
 import torch
 
-from myrtlespeech.model.encoder.encoder import Encoder
+from myrtlespeech.model.encoder_decoder.decoder.decoder import Decoder
+from myrtlespeech.model.encoder_decoder.encoder.encoder import Encoder
 
 
 class EncoderDecoder(torch.nn.Module):
@@ -20,7 +21,7 @@ class EncoderDecoder(torch.nn.Module):
         decoder:
     """
 
-    def __init__(self, encoder: Encoder, decoder: torch.nn.Module):
+    def __init__(self, encoder: Encoder, decoder: Decoder):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder

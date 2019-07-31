@@ -49,7 +49,7 @@ repos:
   - id: check-builtin-literals
   - id: check-docstring-first
     # vgg.py documents a module-level variable
-    exclude: 'src/myrtlespeech/model/encoder/vgg.py'
+    exclude: 'src/myrtlespeech/model/encoder_decoder/encoder/vgg.py'
   - id: check-executables-have-shebangs
   - id: check-json
   - id: check-merge-conflict

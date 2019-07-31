@@ -1,7 +1,7 @@
 from typing import Tuple
 
 from myrtlespeech.builders.cnn_rnn_encoder import build as build_cnn_rnn_encoder
-from myrtlespeech.model.encoder.encoder import Encoder
+from myrtlespeech.model.encoder_decoder.encoder.encoder import Encoder
 from myrtlespeech.protos import encoder_pb2
 
 

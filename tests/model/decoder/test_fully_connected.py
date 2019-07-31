@@ -5,7 +5,9 @@ import torch
 import hypothesis.strategies as st
 from hypothesis import given
 
-from myrtlespeech.model.decoder.fully_connected import FullyConnected
+from myrtlespeech.model.encoder_decoder.decoder.fully_connected import (
+    FullyConnected,
+)
 from tests.utils.utils import tensors
 
 

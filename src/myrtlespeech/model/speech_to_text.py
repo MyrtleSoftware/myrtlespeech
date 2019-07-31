@@ -4,7 +4,7 @@ import torch
 
 from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.loss.ctc_loss import CTCLoss
-from myrtlespeech.model.encoder_decoder import EncoderDecoder
+from myrtlespeech.model.encoder_decoder.encoder_decoder import EncoderDecoder
 from myrtlespeech.post_process.ctc_beam_decoder import CTCBeamDecoder
 from myrtlespeech.post_process.ctc_greedy_decoder import CTCGreedyDecoder
 

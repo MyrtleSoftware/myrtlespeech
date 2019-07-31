@@ -5,7 +5,7 @@ import pytest
 import torch
 from hypothesis import assume, given
 
-from myrtlespeech.model.encoder.rnn import RNNType, RNN
+from myrtlespeech.model.encoder_decoder.encoder.rnn import RNNType, RNN
 
 
 # Fixtures and Strategies -----------------------------------------------------

@@ -1,7 +1,7 @@
 """Builds an :py:class:`.EncoderDecoder` model from a configuration."""
 from myrtlespeech.builders.decoder import build as build_decoder
 from myrtlespeech.builders.encoder import build as build_encoder
-from myrtlespeech.model.encoder_decoder import EncoderDecoder
+from myrtlespeech.model.encoder_decoder.encoder_decoder import EncoderDecoder
 from myrtlespeech.protos import encoder_decoder_pb2
 
 

@@ -6,7 +6,7 @@ import pytest
 from hypothesis import given, assume
 
 from myrtlespeech.model.seq_len_wrapper import SeqLenWrapper
-from myrtlespeech.model.encoder.vgg import (
+from myrtlespeech.model.encoder_decoder.encoder.vgg import (
     VGGConfig,
     make_layers,
     vgg_output_size,

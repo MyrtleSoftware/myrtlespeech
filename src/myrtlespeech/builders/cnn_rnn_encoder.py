@@ -4,8 +4,10 @@ import torch
 
 from myrtlespeech.builders.rnn import build as build_rnn
 from myrtlespeech.builders.vgg import build as build_vgg
-from myrtlespeech.model.encoder.cnn_rnn_encoder import CNNRNNEncoder
-from myrtlespeech.model.encoder.vgg import vgg_output_size
+from myrtlespeech.model.encoder_decoder.encoder.cnn_rnn_encoder import (
+    CNNRNNEncoder,
+)
+from myrtlespeech.model.encoder_decoder.encoder.vgg import vgg_output_size
 from myrtlespeech.protos import cnn_rnn_encoder_pb2
 
 

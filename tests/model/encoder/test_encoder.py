@@ -1,7 +1,7 @@
 import torch
 from hypothesis import given
 
-from myrtlespeech.model.encoder.encoder import conv_to_rnn_size
+from myrtlespeech.model.encoder_decoder.encoder.encoder import conv_to_rnn_size
 from tests.utils.utils import tensors
 
 
