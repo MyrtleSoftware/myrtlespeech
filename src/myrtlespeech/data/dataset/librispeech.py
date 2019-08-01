@@ -48,6 +48,9 @@ class LibriSpeech(Dataset):
         skip_integrity_check: If :py:data:`True` the integrity check is skipped.
             This is useful when doing quick experiments on the larger subsets
             that can take time to verify and may have been recently checked.
+
+        max_duration: All samples with duration (in seconds) greater than this
+            will be dropped.
     """
 
     base_dir = "LibriSpeech"
@@ -93,11 +96,13 @@ class LibriSpeech(Dataset):
         label_transform: Optional[Callable[[str], str]] = None,
         download: bool = False,
         skip_integrity_check: bool = False,
+        max_duration: Optional[float] = None,
     ):
         self.root = os.path.expanduser(root)
         self.subsets = self._validate_subsets(subsets)
         self._transform = audio_transform
         self._target_transform = label_transform
+        self.max_duration = max_duration
 
         if download:
             self.download()
@@ -234,14 +239,19 @@ class LibriSpeech(Dataset):
             # Each line has the form "ID THE TARGET TRANSCRIPTION"
             for line in trans:
                 id_, transcript = line.split(maxsplit=1)
-                self._process_audio(root, id_)
-                self._process_transcript(transcript)
+                dropped = self._process_audio(root, id_)
+                if not dropped:
+                    self._process_transcript(transcript)
 
-    def _process_audio(self, root: str, id: str) -> None:
+    def _process_audio(self, root: str, id: str) -> bool:
+        """Returns True if sample was dropped due to being too long."""
         path = os.path.join(root, id + ".flac")
-        self.paths.append(path)
         duration = soundfile.info(path).duration
+        if self.max_duration is not None and duration > self.max_duration:
+            return True
+        self.paths.append(path)
         self.durations.append(duration)
+        return False
 
     def _process_transcript(self, transcript: str) -> None:
         transcript = transcript.strip().lower()
@@ -250,6 +260,8 @@ class LibriSpeech(Dataset):
     def _sort_by_duration(self) -> None:
         """Orders the loaded data by audio duration, shortest first."""
         total_samples = len(self.paths)
+        if total_samples == 0:
+            return
         samples = zip(self.paths, self.durations, self.transcriptions)
         sorted_samples = sorted(samples, key=lambda sample: sample[1])
         self.paths, self.durations, self.transcriptions = [

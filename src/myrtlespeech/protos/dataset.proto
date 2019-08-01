@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
+import "google/protobuf/wrappers.proto";
+
 import "myrtlespeech/protos/range.proto";
 
 
@@ -32,6 +34,9 @@ message Dataset {
 
     // TODO
     repeated SUBSET subset = 2;
+
+    // TODO
+    google.protobuf.FloatValue max_secs = 3;
   }
 
   oneof supported_datasets {

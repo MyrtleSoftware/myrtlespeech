@@ -88,6 +88,7 @@ def build(
         )
     elif supported_dataset == "librispeech":
         cfg = dataset.librispeech
+        max_duration = cfg.max_secs.value if cfg.HasField("max_secs") else None
         dataset = LibriSpeech(
             root=cfg.root,
             subsets=[
@@ -96,9 +97,10 @@ def build(
                 .replace("_", "-")
                 for subset_idx in cfg.subset
             ],
-            download=download,
             audio_transform=transform,
             label_transform=target_transform,
+            download=download,
+            max_duration=max_duration,
         )
     else:
         raise ValueError(f"{supported_dataset} not supported")
