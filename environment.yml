@@ -104,6 +104,7 @@ dependencies:
   - pyparsing=2.4.0=py_0
   - pyrsistent=0.14.11=py37h7b6447c_0
   - pysocks=1.7.0=py37_0
+  - pysoundfile=0.10.2=py_1001
   - pytest=4.6.2=py37_0
   - pytest-cov=2.7.1=py_0
   - python=3.7.3=h0371630_0
