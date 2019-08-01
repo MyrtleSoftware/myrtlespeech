@@ -2,10 +2,12 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
+import "myrtlespeech/protos/stage.proto";
+
 
 // Preprocessing steps to apply to the input data.
 message PreProcessStep {
-  bool train_only = 1;
+  Stage stage = 1;
 
   oneof pre_process_step {
     MFCC mfcc = 2;

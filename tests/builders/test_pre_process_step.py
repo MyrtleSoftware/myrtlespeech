@@ -5,6 +5,7 @@ from hypothesis import given
 from myrtlespeech.builders.pre_process_step import build
 from myrtlespeech.data.preprocess import MFCC
 from myrtlespeech.protos import pre_process_step_pb2
+from myrtlespeech.stage import Stage
 
 from tests.protos.test_pre_process_step import pre_process_steps
 
@@ -13,10 +14,10 @@ from tests.protos.test_pre_process_step import pre_process_steps
 
 
 def pre_process_step_match_cfg(
-    step: Tuple[MFCC, bool], step_cfg: pre_process_step_pb2.PreProcessStep
+    step: Tuple[MFCC, Stage], step_cfg: pre_process_step_pb2.PreProcessStep
 ) -> None:
     """Ensures preprocessing step matches protobuf configuration."""
-    assert step[1] == step_cfg.train_only
+    assert step[1] == Stage(step_cfg.stage)
 
     step_str = step_cfg.WhichOneof("pre_process_step")
 

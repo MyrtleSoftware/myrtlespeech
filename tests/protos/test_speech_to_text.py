@@ -5,7 +5,7 @@ from typing import Union
 
 import hypothesis.strategies as st
 from myrtlespeech.protos import ctc_greedy_decoder_pb2
-from myrtlespeech.protos import seq_to_seq_pb2
+from myrtlespeech.protos import speech_to_text_pb2
 
 from tests.data.test_alphabet import random_alphabet
 from tests.protos.test_ctc_beam_decoder import ctc_beam_decoders
@@ -19,22 +19,22 @@ from tests.protos.utils import all_fields_set
 
 
 @st.composite
-def seq_to_seqs(
+def speech_to_texts(
     draw, return_kwargs: bool = False
 ) -> Union[
-    st.SearchStrategy[seq_to_seq_pb2.SeqToSeq],
-    st.SearchStrategy[Tuple[seq_to_seq_pb2.SeqToSeq, Dict]],
+    st.SearchStrategy[speech_to_text_pb2.SpeechToText],
+    st.SearchStrategy[Tuple[speech_to_text_pb2.SpeechToText, Dict]],
 ]:
-    """Returns a SearchStrategy for SeqToSeq plus maybe the kwargs."""
+    """Returns a SearchStrategy for a SpeechToText model + maybe the kwargs."""
     kwargs: Dict = {}
     kwargs["alphabet"] = "".join(draw(random_alphabet(min_size=2)).symbols)
 
-    descript = seq_to_seq_pb2.SeqToSeq.DESCRIPTOR
+    descript = speech_to_text_pb2.SpeechToText.DESCRIPTOR
 
     # model
     model_str = draw(
         st.sampled_from(
-            [f.name for f in descript.oneofs_by_name["model"].fields]
+            [f.name for f in descript.oneofs_by_name["supported_models"].fields]
         )
     )
     if model_str == "encoder_decoder":
@@ -48,7 +48,7 @@ def seq_to_seqs(
     # loss
     loss_str = draw(
         st.sampled_from(
-            [f.name for f in descript.oneofs_by_name["loss"].fields]
+            [f.name for f in descript.oneofs_by_name["supported_losses"].fields]
         )
     )
     if loss_str == "ctc_loss":
@@ -67,7 +67,12 @@ def seq_to_seqs(
     # post process
     post_str = draw(
         st.sampled_from(
-            [f.name for f in descript.oneofs_by_name["post_process"].fields]
+            [
+                f.name
+                for f in descript.oneofs_by_name[
+                    "supported_post_processes"
+                ].fields
+            ]
         )
     )
     if post_str == "ctc_greedy_decoder":
@@ -87,8 +92,8 @@ def seq_to_seqs(
         raise ValueError(f"unknown post_process type {post_str}")
 
     # initialise and return
-    all_fields_set(seq_to_seq_pb2.SeqToSeq, kwargs)
-    speech_to_text = seq_to_seq_pb2.SeqToSeq(  # type: ignore
+    all_fields_set(speech_to_text_pb2.SpeechToText, kwargs)
+    speech_to_text = speech_to_text_pb2.SpeechToText(  # type: ignore
         **kwargs
     )
     if not return_kwargs:

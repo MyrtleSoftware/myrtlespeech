@@ -2,7 +2,7 @@ from typing import Tuple
 
 import torch
 from myrtlespeech.builders.dataset import build as build_dataset
-from myrtlespeech.builders.seq_to_seq import build as build_s2s
+from myrtlespeech.builders.speech_to_text import build as build_stt
 from myrtlespeech.data.batch import seq_to_seq_collate_fn
 from myrtlespeech.protos import task_config_pb2
 
@@ -19,7 +19,13 @@ def build(
     """TODO
 
     """
-    model = build_s2s(task_config.model, seq_len_support=seq_len_support)
+    model_str = task_config.WhichOneOf("supported_models")
+    if model_str == "speech_to_text":
+        model = build_stt(
+            task_config.speech_to_text, seq_len_support=seq_len_support
+        )
+    else:
+        raise ValueError(f"unsupported model {model_str}")
 
     # create optimizer
     optim_str = task_config.train_config.WhichOneof("supported_optimizers")

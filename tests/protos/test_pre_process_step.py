@@ -5,6 +5,7 @@ from typing import Union
 import hypothesis.strategies as st
 from myrtlespeech.protos import pre_process_step_pb2
 
+from tests.protos.test_stage import stages
 from tests.protos.utils import all_fields_set
 
 
@@ -21,7 +22,7 @@ def pre_process_steps(
     """Returns a SearchStrategy for a pre_process_step plus maybe the kwargs."""
     kwargs: Dict = {}
 
-    kwargs["train_only"] = draw(st.booleans())
+    kwargs["stage"] = draw(stages())
 
     descript = pre_process_step_pb2.PreProcessStep.DESCRIPTOR
     step_type_str = draw(
@@ -35,7 +36,7 @@ def pre_process_steps(
     else:
         raise ValueError(f"unknown pre_process_step type {step_type_str}")
 
-    # initialise language model and return
+    # initialise return
     all_fields_set(pre_process_step_pb2.PreProcessStep, kwargs)
     step = pre_process_step_pb2.PreProcessStep(**kwargs)
     if not return_kwargs:

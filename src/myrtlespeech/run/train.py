@@ -3,30 +3,32 @@ from typing import Collection
 from typing import Optional
 
 import torch
+from myrtlespeech.model.seq_to_seq import SeqToSeq
 from myrtlespeech.run.callback import Callback
 from myrtlespeech.run.callback import CallbackHandler
+from myrtlespeech.stage import Stage
 from torch.utils.data import DataLoader
 
 
 def fit(
-    model: torch.nn.Module,
+    seq_to_seq: SeqToSeq,
     epochs: int,
     optim: torch.optim.Optimizer,
     train_loader: DataLoader,
     eval_loader: Optional[DataLoader] = None,
     callbacks: Optional[Collection[Callback]] = None,
 ) -> None:
-    r"""Fits the ``model`` for ``epochs`` iters over ``loader`` using ``optim``.
+    r"""Fit ``seq_to_seq`` with ``optim`` for ``epochs`` ``train_loader`` iters.
 
     Args:
-        model: A :py:class:`torch.nn.Module`.
+        seq_to_seq: A :py:class:`.SeqToSeq`.
 
-        epochs: Maximum number of epochs to train ``model`` for. Note that the
-            actual number of epochs may be less if
+        epochs: Maximum number of epochs to train ``seq_to_seq`` for. Note that
+            the actual number of epochs may be less if
             :py:meth:`.CallbackHandler.on_epoch_end` returns :py:data:`True`.
 
-        optim: A :py:class:`torch.optim.Optimizer` initialized with ``model``
-            params.
+        optim: A :py:class:`torch.optim.Optimizer` initialized with
+            ``seq_to_seq.model`` params.
 
         train_loader: A :py:class:`torch.utils.data.DataLoader` for the
             training data.
@@ -43,14 +45,15 @@ def fit(
     for epoch in range(epochs):
         cb_handler.on_epoch_begin()
 
-        modes = [True]  # always train for an epoch
+        stages = [Stage.TRAIN]  # always train for an epoch
         if eval_loader is not None:
-            modes.append(False)  # eval after every epoch
+            stages.append(Stage.EVAL)  # eval after every epoch
             if epoch == 0:
-                modes.insert(0, False)  # eval before training starts
+                stages.insert(0, Stage.EVAL)  # eval before training starts
 
-        for is_training in modes:
-            model.train(mode=is_training)
+        for stage in stages:
+            is_training = stage == Stage.TRAIN
+            seq_to_seq.train(mode=is_training)
             cb_handler.train(mode=is_training)
 
             with ExitStack() as stack:
@@ -60,10 +63,10 @@ def fit(
                 loader = train_loader if is_training else eval_loader
                 for x, y in loader:
                     x, y = cb_handler.on_batch_begin(x, y)
-                    out = model(**x)
+                    out = seq_to_seq.model(**x)
 
                     out = cb_handler.on_loss_begin(out)
-                    loss = model.loss(**out, **y)
+                    loss = seq_to_seq.loss(**out, **y)
                     loss, skip_bwd = cb_handler.on_backward_begin(loss)
 
                     if is_training:

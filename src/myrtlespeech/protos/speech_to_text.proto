@@ -9,24 +9,24 @@ import "myrtlespeech/protos/encoder_decoder.proto";
 import "myrtlespeech/protos/pre_process_step.proto";
 
 
-message SeqToSeq {
+message SpeechToText {
   // Output alphabet.
   string alphabet = 1;
 
   repeated PreProcessStep pre_process_step = 2;
 
-  // Supported models.
-  oneof model {
+  // Supported networks.
+  oneof supported_models {
     EncoderDecoder encoder_decoder = 3;
   }
 
   // Supported loss functions.
-  oneof loss {
+  oneof supported_losses {
     CTCLoss ctc_loss = 4;
   }
 
   // Supported post processing of network output.
-  oneof post_process {
+  oneof supported_post_processes {
     CTCGreedyDecoder ctc_greedy_decoder = 5;
     CTCBeamDecoder ctc_beam_decoder = 6;
   }

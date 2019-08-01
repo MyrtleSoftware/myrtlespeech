@@ -1,4 +1,4 @@
-"""Builds an :py:class:`.SeqToSeq` model from a configuration."""
+"""Builds an :py:class:`.SpeechToText` model from a protobuf configuration."""
 from typing import Callable
 from typing import List
 from typing import Tuple
@@ -13,52 +13,53 @@ from myrtlespeech.builders.pre_process_step import (
 )
 from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.data.preprocess import MFCC
-from myrtlespeech.model.seq_to_seq import SeqToSeq
+from myrtlespeech.model.speech_to_text import SpeechToText
 from myrtlespeech.post_process.ctc_greedy_decoder import CTCGreedyDecoder
-from myrtlespeech.protos import seq_to_seq_pb2
+from myrtlespeech.protos import speech_to_text_pb2
+from myrtlespeech.stage import Stage
 
 
 def build(
-    s2s_cfg: seq_to_seq_pb2.SeqToSeq, seq_len_support: bool = False
-) -> SeqToSeq:
-    """Returns a :py:class:`.SeqToSeq` model based on the config.
+    stt_cfg: speech_to_text_pb2.SpeechToText, seq_len_support: bool = False
+) -> SpeechToText:
+    """Returns a :py:class:`.SpeechToText` model based on the ``stt_cfg``.
 
     .. note::
 
-        Does not verify that the configured `.SeqToSeq` model is valid (i.e.
-        whether the sequence of ``pre_processing_step``s is valid etc).
+        Does not verify that the configured `.SpeechToText` model is valid
+        (i.e.  whether the sequence of ``pre_processing_step``s is valid etc).
 
     Args:
-        s2s_cfg: A :py:class:`seq_to_seq_pb2.SeqToSeq` protobuf object
-            containing the config for the desired :py:class:`.SeqToSeq`.
+        stt_cfg: A :py:class:`speech_to_text_pb2.SpeechToText` protobuf object
+            containing the config for the desired :py:class:`.SpeechToText`.
 
         seq_len_support: If :py:data:`True`, the
             :py:meth:`torch.nn.Module.forward` method of the returned
-            :py:class:`.SeqToSeq` model must optionally accept a
+            :py:meth:`.SpeechToText.model` must optionally accept a
             ``seq_lens`` kwarg.
 
     Returns:
-        An :py:class:`.SeqToSeq` based on the config.
+        An :py:class:`.SpeechToText` based on the config.
 
     Raises:
         :py:class:`ValueError`: On invalid configuration.
     """
-    if not isinstance(s2s_cfg, seq_to_seq_pb2.SeqToSeq):
+    if not isinstance(stt_cfg, speech_to_text_pb2.SpeechToText):
         raise ValueError(
-            f"type(s2s_cfg)={type(s2s_cfg)} and not SeqToSeq protobuf"
+            f"type(stt_cfg)={type(stt_cfg)} and not a SpeechToText protobuf"
         )
 
-    alphabet = Alphabet(s2s_cfg.alphabet)
+    alphabet = Alphabet(stt_cfg.alphabet)
 
     # preprocessing
     input_channels = None
     input_features = 1
-    pre_process_steps: List[Tuple[Callable, bool]] = [
+    pre_process_steps: List[Tuple[Callable, Stage]] = [
         # ensure raw audio signal is in floating-point format
         # why? e.g. MFCC computation truncates when in integer format
-        (lambda x: x.float(), False)
+        (lambda x: x.float(), Stage.TRAIN_AND_EVAL)
     ]
-    for step_cfg in s2s_cfg.pre_process_step:
+    for step_cfg in stt_cfg.pre_process_step:
         step = build_pre_process_step(step_cfg)
         if isinstance(step[0], MFCC):
             input_features = step[0].numcep
@@ -69,14 +70,16 @@ def build(
     if input_channels is None:
         # data after all other steps has size [features, seq_len], convert to
         # [channels (1), features, seq_len]
-        pre_process_steps.append((lambda x: x.unsqueeze(0), False))
+        pre_process_steps.append(
+            (lambda x: x.unsqueeze(0), Stage.TRAIN_AND_EVAL)
+        )
         input_channels = 1
 
     # model
-    model_type = s2s_cfg.WhichOneof("model")
+    model_type = stt_cfg.WhichOneof("supported_models")
     if model_type == "encoder_decoder":
         model = build_encoder_decoder(
-            encoder_decoder_cfg=s2s_cfg.encoder_decoder,
+            encoder_decoder_cfg=stt_cfg.encoder_decoder,
             input_features=input_features,
             output_features=len(alphabet),
             input_channels=input_channels,
@@ -89,23 +92,23 @@ def build(
     ctc_blank_indices: List[int] = []
 
     # loss
-    loss_type = s2s_cfg.WhichOneof("loss")
+    loss_type = stt_cfg.WhichOneof("supported_losses")
     if loss_type == "ctc_loss":
-        blank_index = s2s_cfg.ctc_loss.blank_index
+        blank_index = stt_cfg.ctc_loss.blank_index
         ctc_blank_indices.append(blank_index)
         if not (0 <= blank_index <= max(0, len(alphabet) - 1)):
             raise ValueError(
                 f"ctc_loss.blank_index={blank_index} must be in "
                 f"[0, {max(0, len(alphabet) - 1)}]"
             )
-        loss = build_ctc_loss(s2s_cfg.ctc_loss)
+        loss = build_ctc_loss(stt_cfg.ctc_loss)
     else:
         raise ValueError(f"loss={loss_type} not supported")
 
     # post processing
-    post_process_type = s2s_cfg.WhichOneof("post_process")
+    post_process_type = stt_cfg.WhichOneof("supported_post_processes")
     if post_process_type == "ctc_greedy_decoder":
-        blank_index = s2s_cfg.ctc_greedy_decoder.blank_index
+        blank_index = stt_cfg.ctc_greedy_decoder.blank_index
         ctc_blank_indices.append(blank_index)
         if not (0 <= blank_index <= max(0, len(alphabet) - 1)):
             raise ValueError(
@@ -114,21 +117,21 @@ def build(
             )
         post_process = CTCGreedyDecoder(blank_index=blank_index)
     elif post_process_type == "ctc_beam_decoder":
-        blank_index = s2s_cfg.ctc_beam_decoder.blank_index
+        blank_index = stt_cfg.ctc_beam_decoder.blank_index
         ctc_blank_indices.append(blank_index)
         if not (0 <= blank_index <= max(0, len(alphabet) - 1)):
             raise ValueError(
                 f"ctc_beam_decoder.blank_index={blank_index} must be in "
                 f"[0, {max(0, len(alphabet) - 1)}]"
             )
-        if s2s_cfg.ctc_beam_decoder.HasField("separator_index"):
-            separator_index = s2s_cfg.ctc_beam_decoder.separator_index.value
+        if stt_cfg.ctc_beam_decoder.HasField("separator_index"):
+            separator_index = stt_cfg.ctc_beam_decoder.separator_index.value
             if not (0 <= separator_index <= max(0, len(alphabet) - 1)):
                 raise ValueError(
                     f"ctc_beam_decoder.separator_index.value={separator_index} "
                     f"[0, {max(0, len(alphabet) - 1)}]"
                 )
-        post_process = build_ctc_beam_decoder(s2s_cfg.ctc_beam_decoder)
+        post_process = build_ctc_beam_decoder(stt_cfg.ctc_beam_decoder)
     else:
         raise ValueError(f"post_process={post_process_type} not supported")
 
@@ -136,11 +139,11 @@ def build(
     if ctc_blank_indices and not len(set(ctc_blank_indices)) == 1:
         raise ValueError("all blank_index values of CTC components must match")
 
-    s2s = SeqToSeq(
+    stt = SpeechToText(
         alphabet=alphabet,
         model=model,
         loss=loss,
         pre_process_steps=pre_process_steps,
         post_process=post_process,
     )
-    return s2s
+    return stt

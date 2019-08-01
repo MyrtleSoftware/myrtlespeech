@@ -2,15 +2,17 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
-import "myrtlespeech/protos/seq_to_seq.proto";
+import "myrtlespeech/protos/speech_to_text.proto";
 import "myrtlespeech/protos/eval_config.proto";
 import "myrtlespeech/protos/train_config.proto";
 
 
 // Top-level model, training and evaluation configuration.
 message TaskConfig {
-  // SeqToSeq model configuration.
-  SeqToSeq model = 1;
+  // Model configuration.
+  oneof supported_models {
+    SpeechToText speech_to_text = 1;
+  }
 
   // Training configuration.
   TrainConfig train_config = 2;
