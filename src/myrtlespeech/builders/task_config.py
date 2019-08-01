@@ -19,7 +19,7 @@ def build(
     """TODO
 
     """
-    model_str = task_config.WhichOneOf("supported_models")
+    model_str = task_config.WhichOneof("supported_models")
     if model_str == "speech_to_text":
         model = build_stt(
             task_config.speech_to_text, seq_len_support=seq_len_support
@@ -56,7 +56,7 @@ def build(
     # training
     train_dataset = build_dataset(
         task_config.train_config.dataset,
-        transform=model.transform,
+        transform=model.pre_process,
         target_transform=target_transform,
         add_seq_len_to_transforms=seq_len_support,
     )
@@ -70,7 +70,7 @@ def build(
     # eval
     eval_dataset = build_dataset(
         task_config.eval_config.dataset,
-        transform=model.transform,
+        transform=model.pre_process,
         target_transform=target_transform,
         add_seq_len_to_transforms=seq_len_support,
     )

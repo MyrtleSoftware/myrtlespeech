@@ -44,11 +44,6 @@ def build(
     Raises:
         :py:class:`ValueError`: On invalid configuration.
     """
-    if not isinstance(stt_cfg, speech_to_text_pb2.SpeechToText):
-        raise ValueError(
-            f"type(stt_cfg)={type(stt_cfg)} and not a SpeechToText protobuf"
-        )
-
     alphabet = Alphabet(stt_cfg.alphabet)
 
     # preprocessing

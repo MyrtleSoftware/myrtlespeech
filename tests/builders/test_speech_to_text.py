@@ -20,4 +20,4 @@ def test_build_returns_speech_to_text(
     stt = build(stt_cfg)
     assert isinstance(stt, SpeechToText)
     assert isinstance(stt, SeqToSeq)
-    warnings.warn("SpeechToText module only build and not checked if correct")
+    warnings.warn("SpeechToText only built and not checked if correct")
