@@ -31,30 +31,6 @@ def speech_to_text(
 ) -> SpeechToTextGen:
     r"""Returns a function that returns random ``(audio data, string)`` tuples.
 
-    Example:
-
-        >>> generator = speech_to_text(audio_ms=(1, 1000),   # up to 1s long
-        ...                            label_symbols="abcd ",
-        ...                            label_len=(1, 10))
-        >>> audio, label = generator(12345)
-        >>> audio.size()   # note: > 1000 due to 16kHz sample rate
-        torch.Size([6128])
-        >>> label
-        'd    bc'
-
-        Note the difference when ``audio_channels > 1``:
-
-        >>> generator = speech_to_text(audio_ms=(1, 1000),   # up to 1s long
-        ...                            label_symbols="abcd ",
-        ...                            label_len=(1, 10),
-        ...                            audio_channels=2)
-        >>> audio, label = generator(12345)
-        >>> audio.size()   # note: > 1000 due to 16kHz sample rate
-        torch.Size([2, 6128])
-        >>> label
-        'd    bc'
-
-
     Args:
         audio_ms: Audio sample will have length (time) between this range.
             Range specificed in milliseconds and is inclusive of both ends
@@ -104,7 +80,6 @@ def speech_to_text(
             that is applied to the generated string before it is returned.
 
     Returns:
-
         A function that returns random ``(audio data, string)`` tuples where
         ``audio data`` is a :py:class:`torch.Tensor` with size
         ``(audio_channels, length)`` if ``audio_channels > 1`` else
@@ -117,7 +92,6 @@ def speech_to_text(
             :py:data:`None`.
 
     Raises:
-
         :py:class:`ValueError`: if ``audio_ms[0] > audio_ms[1]``.
 
         :py:class:`ValueError`: if ``audio_ms[0] <= 0``.
@@ -130,6 +104,28 @@ def speech_to_text(
 
         :py:class:`ValueError`: if not in
             ``[torch.float64, torch.float32, torch.int32, torch.int16]``.
+
+    Example:
+        >>> generator = speech_to_text(audio_ms=(1, 1000),   # up to 1s long
+        ...                            label_symbols="abcd ",
+        ...                            label_len=(1, 10))
+        >>> audio, label = generator(12345)
+        >>> audio.size()   # note: > 1000 due to 16kHz sample rate
+        torch.Size([6128])
+        >>> label
+        'd    bc'
+
+        Note the difference when ``audio_channels > 1``:
+
+        >>> generator = speech_to_text(audio_ms=(1, 1000),   # up to 1s long
+        ...                            label_symbols="abcd ",
+        ...                            label_len=(1, 10),
+        ...                            audio_channels=2)
+        >>> audio, label = generator(12345)
+        >>> audio.size()   # note: > 1000 due to 16kHz sample rate
+        torch.Size([2, 6128])
+        >>> label
+        'd    bc'
     """
     if audio_ms[0] > audio_ms[1]:
         raise ValueError("audio_ms lower bound must be > upper bound")

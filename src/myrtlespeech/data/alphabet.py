@@ -9,13 +9,12 @@ class Alphabet:
         symbols: List of symbols in the alphabet. Each symbol will be assigned,
             in iteration order, an index (``int``) starting from 0.
 
-    Example:
-
-        >>> Alphabet(symbols=["a", "b", "c", ".", " "])
-        Alphabet(symbols=['a', 'b', 'c', '.', ' '])
-
     Raises:
         ``ValueError``: Duplicate symbol in ``symbols``.
+
+    Example:
+        >>> Alphabet(symbols=["a", "b", "c", ".", " "])
+        Alphabet(symbols=['a', 'b', 'c', '.', ' '])
     """
 
     def __init__(self, symbols: List[str]):

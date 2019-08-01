@@ -7,4 +7,5 @@
     :caption: Contents:
 
     callback
+    stage
     train

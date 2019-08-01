@@ -13,18 +13,23 @@ class RNNType(IntEnum):
 
 
 class RNN(torch.nn.Module):
-    """TODO
+    """A recurrent neural network.
+
+    See :py:class:`torch.nn.LSTM`, :py:class:`torch.nn.GRU` and
+    :py:class:`torch.nn.RNN` for more information as these are used internally
+    (see Attributes).
 
     Args:
-        rnn_type: The type of recurrent neural network cell to use.
+        rnn_type: The type of recurrent neural network cell to use. See
+            :py:class:`RNNType` for a list of the supported types.
 
-        input_size: The number of expected features in the input.
+        input_size: The number of features in the input.
 
         hidden_size: The number of features in the hidden state.
 
-        num_layers: Number of recurrent layers.
+        num_layers: The number of recurrent layers.
 
-        bias: If :py:data:`False`, then the layer does not use bias weights
+        bias: If :py:data:`False`, then the layer does not use the bias weights
             ``b_ih`` and ``b_hh``.
 
         dropout: If non-zero, introduces a dropout layer on the
@@ -34,8 +39,9 @@ class RNN(torch.nn.Module):
         bidirectional: If :py:data:`True`, becomes a bidirectional LSTM.
 
         forget_gate_bias: If ``rnn_type == RNNType.LSTM`` and ``bias = True``
-            then the total forget gate bias is initialised to this value if it
-            is not :py:data:`None`.
+            then the sum of forget gate bias after initialisation equals this
+            value if it is not :py:data:`None`. If it is :py:data:`None` then
+            the default initialisation is used.
 
             See `Jozefowicz et al., 2015
             <http://www.jmlr.org/proceedings/papers/v37/jozefowicz15.pdf>`_.
@@ -97,7 +103,7 @@ class RNN(torch.nn.Module):
         initialisation.
 
         Args:
-            x: :py:class:`torch.Tensor` with shape ``[batch, seq_len,
+            x: :py:class:`torch.Tensor` with shape ``[seq_len, batch
                 in_features]``.
 
             seq_lens: An optional argument that, if not :py:data:`None` it must
@@ -108,8 +114,9 @@ class RNN(torch.nn.Module):
                 sequence lengths).
 
         Returns:
-            A :py:class:`torch.Tensor` with shape ``[batch, seq_len,
-            out_features]``.
+            A :py:class:`torch.Tensor` with shape ``[seq_len, batch,
+            out_features]``. If ``seq_lens`` is not :py:data:`None` then it
+            is returned as the second argument.
         """
         if self.use_cuda:
             x = x.cuda()

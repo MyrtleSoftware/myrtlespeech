@@ -28,7 +28,7 @@ class Decoder(torch.nn.Module):
             A Tuple is returned when ``seq_lens`` is not None.
 
             The single return value or first element of the Tuple return value
-            is the result after applying the :py:class:`Encoder` to ``x``. It
+            is the result after applying the :py:class:`Decoder` to ``x``. It
             must have size ``[max_out_seq_len, batch, out_features]``.
 
             The second element of the Tuple return value is a

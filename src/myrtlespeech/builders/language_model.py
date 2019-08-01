@@ -18,7 +18,6 @@ def build(
         A language model based on the config or None if ``no_lm``.
 
     Example:
-
         >>> from google.protobuf import text_format
         >>> lm_cfg_text = '''
         ... no_lm {

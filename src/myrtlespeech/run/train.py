@@ -6,7 +6,7 @@ import torch
 from myrtlespeech.model.seq_to_seq import SeqToSeq
 from myrtlespeech.run.callback import Callback
 from myrtlespeech.run.callback import CallbackHandler
-from myrtlespeech.stage import Stage
+from myrtlespeech.run.stage import Stage
 from torch.utils.data import DataLoader
 
 
@@ -21,7 +21,7 @@ def fit(
     r"""Fit ``seq_to_seq`` with ``optim`` for ``epochs`` ``train_loader`` iters.
 
     Args:
-        seq_to_seq: A :py:class:`.SeqToSeq`.
+        seq_to_seq: A :py:class:`.SeqToSeq` model.
 
         epochs: Maximum number of epochs to train ``seq_to_seq`` for. Note that
             the actual number of epochs may be less if

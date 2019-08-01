@@ -2,7 +2,7 @@ from typing import Tuple
 
 from myrtlespeech.data.preprocess import MFCC
 from myrtlespeech.protos import pre_process_step_pb2
-from myrtlespeech.stage import Stage
+from myrtlespeech.run.stage import Stage
 
 
 def build(

@@ -8,18 +8,15 @@ from myrtlespeech.model.encoder_decoder.encoder.encoder import Encoder
 
 
 class EncoderDecoder(torch.nn.Module):
-    """An encoder-decoder sequence-to-sequence model.
+    """An encoder-decoder model.
 
     All ``encoder`` and ``decoder`` parameters and buffers are moved to the GPU
     with :py:meth:`torch.nn.Module.cuda` if :py:func:`torch.cuda.is_available`.
 
-    .. todo::
-
-        Document this
-
     Args:
-        encoder:
-        decoder:
+        encoder: An :py:class:`.Encoder`.
+
+        decoder: A :py:class:`.Decoder`.
     """
 
     def __init__(self, encoder: Encoder, decoder: Decoder):
@@ -35,19 +32,33 @@ class EncoderDecoder(torch.nn.Module):
     def forward(
         self, x: torch.Tensor, seq_lens: Optional[torch.Tensor] = None
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        """
+        """Returns the result of applying the ``EncoderDecoder`` to ``x``.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
         initialisation.
 
-        .. todo::
-
-            Document
-
         Args:
-            x:
+            x: A :py:class:`torch.Tensor` with size ``[batch, channels,
+                features, max_in_seq_len]``.
 
+            seq_lens: An optional :py:class:`torch.Tensor` of size ``[batch]``
+                where each entry represents the sequence length of the
+                corresponding *input* sequence in ``x``.
+
+        Returns:
+            A Tuple is returned when ``seq_lens`` is not None.
+
+            The single return value or first element of the Tuple return value
+            is the result after applying both the :py:class:`.Encoder` and
+            :py:class:`.Decoder` to ``x``. It must have size
+            ``[max_out_seq_len, batch, out_features]``.
+
+            The second element of the Tuple return value is a
+            :py:class:`torch.Tensor` with size ``[batch]`` where each entry
+            represents the sequence length of the corresponding *output*
+            sequence. Each of these will be less than or equal to
+            ``max_out_seq_len``.
         """
         if self.use_cuda:
             x = x.cuda()

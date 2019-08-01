@@ -1,30 +1,27 @@
 from typing import Callable
-from typing import Optional
 from typing import Sequence
 from typing import Tuple
-from typing import Union
 
 import torch
-from myrtlespeech.stage import Stage
+from myrtlespeech.run.stage import Stage
 
 
 class SeqToSeq(torch.nn.Module):
-    """A sequence-to-sequence model.
-
-    All ``model`` parameters and buffers are moved to the GPU with
-    :py:meth:`torch.nn.Module.cuda` if :py:func:`torch.cuda.is_available`.
-
-    .. todo::
-
-        Document this
+    """A generic sequence-to-sequence model.
 
     Args:
-        model:
+        model: A :py:class:`torch.nn.Module`.
 
-        loss: Callable that takes [log_probs, targets, input_lengths,
-            target_lengths]?
+        loss: A :py:class:`torch.nn.Module` to compute the loss.
 
-        pre_process_steps:
+        pre_process_steps: A sequence of preprocessing steps. For each
+            ``(callable, stage)`` tuple in the sequence, the ``callable``
+            should accept as input the output from the previous ``callable`` in
+            the sequence or raw data if it is the first. The ``callable``
+            should only be applied when the current training stage matches
+            ``stage``.  :py:data:`.SeqToSeq.pre_process` returns a ``Callable``
+            that handles this automatically based on
+            :py:class:`.SeqToSeq.training`.
     """
 
     def __init__(
@@ -42,12 +39,9 @@ class SeqToSeq(torch.nn.Module):
         if self.use_cuda:
             self.model = self.model.cuda()
 
-    def _run_steps(self, steps) -> Callable:
-        """TODO"""
-
     @property
     def pre_process(self) -> Callable:
-        """TODO"""
+        """See Args."""
 
         def process(x):
             for step, stage in self.pre_process_steps:

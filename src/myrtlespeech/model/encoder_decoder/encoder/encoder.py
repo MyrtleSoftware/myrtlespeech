@@ -17,7 +17,7 @@ class Encoder(torch.nn.Module):
         r"""Returns the result of applying the ``Encoder`` to ``x``.
 
         Args:
-            x: This is a :py:class:`torch.Tensor` with size ``[batch, channels,
+            x: A :py:class:`torch.Tensor` with size ``[batch, channels,
                 features, max_in_seq_len]``.
 
             seq_lens: An optional :py:class:`torch.Tensor` of size ``[batch]``

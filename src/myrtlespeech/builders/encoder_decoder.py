@@ -20,8 +20,7 @@ def build(
 
         input_features: The number of features for the input.
 
-        input_channels: The number of channels for the input. May be ``None``
-            if encoder does require it.
+        input_channels: The number of channels for the input.
 
         seq_len_support: If :py:data:`True`, the returned encoder and decoder
             :py:meth:`torch.nn.Module.forward` methods must optionally accept a

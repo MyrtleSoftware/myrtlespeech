@@ -4,20 +4,51 @@ import torch
 from myrtlespeech.builders.dataset import build as build_dataset
 from myrtlespeech.builders.speech_to_text import build as build_stt
 from myrtlespeech.data.batch import seq_to_seq_collate_fn
+from myrtlespeech.model.seq_to_seq import SeqToSeq
 from myrtlespeech.protos import task_config_pb2
 
 
 def build(
     task_config: task_config_pb2.TaskConfig, seq_len_support: bool = True
 ) -> Tuple[
-    torch.nn.Module,
+    SeqToSeq,
     int,
     torch.optim.Optimizer,
     torch.utils.data.DataLoader,
     torch.utils.data.DataLoader,
 ]:
-    """TODO
+    """Builds a ``task_config`` and returns each component.
 
+    Args:
+        task_config: A :py:class:`task_config_pb2.TaskConfig` protobuf object
+            containing the config for the desired task.
+
+        seq_len_support: If :py:data:`True`, the
+            :py:meth:`torch.nn.Module.forward` method of the returned
+            :py:data:`.SeqToSeq.model` must optionally accept a ``seq_lens``
+            kwarg.
+
+    Returns:
+        A tuple of ``(model, epochs, optim, train_loader, eval_loader)`` where:
+
+            model:
+                A :py:class:`.SeqToSeq` model.
+
+            epochs:
+                The number of epochs to train for.
+
+            optim:
+                A :py:class:`torch.optim.Optimizer` initialised with the
+                ``model`` parameters.
+
+            train_loader:
+                A :py:class:`torch.utils.data.DataLoader` for the training data.
+
+            eval_loader:
+                A :py:class:`torch.utils.data.DataLoader` for the eval data.
+
+    Raises:
+        :py:class:`ValueError`: On invalid configuration.
     """
     model_str = task_config.WhichOneof("supported_models")
     if model_str == "speech_to_text":

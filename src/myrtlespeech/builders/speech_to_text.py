@@ -16,7 +16,7 @@ from myrtlespeech.data.preprocess import MFCC
 from myrtlespeech.model.speech_to_text import SpeechToText
 from myrtlespeech.post_process.ctc_greedy_decoder import CTCGreedyDecoder
 from myrtlespeech.protos import speech_to_text_pb2
-from myrtlespeech.stage import Stage
+from myrtlespeech.run.stage import Stage
 
 
 def build(
@@ -43,8 +43,65 @@ def build(
 
     Raises:
         :py:class:`ValueError`: On invalid configuration.
+
+    Example:
+        >>> from google.protobuf import text_format
+        >>> cfg_text = '''
+        ... alphabet: "_acgt";
+        ... encoder_decoder {
+        ...   encoder {
+        ...     cnn_rnn_encoder {
+        ...       no_cnn {
+        ...       }
+        ...       rnn {
+        ...         rnn_type: LSTM;
+        ...         hidden_size: 128;
+        ...         num_layers: 2;
+        ...         bias: true;
+        ...         bidirectional: false;
+        ...       }
+        ...     }
+        ...   }
+        ...   decoder {
+        ...     fully_connected {
+        ...       num_hidden_layers: 0;
+        ...     }
+        ...   }
+        ... }
+        ... ctc_loss {
+        ...   blank_index: 0;
+        ...   reduction: MEAN;
+        ... }
+        ... ctc_greedy_decoder {
+        ...   blank_index: 0;
+        ... }
+        ... '''
+        >>> cfg = text_format.Merge(
+        ...     cfg_text,
+        ...     speech_to_text_pb2.SpeechToText()
+        ... )
+        >>> build(cfg)
+        SpeechToText(
+          (alphabet): Alphabet(symbols=['_', 'a', 'c', 'g', 't'])
+          (model): EncoderDecoder(
+            (encoder): CNNRNNEncoder(
+              (cnn_to_rnn): Lambda()
+              (rnn): RNN(
+                (rnn): LSTM(1, 128, num_layers=2)
+              )
+            )
+            (decoder): FullyConnected(
+              (fully_connected): Linear(in_features=128, out_features=5, bias=True)
+            )
+          )
+          (loss): CTCLoss(
+            (log_softmax): LogSoftmax()
+            (ctc_loss): CTCLoss()
+          )
+          (post_process): CTCGreedyDecoder(blank_index=0)
+        )
     """
-    alphabet = Alphabet(stt_cfg.alphabet)
+    alphabet = Alphabet(list(stt_cfg.alphabet))
 
     # preprocessing
     input_channels = None

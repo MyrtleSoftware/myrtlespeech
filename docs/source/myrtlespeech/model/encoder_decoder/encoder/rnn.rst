@@ -7,6 +7,7 @@ Python
 
 .. automodule:: myrtlespeech.model.encoder_decoder.encoder.rnn
     :members:
+    :undoc-members:
     :show-inheritance:
 
 Protobuf
