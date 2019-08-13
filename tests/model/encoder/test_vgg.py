@@ -199,7 +199,7 @@ def test_make_layers_returned_module_returns_correct_seq_len(
     )
 
     # compute output and check
-    _, act_seq_lens = module(tensor, seq_lens=in_seq_lens)
+    _, act_seq_lens = module((tensor, in_seq_lens))
 
     exp_seq_lens = []
     for seq_len in in_seq_lens:

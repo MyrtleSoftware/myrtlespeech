@@ -1,6 +1,5 @@
 from typing import Optional
 from typing import Tuple
-from typing import Union
 
 import torch
 from myrtlespeech.model.encoder_decoder.encoder.encoder import conv_to_rnn_size
@@ -43,8 +42,8 @@ class CNNRNNEncoder(Encoder):
                 self.rnn = self.rnn.cuda()
 
     def forward(
-        self, x: torch.Tensor, seq_lens: Optional[torch.Tensor] = None
-    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        self, x: Tuple[torch.Tensor, torch.Tensor]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Returns the result of applying ``cnn`` and ``rnn`` to ``x``.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
@@ -54,22 +53,11 @@ class CNNRNNEncoder(Encoder):
         See :py:meth:`myrtlespeech.model.encoder.encoder.Encoder`.
         """
         if self.use_cuda:
-            x = x.cuda()
-            if seq_lens is not None:
-                seq_lens = seq_lens.cuda()
-
+            x = (x[0].cuda(), x[1].cuda())
         h = x
-        if seq_lens is not None:
-            if self.cnn:
-                h, seq_lens = self.cnn(h, seq_lens=seq_lens)
-            h = self.cnn_to_rnn(h)
-            if self.rnn:
-                h, seq_lens = self.rnn(h, seq_lens=seq_lens)
-            return h, seq_lens
-
         if self.cnn:
             h = self.cnn(h)
-        h = self.cnn_to_rnn(h)
+        h = (self.cnn_to_rnn(h[0]), h[1])
         if self.rnn:
             h = self.rnn(h)
         return h

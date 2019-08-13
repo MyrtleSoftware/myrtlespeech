@@ -106,8 +106,8 @@ class FullyConnected(Decoder):
         return module
 
     def forward(
-        self, x: torch.Tensor, seq_lens: Optional[torch.Tensor] = None
-    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        self, x: Tuple[torch.Tensor, torch.Tensor]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Returns the result of applying ``fully_connected`` to ``x``.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
@@ -117,15 +117,11 @@ class FullyConnected(Decoder):
         See :py:meth:`.Decoder.forward`.
         """
         if self.use_cuda:
-            x = x.cuda()
-            if seq_lens is not None:
-                seq_lens = seq_lens.cuda()
+            x = (x[0].cuda(), x[1].cuda())
 
         # PyTorch linear layer documentation states batch must be the first
         # dimension but applying with seq_len first and batch second achieves
         # what we want without transposes (e.g. Linear applied to each timestep
         # for each batch element)
-        result = self.fully_connected(x)
-        if seq_lens is not None:
-            return result, seq_lens
-        return result
+        result = self.fully_connected(x[0])
+        return result, x[1]

@@ -1,6 +1,4 @@
-from typing import Optional
 from typing import Tuple
-from typing import Union
 
 import torch
 
@@ -12,24 +10,22 @@ class Decoder(torch.nn.Module):
     """
 
     def forward(
-        self, x: torch.Tensor, seq_lens: Optional[torch.Tensor] = None
-    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        r"""Returns the result of applying the ``Decoder`` to ``x``.
+        self, x: Tuple[torch.Tensor, torch.Tensor]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        r"""Returns the result of applying the ``Decoder`` to ``x[0]``.
 
-        Args:
-            x: This is a :py:class:`torch.Tensor` with size ``[max_out_seq_len,
-                batch, out_features]``.
-
-            seq_lens: An optional :py:class:`torch.Tensor` of size ``[batch]``
-                where each entry represents the sequence length of the
-                corresponding *input* sequence in ``x``.
+        Args
+            x: A tuple where the first element is the network input (a
+                :py:class:`torch.Tensor`) with size ``[max_out_seq_len, batch,
+                out_features]`` and the second element is
+                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+                represents the sequence length of the corresponding *input*
+                sequence.
 
         Returns:
-            A Tuple is returned when ``seq_lens`` is not None.
-
-            The single return value or first element of the Tuple return value
-            is the result after applying the :py:class:`Decoder` to ``x``. It
-            must have size ``[max_out_seq_len, batch, out_features]``.
+            The first element of the Tuple return value is the result after
+            applying both the :py:class:`.Decoder` to ``x[0]``. It must have
+            size ``[max_out_seq_len, batch, out_features]``.
 
             The second element of the Tuple return value is a
             :py:class:`torch.Tensor` with size ``[batch]`` where each entry

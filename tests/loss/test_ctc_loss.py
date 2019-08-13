@@ -89,10 +89,8 @@ def test_ctc_loss_matches_torch(args) -> None:
     )
 
     actual = myrtle_ctc_loss(
-        inputs=args["inputs"],
-        targets=args["targets"],
-        input_lengths=args["input_lengths"],
-        target_lengths=args["target_lengths"],
+        inputs=(args["inputs"], args["input_lengths"]),
+        targets=(args["targets"], args["target_lengths"]),
     )
 
     expected = torch_ctc_loss(

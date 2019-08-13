@@ -191,7 +191,7 @@ class CallbackHandler:
             {}
             >>> handler.on_train_begin(epochs=100)
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 100, 'iteration': 0, 'num_batch': 0, metrics={}}
+            {'epoch': 0, 'epochs': 100, 'iteration': 0, 'num_batch': 0, 'metrics': {}}
         """
         self.state_dict.update(
             dict(epoch=0, epochs=epochs, iteration=0, num_batch=0, metrics={})
@@ -397,7 +397,7 @@ class CallbackHandler:
             if metric_name not in self.state_dict["metrics"]:
                 self.state_dict["metrics"][metric_name] = {}
 
-            metric(**self.state_dict)
+            metric(training=self.training, **self.state_dict)
 
     def on_batch_end(self) -> bool:
         """Updates ``state_dict``, runs callbacks, and returns a bool.
@@ -431,11 +431,11 @@ class CallbackHandler:
             >>> handler = CallbackHandler(callbacks=[callback])
             >>> handler.on_train_begin(1)   # initialise state_dict
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 1, 'iteration': 0, 'num_batch': 0}
+            {'epoch': 0, 'epochs': 1, 'iteration': 0, 'num_batch': 0, 'metrics': {}}
             >>> handler.on_batch_end()
             True
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 1, 'iteration': 1, 'num_batch': 1, 'stop_epoch': True}
+            {'epoch': 0, 'epochs': 1, 'iteration': 1, 'num_batch': 1, 'metrics': {}, 'stop_epoch': True}
         """
         self.state_dict["stop_epoch"] = False
         self("on_batch_end")
@@ -474,7 +474,7 @@ class CallbackHandler:
             >>> handler = CallbackHandler(callbacks=[callback])
             >>> handler.on_train_begin(1)   # initialise state_dict
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 1, 'iteration': 0, 'num_batch': 0}
+            {'epoch': 0, 'epochs': 1, 'iteration': 0, 'num_batch': 0, 'metrics': {}}
             >>> handler.on_epoch_end()
             True
             >>> handler.state_dict["epoch"]

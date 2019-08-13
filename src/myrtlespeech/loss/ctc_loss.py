@@ -1,5 +1,4 @@
 from typing import Tuple
-from typing import Union
 
 import torch
 
@@ -51,10 +50,8 @@ class CTCLoss(torch.nn.Module):
 
     def forward(
         self,
-        inputs: torch.Tensor,
-        targets: torch.Tensor,
-        input_lengths: Union[Tuple, torch.Tensor],
-        target_lengths: Union[Tuple, torch.Tensor],
+        inputs: Tuple[torch.Tensor, torch.Tensor],
+        targets: Tuple[torch.Tensor, torch.Tensor],
     ) -> torch.Tensor:
         """Computes CTC loss.
 
@@ -66,39 +63,39 @@ class CTCLoss(torch.nn.Module):
         :py:class:`torch.nn.CTCLoss`.
 
         Args:
-            inputs: Unnormalized network :py:class:`torch.Tensor` outputs of
-                size ``(max_seq_len, batch, features)``.
+            inputs: A tuple where the first element is the unnormalized network
+                :py:class:`torch.Tensor` outputs of size ``(max_seq_len, batch,
+                features)``. The second element is a :py:class:`torch.Tensor`
+                that gives the length of the inputs (each must be ``<=
+                max_seq_len``). Lengths are specified for each sequence to
+                achieve masking under the assumption that sequences are padded
+                to equal lengths.
 
-            targets: :py:class:`torch.Tensor` where each element in the target
+            targets: A tuple where the first element is a
+                :py:class:`torch.Tensor` such that each entry in the target
                 sequence is a class index. Target indices cannot be the blank
-                index.
-
-                Must have size ``(batch, max_seq_len)`` or
+                index. It must have size ``(batch, max_seq_len)`` or
                 ``sum(target_lengths)``. In the former form each target
                 sequence is padded to the length of the longest sequence and
                 stacked.
 
-            input_lengths: Length of the inputs (each must be ``<= batch``).
-                Lengths are specified for each sequence to achieve masking
-                under the assumption that sequences are padded to equal
-                lengths.
-
-            target_lengths: Lengths of the targets. Lengths are specified for
-                each sequence to achieve masking under the assumption that
-                sequences are padded to equal lengths.
+                The second element is a :py:class:`torch.Tensor` that gives
+                the lengths of the targets. Lengths are specified for each
+                sequence to achieve masking under the assumption that sequences
+                are padded to equal lengths.
         """
+        x, x_lens = inputs
+        y, y_lens = targets
         if self.use_cuda:
-            inputs = inputs.cuda()
-            targets = targets.cuda()
-            if torch.is_tensor(input_lengths):
-                input_lengths = input_lengths.cuda()  # type: ignore
-            if torch.is_tensor(target_lengths):
-                target_lengths = target_lengths.cuda()  # type: ignore
+            x = x.cuda()
+            x_lens = x_lens.cuda()
+            y = y.cuda()
+            y_lens = y_lens.cuda()
 
-        log_probs = self.log_softmax(inputs)
+        log_probs = self.log_softmax(x)
         return self.ctc_loss(
             log_probs=log_probs,
-            targets=targets,
-            input_lengths=input_lengths,
-            target_lengths=target_lengths,
+            targets=y,
+            input_lengths=x_lens,
+            target_lengths=y_lens,
         )

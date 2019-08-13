@@ -94,35 +94,34 @@ class RNN(torch.nn.Module):
             self.rnn = self.rnn.cuda()
 
     def forward(
-        self, x: torch.Tensor, seq_lens: Optional[torch.Tensor] = None
-    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        r"""Returns the result of applying the rnn to ``x``.
+        self, x: Tuple[torch.Tensor, torch.Tensor]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        r"""Returns the result of applying the rnn to ``x[0]``.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
         initialisation.
 
-        Args:
-            x: :py:class:`torch.Tensor` with shape ``[seq_len, batch
-                in_features]``.
-
-            seq_lens: An optional argument that, if not :py:data:`None` it must
-                be a :py:class:`torch.Tensor` of size ``[batch]`` where each
-                entry is an integer that gives the sequence length of the
-                corresponding sequence in ``x``. If not :py:data:`None`, the
-                function will also return this value (layer does not change
-                sequence lengths).
+        Args
+            x: A tuple where the first element is the network input (a
+                :py:class:`torch.Tensor`) with size ``[seq_len, batch,
+                in_features]`` and the second element is
+                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+                represents the sequence length of the corresponding *input*
+                sequence.
 
         Returns:
-            A :py:class:`torch.Tensor` with shape ``[seq_len, batch,
-            out_features]``. If ``seq_lens`` is not :py:data:`None` then it
-            is returned as the second argument.
+            The first element of the Tuple return value is the result after
+            applying the RNN to ``x[0]``. It must have size ``[seq_len,
+            batch, out_features]``.
+
+            The second element of the Tuple return value is a
+            :py:class:`torch.Tensor` with size ``[batch]`` where each entry
+            represents the sequence length of the corresponding *output*
+            sequence. This will be equal to ``x[1]`` as this layer does not
+            currently change sequence length.
         """
         if self.use_cuda:
-            x = x.cuda()
-            if seq_lens is not None:
-                seq_lens = seq_lens.cuda()
-
-        h, _ = self.rnn(x)
-
-        return h, seq_lens
+            x = (x[0].cuda(), x[1].cuda())
+        h, _ = self.rnn(x[0])
+        return h, x[1]

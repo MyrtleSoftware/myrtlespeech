@@ -49,7 +49,9 @@ def seq_to_seq_collate_fn(
             Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]
         ]
     ]
-) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
+) -> Tuple[
+    Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]
+]:
     r"""Collates a list of ``((tensor, tensor_len), (target, target_len))``.
 
     A ``collate_fn`` for sequence-to-sequence tasks.
@@ -74,15 +76,12 @@ def seq_to_seq_collate_fn(
                 ``target``.
 
     Returns:
-        A tuple of two dictionaries.
-
-        The first dictionary has two keys, ``x`` and ``seq_lens``. ``x`` is the
-        result of applying :py:func:`.pad_sequence` to all ``tensor``\s and
-        ``seq_lens`` is the result of stacking all ``tensor_len``\s.
-
-        The second dictionary has two keys, ``targets`` and ``target_lengths``.
-        ``targets`` is the result of appying :py:func:`.pad_sequence` to all
-        ``target``\s and ``target_lengths`` is the result of stacking all
+        A tuple of ``((batch_tensor, batch_tensor_len), (batch_target,
+        batch_target_len))`` where ``batch_tensor`` is the
+        result of applying :py:func:`.pad_sequence` to all ``tensor``\s,
+        ``batch_tensor_lens`` is the result of stacking all ``tensor_len``\s,
+        ``batch_target`` is the result of appying :py:func:`.pad_sequence` to
+        all ``target``\s and ``batch_target_len`` is the result of stacking all
         ``target_len``\s.
     """
     inputs, in_seq_lens = [], []
@@ -99,7 +98,4 @@ def seq_to_seq_collate_fn(
     targets = pad_sequence(targets)
     target_seq_lens = torch.tensor(target_seq_lens, requires_grad=False)
 
-    x = {"x": inputs, "seq_lens": in_seq_lens}
-    y = {"targets": targets, "target_lengths": target_seq_lens}
-
-    return x, y
+    return (inputs, in_seq_lens), (targets, target_seq_lens)

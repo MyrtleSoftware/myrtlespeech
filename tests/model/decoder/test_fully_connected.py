@@ -98,7 +98,7 @@ def test_fully_connected_module_returns_correct_seq_lens(
         requires_grad=False,
     )
 
-    _, act_seq_lens = fully_connected(tensor, seq_lens=in_seq_lens)
+    _, act_seq_lens = fully_connected((tensor, in_seq_lens))
 
     assert torch.all(act_seq_lens == in_seq_lens)
 
@@ -159,7 +159,16 @@ def test_fully_connected_forward_returns_correct_size(
     _, kwargs = fully_connected_kwargs
     kwargs["in_features"] = tensor.size()[-1]
     fully_connected = FullyConnected(**kwargs)
-    out = fully_connected(tensor)
+
+    max_seq_len, batch_size, *_ = tensor.size()
+    in_seq_lens = torch.randint(
+        low=1,
+        high=max_seq_len + 1,
+        size=[batch_size],
+        dtype=torch.int32,
+        requires_grad=False,
+    )
+    out, _ = fully_connected((tensor, in_seq_lens))
 
     in_size = tensor.size()
     out_size = out.size()

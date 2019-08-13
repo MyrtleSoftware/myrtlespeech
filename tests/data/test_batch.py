@@ -116,11 +116,14 @@ def test_seq_to_seq_collate_fn() -> None:
 
     x, y = seq_to_seq_collate_fn(batch)
 
-    assert set(x.keys()) == {"x", "seq_lens"}
-    assert set(y.keys()) == {"targets", "target_lengths"}
+    assert isinstance(x, tuple)
+    assert len(x) == 2
 
-    assert torch.all(x["x"] == pad_sequence(inputs))
-    assert torch.all(x["seq_lens"] == seq_lens)
+    assert isinstance(y, tuple)
+    assert len(y) == 2
 
-    assert torch.all(y["targets"] == pad_sequence(targets))
-    assert torch.all(y["target_lengths"] == target_lengths)
+    assert torch.all(x[0] == pad_sequence(inputs))
+    assert torch.all(x[1] == seq_lens)
+
+    assert torch.all(y[0] == pad_sequence(targets))
+    assert torch.all(y[1] == target_lengths)

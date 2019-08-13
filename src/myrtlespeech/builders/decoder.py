@@ -67,15 +67,12 @@ def build(
         >>> # create and process example tensor with shape
         >>> # [max_seq_len, batch, in_features]
         >>> ex_in = torch.empty([100, 3, 10]).normal_()
+        >>> ex_in_seq_lens = torch.tensor([10, 50, 100])
         >>> # fully connected layers do not change the sequence length
-        >>> ex_out = decoder(ex_in)
+        >>> ex_out, ex_out_seq_lens = decoder((ex_in, ex_in_seq_lens))
         >>> ex_out.size()
         torch.Size([100, 3, 20])
         >>> # hence the seq_lens argument also does not change
-        >>> ex_in_seq_lens = torch.tensor([10, 25, 100])
-        >>> ex_out, ex_out_seq_lens = decoder(ex_in, seq_lens=ex_in_seq_lens)
-        >>> ex_out.size()
-        torch.Size([100, 3, 20])
         >>> bool(torch.all(ex_out_seq_lens == ex_in_seq_lens))
         True
     """

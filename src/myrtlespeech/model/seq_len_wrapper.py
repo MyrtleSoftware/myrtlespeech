@@ -1,10 +1,12 @@
+from typing import Any
 from typing import Callable
+from typing import Tuple
 
 import torch
 
 
 class SeqLenWrapper(torch.nn.Module):
-    """Adds ``seq_len`` kwarg support to a :py:class:`torch.nn.Module`.
+    """Adds sequence length support to a :py:class:`torch.nn.Module`.
 
     Args:
         module: A :py:class:`torch.nn.Module`.
@@ -23,8 +25,8 @@ class SeqLenWrapper(torch.nn.Module):
         self.module = module
         self.seq_lens_fn = seq_lens_fn
 
-    def forward(self, x, seq_lens=None, *args, **kwargs):
-        result = self.module(x, *args, **kwargs)
-        if seq_lens is None:
-            return result
-        return result, self.seq_lens_fn(seq_lens)
+    def forward(
+        self, x: Tuple[Any, torch.Tensor], *args, **kwargs
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        result = self.module(x[0], *args, **kwargs)
+        return result, self.seq_lens_fn(x[1])

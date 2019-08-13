@@ -68,11 +68,11 @@ def fit(
                 for x, y in loader:
                     # model
                     x, y = cb_handler.on_batch_begin(x, y)
-                    out = seq_to_seq.model(**x)
+                    out = seq_to_seq.model(x)
 
                     # loss
                     loss_out, loss_y = cb_handler.on_loss_begin(out, y)
-                    loss = seq_to_seq.loss(**loss_out, **loss_y)
+                    loss = seq_to_seq.loss(loss_out, loss_y)
                     loss, skip_bwd = cb_handler.on_backward_begin(loss)
 
                     # optim
