@@ -1,4 +1,5 @@
 from typing import Any
+from typing import Callable
 from typing import Collection
 from typing import Dict
 from typing import Optional
@@ -92,6 +93,8 @@ class CallbackHandler:
     Args:
         callbacks: A collection of :py:class:`Callback`\s.
 
+        metrics: TODO
+
         training: See Attributes.
 
     Attributes:
@@ -102,8 +105,16 @@ class CallbackHandler:
             training mode.
     """
 
-    def __init__(self, callbacks: Collection[Callback], training: bool = True):
+    def __init__(
+        self,
+        callbacks: Collection[Callback],
+        metrics: Optional[Collection[Callable]] = None,
+        training: bool = True,
+    ):
         self.callbacks = callbacks
+        self.metrics: Collection[Callable] = []
+        if metrics is not None:
+            self.metrics = metrics
         self.state_dict: Dict = {}
         self.training = training
 
@@ -171,16 +182,19 @@ class CallbackHandler:
                 :py:meth:`CallbackHandler.on_batch_end` since the last call to
                 :py:meth:`CallbackHandler.on_epoch_begin`.
 
+            metrics:
+                TODO
+
         Example:
             >>> handler = CallbackHandler(callbacks=[])
             >>> handler.state_dict
             {}
             >>> handler.on_train_begin(epochs=100)
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 100, 'iteration': 0, 'num_batch': 0}
+            {'epoch': 0, 'epochs': 100, 'iteration': 0, 'num_batch': 0, metrics={}}
         """
         self.state_dict.update(
-            dict(epoch=0, epochs=epochs, iteration=0, num_batch=0)
+            dict(epoch=0, epochs=epochs, iteration=0, num_batch=0, metrics={})
         )
         self("on_train_begin")
 
@@ -235,7 +249,7 @@ class CallbackHandler:
         self("on_batch_begin")
         return self.state_dict["last_input"], self.state_dict["last_target"]
 
-    def on_loss_begin(self, out: Any) -> Dict:
+    def on_loss_begin(self, out: Any, y: Any) -> Tuple[Dict, Dict]:
         """Updates ``state_dict``, runs callbacks, and returns output.
 
         The following key is first set in
@@ -244,25 +258,35 @@ class CallbackHandler:
             last_output:
                 Set to ``out``.
 
-        All :py:meth:`Callback.on_loss_begin` methods are then ran. These may
-        modify the ``last_output`` :py:data:`CallbackHandler.state_dict`
-        value.
+            last_target:
+                Set to ``y``.
 
-        The possibly modified ``last_output`` is then returned.
+        All :py:meth:`Callback.on_loss_begin` methods are then ran. These may
+        modify the ``last_output`` and ``last_target``
+        :py:data:`CallbackHandler.state_dict` value.
+
+        The possibly modified ``last_output`` and ``last_target`` is then
+        returned.
 
         Returns:
-            Possibly modified ``last_output`` value.
+            Possibly modified ``last_output`` and ``last_target`` value.
 
         Example:
-            >>> callback = Callback()
-            >>> callback.on_loss_begin = lambda **kwargs: {"last_output": {"out": kwargs["last_output"]}}
-            >>> handler = CallbackHandler(callbacks=[callback])
-            >>> handler.on_loss_begin(out=0)
-            {'out': 0}
+            TODO
         """
         self.state_dict["last_output"] = out
+        self.state_dict["last_target"] = y
+
+        self.state_dict["loss"] = {
+            "last_output": self.state_dict["last_output"],
+            "last_target": self.state_dict["last_target"],
+        }
         self("on_loss_begin")
-        return self.state_dict["last_output"]
+
+        return (
+            self.state_dict["loss"]["last_output"],
+            self.state_dict["loss"]["last_target"],
+        )
 
     def on_backward_begin(
         self, loss: torch.Tensor
@@ -355,6 +379,25 @@ class CallbackHandler:
         self.state_dict["skip_zero"] = False
         self("on_step_end")
         return self.state_dict["skip_zero"]
+
+    def run_metrics(self) -> None:
+        """Runs all metrics.
+
+        For each metric, the following is first set in
+        :py:data:`CallbackHandler.state_dict` if it does not already exist:
+
+        .. code-block:: python
+
+            self.state_dict["metrics"][metric.__class__.__name__] = {}
+
+        Values related to the metric can be captured in this dictionary.
+        """
+        for metric in self.metrics:
+            metric_name = metric.__class__.__name__
+            if metric_name not in self.state_dict["metrics"]:
+                self.state_dict["metrics"][metric_name] = {}
+
+            metric(**self.state_dict)
 
     def on_batch_end(self) -> bool:
         """Updates ``state_dict``, runs callbacks, and returns a bool.

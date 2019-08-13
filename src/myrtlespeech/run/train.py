@@ -1,4 +1,5 @@
 from contextlib import ExitStack
+from typing import Callable
 from typing import Collection
 from typing import Optional
 
@@ -17,6 +18,7 @@ def fit(
     train_loader: DataLoader,
     eval_loader: Optional[DataLoader] = None,
     callbacks: Optional[Collection[Callback]] = None,
+    metrics: Optional[Collection[Callable]] = None,
 ) -> None:
     r"""Fit ``seq_to_seq`` with ``optim`` for ``epochs`` ``train_loader`` iters.
 
@@ -37,9 +39,11 @@ def fit(
             the validation data.
 
         callbacks: A collection of :py:class:`.Callback`\s.
+
+        metrics: TODO
     """
     # sphinx-doc-start-after
-    cb_handler = CallbackHandler(callbacks)
+    cb_handler = CallbackHandler(callbacks, metrics)
     cb_handler.on_train_begin(epochs)
 
     for epoch in range(epochs):
@@ -62,13 +66,16 @@ def fit(
 
                 loader = train_loader if is_training else eval_loader
                 for x, y in loader:
+                    # model
                     x, y = cb_handler.on_batch_begin(x, y)
                     out = seq_to_seq.model(**x)
 
-                    out = cb_handler.on_loss_begin(out)
-                    loss = seq_to_seq.loss(**out, **y)
+                    # loss
+                    loss_out, loss_y = cb_handler.on_loss_begin(out, y)
+                    loss = seq_to_seq.loss(**loss_out, **loss_y)
                     loss, skip_bwd = cb_handler.on_backward_begin(loss)
 
+                    # optim
                     if is_training:
                         if not skip_bwd:
                             loss.backward()
@@ -78,6 +85,9 @@ def fit(
 
                         if not cb_handler.on_step_end():
                             optim.zero_grad()
+
+                    # metrics
+                    cb_handler.run_metrics()
 
                     if cb_handler.on_batch_end():
                         break
