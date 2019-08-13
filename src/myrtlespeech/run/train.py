@@ -86,9 +86,6 @@ def fit(
                         if not cb_handler.on_step_end():
                             optim.zero_grad()
 
-                    # metrics
-                    cb_handler.run_metrics()
-
                     if cb_handler.on_batch_end():
                         break
 

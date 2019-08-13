@@ -93,8 +93,6 @@ class CallbackHandler:
     Args:
         callbacks: A collection of :py:class:`Callback`\s.
 
-        metrics: TODO
-
         training: See Attributes.
 
     Attributes:
@@ -105,16 +103,8 @@ class CallbackHandler:
             training mode.
     """
 
-    def __init__(
-        self,
-        callbacks: Collection[Callback],
-        metrics: Optional[Collection[Callable]] = None,
-        training: bool = True,
-    ):
+    def __init__(self, callbacks: Collection[Callback], training: bool = True):
         self.callbacks = callbacks
-        self.metrics: Collection[Callable] = []
-        if metrics is not None:
-            self.metrics = metrics
         self.state_dict: Dict = {}
         self.training = training
 
@@ -379,25 +369,6 @@ class CallbackHandler:
         self.state_dict["skip_zero"] = False
         self("on_step_end")
         return self.state_dict["skip_zero"]
-
-    def run_metrics(self) -> None:
-        """Runs all metrics.
-
-        For each metric, the following is first set in
-        :py:data:`CallbackHandler.state_dict` if it does not already exist:
-
-        .. code-block:: python
-
-            self.state_dict["metrics"][metric.__class__.__name__] = {}
-
-        Values related to the metric can be captured in this dictionary.
-        """
-        for metric in self.metrics:
-            metric_name = metric.__class__.__name__
-            if metric_name not in self.state_dict["metrics"]:
-                self.state_dict["metrics"][metric_name] = {}
-
-            metric(training=self.training, **self.state_dict)
 
     def on_batch_end(self) -> bool:
         """Updates ``state_dict``, runs callbacks, and returns a bool.
