@@ -1,5 +1,4 @@
 from typing import Any
-from typing import Callable
 from typing import Collection
 from typing import Dict
 from typing import Optional
@@ -103,8 +102,12 @@ class CallbackHandler:
             training mode.
     """
 
-    def __init__(self, callbacks: Collection[Callback], training: bool = True):
-        self.callbacks = callbacks
+    def __init__(
+        self,
+        callbacks: Optional[Collection[Callback]] = None,
+        training: bool = True,
+    ):
+        self.callbacks = callbacks if callbacks is not None else []
         self.state_dict: Dict = {}
         self.training = training
 
@@ -152,7 +155,7 @@ class CallbackHandler:
         """Initializes :py:data:`CallbackHandler.state_dict` and runs callbacks.
 
         The initialized :py:data:`CallbackHandler.state_dict` will contain the
-        following three keys:
+        following keys:
 
             epoch:
                 An :py:class:`int` denoting the total number of training epochs
@@ -162,17 +165,19 @@ class CallbackHandler:
                 An :py:class:`int` denoting the total number of training
                 epochs. Initialized to the ``epochs`` argument.
 
-            iteration:
+            total_train_batches:
+                TODO
                 An :py:class:`int` denoting the total number of calls to
                 :py:meth:`CallbackHandler.on_batch_end` since the last call to
                 :py:meth:`CallbackHandler.on_train_begin`.
 
-            num_batch:
+            epoch_batches:
+                TODO
                 An :py:class:`int` denoting the total number of calls to
                 :py:meth:`CallbackHandler.on_batch_end` since the last call to
                 :py:meth:`CallbackHandler.on_epoch_begin`.
 
-            metrics:
+            reports:
                 TODO
 
         Example:
@@ -181,15 +186,21 @@ class CallbackHandler:
             {}
             >>> handler.on_train_begin(epochs=100)
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 100, 'iteration': 0, 'num_batch': 0, 'metrics': {}}
+            {'epoch': 0, 'epochs': 100, 'iteration': 0, 'total_train_batches': 0, 'epoch_batches': 0, 'reports': {}}
         """
         self.state_dict.update(
-            dict(epoch=0, epochs=epochs, iteration=0, num_batch=0, metrics={})
+            dict(
+                epoch=0,
+                epochs=epochs,
+                total_train_batches=0,
+                epoch_batches=0,
+                reports={},
+            )
         )
         self("on_train_begin")
 
     def on_epoch_begin(self) -> None:
-        """Sets ``num_batch=0`` in ``state_dict`` and runs callbacks.
+        """Sets ``epoch_batches=0`` in ``state_dict`` and runs callbacks.
 
         Example:
             >>> callback = Callback()
@@ -200,9 +211,9 @@ class CallbackHandler:
             >>> handler.on_epoch_begin()
             called
             >>> handler.state_dict
-            {'num_batch': 0}
+            TODO
         """
-        self.state_dict["num_batch"] = 0
+        self.state_dict["epoch_batches"] = 0
         self("on_epoch_begin")
 
     def on_batch_begin(self, x: Any, y: Any) -> Tuple[Dict, Dict]:
@@ -385,10 +396,10 @@ class CallbackHandler:
         If :py:data:`CallbackHandler.training` then the following keys are then
         modified in :py:data:`CallbackHandler.state_dict`:
 
-            iteration:
-                Incremented by 1.
+            total_train_batches:
+                Incremented by 1 if ``self.training``.
 
-            num_batch:
+            epoch_batches:
                 Incremented by 1.
 
         The possibly modified ``stop_epoch`` value is then returned.
@@ -402,17 +413,17 @@ class CallbackHandler:
             >>> handler = CallbackHandler(callbacks=[callback])
             >>> handler.on_train_begin(1)   # initialise state_dict
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 1, 'iteration': 0, 'num_batch': 0, 'metrics': {}}
+            {'epoch': 0, 'epochs': 1, 'total_train_batches': 0, 'epoch_batches': 0, 'reports': {}}
             >>> handler.on_batch_end()
             True
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 1, 'iteration': 1, 'num_batch': 1, 'metrics': {}, 'stop_epoch': True}
+            {'epoch': 0, 'epochs': 1, 'total_train_batches': 1, 'epoch_batches': 1, 'reports': {}, 'stop_epoch': True}
         """
         self.state_dict["stop_epoch"] = False
         self("on_batch_end")
+        self.state_dict["epoch_batches"] += 1
         if self.training:
-            self.state_dict["iteration"] += 1
-            self.state_dict["num_batch"] += 1
+            self.state_dict["total_train_batches"] += 1
         return self.state_dict["stop_epoch"]
 
     def on_epoch_end(self) -> bool:
@@ -432,7 +443,7 @@ class CallbackHandler:
         :py:data:`CallbackHandler.state_dict`\:
 
             epoch:
-                Incremented by 1.
+                Incremented by 1 if ``self.training``.
 
         The possibly modified ``stop_training`` value is then returned.
 
@@ -445,7 +456,7 @@ class CallbackHandler:
             >>> handler = CallbackHandler(callbacks=[callback])
             >>> handler.on_train_begin(1)   # initialise state_dict
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 1, 'iteration': 0, 'num_batch': 0, 'metrics': {}}
+            {'epoch': 0, 'epochs': 1, 'iteration': 0, 'num_batch': 0, 'reports': {}}
             >>> handler.on_epoch_end()
             True
             >>> handler.state_dict["epoch"]
@@ -455,14 +466,15 @@ class CallbackHandler:
         """
         self.state_dict["stop_training"] = False
         self("on_epoch_end")
-        self.state_dict["epoch"] += 1
+        if self.training:
+            self.state_dict["epoch"] += 1
         return self.state_dict["stop_training"]
 
     def on_train_end(self) -> None:
         """Runs all ``on_train_end`` callbacks."""
         self("on_train_end")
 
-    def train(self, mode=True):
+    def train(self, mode=True) -> "CallbackHandler":
         """Sets the handler and all registered callbacks in training mode.
 
         Returns:

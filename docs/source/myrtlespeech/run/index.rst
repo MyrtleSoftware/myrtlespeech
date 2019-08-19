@@ -6,6 +6,6 @@
     :maxdepth: 1
     :caption: Contents:
 
-    callback
+    callbacks/index
     stage
     train

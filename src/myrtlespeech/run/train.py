@@ -5,8 +5,8 @@ from typing import Optional
 
 import torch
 from myrtlespeech.model.seq_to_seq import SeqToSeq
-from myrtlespeech.run.callback import Callback
-from myrtlespeech.run.callback import CallbackHandler
+from myrtlespeech.run.callbacks.callback import Callback
+from myrtlespeech.run.callbacks.callback import CallbackHandler
 from myrtlespeech.run.stage import Stage
 from torch.utils.data import DataLoader
 
@@ -18,7 +18,6 @@ def fit(
     train_loader: DataLoader,
     eval_loader: Optional[DataLoader] = None,
     callbacks: Optional[Collection[Callback]] = None,
-    metrics: Optional[Collection[Callable]] = None,
 ) -> None:
     r"""Fit ``seq_to_seq`` with ``optim`` for ``epochs`` ``train_loader`` iters.
 
@@ -39,16 +38,12 @@ def fit(
             the validation data.
 
         callbacks: A collection of :py:class:`.Callback`\s.
-
-        metrics: TODO
     """
     # sphinx-doc-start-after
-    cb_handler = CallbackHandler(callbacks, metrics)
+    cb_handler = CallbackHandler(callbacks)
     cb_handler.on_train_begin(epochs)
 
     for epoch in range(epochs):
-        cb_handler.on_epoch_begin()
-
         stages = [Stage.TRAIN]  # always train for an epoch
         if eval_loader is not None:
             stages.append(Stage.EVAL)  # eval after every epoch
@@ -59,6 +54,8 @@ def fit(
             is_training = stage == Stage.TRAIN
             seq_to_seq.train(mode=is_training)
             cb_handler.train(mode=is_training)
+
+            cb_handler.on_epoch_begin()
 
             with ExitStack() as stack:
                 if not is_training:
@@ -89,8 +86,8 @@ def fit(
                     if cb_handler.on_batch_end():
                         break
 
-        if cb_handler.on_epoch_end():
-            break
+            if cb_handler.on_epoch_end():
+                break
 
     cb_handler.on_train_end()
     # sphinx-doc-end-before
