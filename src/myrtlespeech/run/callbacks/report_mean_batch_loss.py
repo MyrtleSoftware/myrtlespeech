@@ -1,3 +1,5 @@
+from typing import Optional
+
 from myrtlespeech.run.callbacks.callback import Callback
 
 
@@ -32,7 +34,7 @@ class ReportMeanBatchLoss(Callback):
 
     def _reset(self, **kwargs) -> None:
         kwargs["reports"][self.__class__.__name__] = None
-        self.loss = None
+        self.loss: Optional[float] = None
 
     def on_train_begin(self, **kwargs) -> None:
         """Sets ``kwargs["reports"]["ReportMeanBatchLoss"] = None``."""
@@ -51,7 +53,7 @@ class ReportMeanBatchLoss(Callback):
 
     def on_epoch_end(self, **kwargs) -> None:
         """Sets ``kwargs["reports"]["ReportMeanBatchLoss"]`` to mean loss."""
-        assert self.loss is not None
+        self.loss = 0.0 if self.loss is None else self.loss
         kwargs["reports"][self.__class__.__name__] = self.loss / float(
             kwargs["epoch_batches"]
         )
