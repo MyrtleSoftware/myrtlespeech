@@ -35,6 +35,10 @@ def levenshtein(a: Sequence, b: Sequence) -> int:
         >>> b = ["hallo", "world", "!"]
         >>> levenshtein(a, b)
         2
+        >>> a = [1, 2, 3, 4, 5]
+        >>> b = []
+        >>> levenshtein(a, b)
+        5
     """
     n, m = len(a), len(b)
     if n > m:
