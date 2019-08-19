@@ -8,3 +8,5 @@
 
     callback
     csv_logger
+    report_mean_batch_loss
+    stop_epoch_after

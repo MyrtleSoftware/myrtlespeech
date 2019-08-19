@@ -186,7 +186,7 @@ class CallbackHandler:
             {}
             >>> handler.on_train_begin(epochs=100)
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 100, 'iteration': 0, 'total_train_batches': 0, 'epoch_batches': 0, 'reports': {}}
+            {'epoch': 0, 'epochs': 100, 'total_train_batches': 0, 'epoch_batches': 0, 'reports': {}}
         """
         self.state_dict.update(
             dict(
@@ -211,7 +211,7 @@ class CallbackHandler:
             >>> handler.on_epoch_begin()
             called
             >>> handler.state_dict
-            TODO
+            {'epoch_batches': 0}
         """
         self.state_dict["epoch_batches"] = 0
         self("on_epoch_begin")
@@ -456,7 +456,7 @@ class CallbackHandler:
             >>> handler = CallbackHandler(callbacks=[callback])
             >>> handler.on_train_begin(1)   # initialise state_dict
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 1, 'iteration': 0, 'num_batch': 0, 'reports': {}}
+            {'epoch': 0, 'epochs': 1, 'total_train_batches': 0, 'epoch_batches': 0, 'reports': {}}
             >>> handler.on_epoch_end()
             True
             >>> handler.state_dict["epoch"]
