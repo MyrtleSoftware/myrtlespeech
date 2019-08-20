@@ -1,3 +1,4 @@
+import csv
 import pathlib
 from collections.abc import Container
 from typing import Optional
@@ -70,7 +71,7 @@ class CSVLogger(Callback):
         """Yields (key, val) tuples from reports, excluding keys in exclude."""
         # invariant: path is either empty ("") or ends in a "/"
         for metric, value in reports.items():
-            if metric in self.exclude:
+            if path + metric in self.exclude:
                 continue
             if isinstance(value, dict):
                 yield from self._get_reports(value, path=path + metric + "/")
@@ -82,13 +83,13 @@ class CSVLogger(Callback):
         if self.keys is None:
             self.keys = [metric for metric, _ in self._get_reports(kwargs)]
         keys = ["stage"] + self.keys
-        with self.path.open("w") as f:
-            f.write(",".join(keys) + "\n")
+        with self.path.open("w", newline="") as f:
+            csv.writer(f).writerow(keys)
 
     def on_epoch_end(self, **kwargs):
         """Writes current stage and ``CSVLogger.keys`` values to CSV file."""
         vals = dict(self._get_reports(kwargs))
         vals = [vals[k] for k in self.keys]
         vals = ["train" if self.training else "eval"] + vals
-        with self.path.open("a") as f:
-            f.write(",".join(vals) + "\n")
+        with self.path.open("a", newline="") as f:
+            csv.writer(f).writerow(vals)
