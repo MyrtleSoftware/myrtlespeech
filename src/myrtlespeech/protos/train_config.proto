@@ -16,7 +16,8 @@ message TrainConfig {
 
   oneof supported_optimizers {
     SGD sgd = 3;
+    Adam adam = 4;
   }
 
-  Dataset dataset = 4;
+  Dataset dataset = 5;
 }

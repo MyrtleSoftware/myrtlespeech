@@ -70,8 +70,32 @@ def build(
         if sgd.HasField("l2_weight_decay"):
             kwargs["weight_decay"] = sgd.l2_weight_decay.value
 
+        kwargs["nesterov"] = sgd.nesterov_momentum
+
         optim = torch.optim.SGD(
             params=model.parameters(), lr=sgd.learning_rate, **kwargs
+        )
+    elif optim_str == "adam":
+        kwargs = {}
+
+        adam = task_config.train_config.adam
+        betas = [0.9, 0.999]
+        if adam.HasField("beta_1"):
+            betas[0] = adam.beta_1.value
+        if adam.HasField("beta_2"):
+            betas[1] = adam.beta_2.value
+        betas = tuple(betas)  # type: ignore
+
+        if adam.HasField("eps"):
+            kwargs["eps"] = adam.eps.value
+
+        if adam.HasField("l2_weight_decay"):
+            kwargs["weight_decay"] = adam.l2_weight_decay.value
+
+        kwargs["amsgrad"] = adam.amsgrad
+
+        optim = torch.optim.Adam(
+            params=model.parameters(), lr=adam.learning_rate, **kwargs
         )
     else:
         raise ValueError(f"unsupported optimizer {optim_str}")
@@ -94,6 +118,7 @@ def build(
     train_loader = torch.utils.data.DataLoader(
         dataset=train_dataset,
         batch_size=task_config.train_config.batch_size,
+        num_workers=8,
         collate_fn=seq_to_seq_collate_fn,
         shuffle=False,
     )
@@ -108,6 +133,7 @@ def build(
     eval_loader = torch.utils.data.DataLoader(
         dataset=eval_dataset,
         batch_size=task_config.eval_config.batch_size,
+        num_workers=8,
         collate_fn=seq_to_seq_collate_fn,
     )
 
