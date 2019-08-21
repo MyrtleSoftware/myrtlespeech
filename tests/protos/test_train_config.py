@@ -42,9 +42,23 @@ def train_configs(
     elif optim_str == "adam":
         kwargs[optim_str] = draw(adams())
     else:
-        raise ValueError(f"unknown model type {optim_str}")
+        raise ValueError(f"unknown optim type {optim_str}")
 
     kwargs["dataset"] = draw(datasets())
+
+    # shuffle
+    shuffle_str = draw(
+        st.sampled_from(
+            [
+                f.name
+                for f in descript.oneofs_by_name["supported_shuffles"].fields
+            ]
+        )
+    )
+    if shuffle_str == "shuffle_batches_before_every_epoch":
+        kwargs[shuffle_str] = draw(st.booleans())
+    else:
+        raise ValueError(f"unknown shuffle type {shuffle_str}")
 
     # initialise and return
     all_fields_set(train_config_pb2.TrainConfig, kwargs)

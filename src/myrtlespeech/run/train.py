@@ -1,5 +1,4 @@
 from contextlib import ExitStack
-from typing import Callable
 from typing import Collection
 from typing import Optional
 
@@ -14,12 +13,11 @@ from torch.utils.data import DataLoader
 def fit(
     seq_to_seq: SeqToSeq,
     epochs: int,
-    optim: torch.optim.Optimizer,
     train_loader: DataLoader,
     eval_loader: Optional[DataLoader] = None,
     callbacks: Optional[Collection[Callback]] = None,
 ) -> None:
-    r"""Fit ``seq_to_seq`` with ``optim`` for ``epochs`` ``train_loader`` iters.
+    r"""Fit ``seq_to_seq`` for ``epochs`` ``train_loader`` iters.
 
     Args:
         seq_to_seq: A :py:class:`.SeqToSeq` model.
@@ -27,9 +25,6 @@ def fit(
         epochs: Maximum number of epochs to train ``seq_to_seq`` for. Note that
             the actual number of epochs may be less if
             :py:meth:`.CallbackHandler.on_epoch_end` returns :py:data:`True`.
-
-        optim: A :py:class:`torch.optim.Optimizer` initialized with
-            ``seq_to_seq.model`` params.
 
         train_loader: A :py:class:`torch.utils.data.DataLoader` for the
             training data.
@@ -77,11 +72,12 @@ def fit(
                         if not skip_bwd:
                             loss.backward()
 
-                        if not cb_handler.on_backward_end():
-                            optim.step()
+                        if seq_to_seq.optim is not None:
+                            if not cb_handler.on_backward_end():
+                                seq_to_seq.optim.step()
 
-                        if not cb_handler.on_step_end():
-                            optim.zero_grad()
+                            if not cb_handler.on_step_end():
+                                seq_to_seq.optim.zero_grad()
 
                     if cb_handler.on_batch_end():
                         break

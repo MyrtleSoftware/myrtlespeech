@@ -1,4 +1,5 @@
 from typing import Callable
+from typing import Optional
 from typing import Sequence
 from typing import Tuple
 
@@ -22,6 +23,9 @@ class SeqToSeq(torch.nn.Module):
             ``stage``.  :py:data:`.SeqToSeq.pre_process` returns a ``Callable``
             that handles this automatically based on
             :py:class:`.SeqToSeq.training`.
+
+        optim: An optional :py:class:`torch.optim.Optimizer` initialized with
+            model parameters to update.
     """
 
     def __init__(
@@ -29,11 +33,13 @@ class SeqToSeq(torch.nn.Module):
         model: torch.nn.Module,
         loss: torch.nn.Module,
         pre_process_steps: Sequence[Tuple[Callable, Stage]],
+        optim: Optional[torch.optim.Optimizer] = None,
     ):
         super().__init__()
         self.model = model
         self.loss = loss
         self.pre_process_steps = pre_process_steps
+        self.optim = optim
 
         self.use_cuda = torch.cuda.is_available()
         if self.use_cuda:

@@ -20,4 +20,9 @@ message TrainConfig {
   }
 
   Dataset dataset = 5;
+
+  oneof supported_shuffles {
+    // Shuffle batches before every epoch.
+    bool shuffle_batches_before_every_epoch = 6;
+  }
 }

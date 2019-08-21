@@ -8,5 +8,6 @@
 
     callback
     csv_logger
+    mixed_precision
     report_mean_batch_loss
     stop_epoch_after

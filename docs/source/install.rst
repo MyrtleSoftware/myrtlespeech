@@ -39,6 +39,18 @@ Development
         This command should be executed each time a ``.proto`` file is
         modified.
 
+4. Install `NVIDIA Apex
+   <https://github.com/NVIDIA/apex/tree/880ab925bce9f817a93988b021e12db5f67f7787>`_.
+   As of 2019-08-21 it does _not_ have a Conda package and must be installed
+   manually:
+
+   .. code-block:: bash
+
+    $ git clone https://github.com/NVIDIA/apex
+    $ cd apex
+    $ git checkout 880ab925bce9f817a93988b021e12db5f67f7787
+    $ pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./
+
 
 Continuous Integration
 -----------------------
@@ -52,3 +64,9 @@ the package can be easily deployed to a cluster. To build the container:
 
 The default Docker ``CMD`` is to run the full test suite under the ``ci``
 Hypothesis profile (see :ref:`hypothesis-label`).
+
+.. warning::
+
+    The Dockerfile installs `NVIDIA Apex <https://github.com/NVIDIA/apex>`_,
+    used for mixed precision, using a Python-only build and will omit some Apex
+    features and performance improvements.

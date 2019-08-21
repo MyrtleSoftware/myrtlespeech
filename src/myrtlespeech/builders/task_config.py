@@ -1,3 +1,4 @@
+import multiprocessing
 from typing import Tuple
 
 import torch
@@ -11,11 +12,7 @@ from myrtlespeech.protos import task_config_pb2
 def build(
     task_config: task_config_pb2.TaskConfig, seq_len_support: bool = True
 ) -> Tuple[
-    SeqToSeq,
-    int,
-    torch.optim.Optimizer,
-    torch.utils.data.DataLoader,
-    torch.utils.data.DataLoader,
+    SeqToSeq, int, torch.utils.data.DataLoader, torch.utils.data.DataLoader
 ]:
     """Builds a ``task_config`` and returns each component.
 
@@ -29,17 +26,13 @@ def build(
             kwarg.
 
     Returns:
-        A tuple of ``(model, epochs, optim, train_loader, eval_loader)`` where:
+        A tuple of ``(seq_to_seq, epochs, optim, train_loader, eval_loader)`` where:
 
-            model:
+            seq_to_seq:
                 A :py:class:`.SeqToSeq` model.
 
             epochs:
                 The number of epochs to train for.
-
-            optim:
-                A :py:class:`torch.optim.Optimizer` initialised with the
-                ``model`` parameters.
 
             train_loader:
                 A :py:class:`torch.utils.data.DataLoader` for the training data.
@@ -52,7 +45,7 @@ def build(
     """
     model_str = task_config.WhichOneof("supported_models")
     if model_str == "speech_to_text":
-        model = build_stt(
+        seq_to_seq = build_stt(
             task_config.speech_to_text, seq_len_support=seq_len_support
         )
     else:
@@ -73,7 +66,7 @@ def build(
         kwargs["nesterov"] = sgd.nesterov_momentum
 
         optim = torch.optim.SGD(
-            params=model.parameters(), lr=sgd.learning_rate, **kwargs
+            params=seq_to_seq.parameters(), lr=sgd.learning_rate, **kwargs
         )
     elif optim_str == "adam":
         kwargs = {}
@@ -95,52 +88,57 @@ def build(
         kwargs["amsgrad"] = adam.amsgrad
 
         optim = torch.optim.Adam(
-            params=model.parameters(), lr=adam.learning_rate, **kwargs
+            params=seq_to_seq.parameters(), lr=adam.learning_rate, **kwargs
         )
     else:
         raise ValueError(f"unsupported optimizer {optim_str}")
 
+    seq_to_seq.optim = optim
+
     # create dataloader
     def target_transform(target):
         return torch.tensor(
-            model.alphabet.get_indices(target),
+            seq_to_seq.alphabet.get_indices(target),
             dtype=torch.int32,
             requires_grad=False,
         )
 
+    num_workers = multiprocessing.cpu_count() // 4
+
     # training
     train_dataset = build_dataset(
         task_config.train_config.dataset,
-        transform=model.pre_process,
+        transform=seq_to_seq.pre_process,
         target_transform=target_transform,
         add_seq_len_to_transforms=seq_len_support,
     )
     train_loader = torch.utils.data.DataLoader(
         dataset=train_dataset,
         batch_size=task_config.train_config.batch_size,
-        num_workers=8,
+        num_workers=num_workers,
         collate_fn=seq_to_seq_collate_fn,
-        shuffle=False,
+        shuffle=task_config.train_config.shuffle_batches_before_every_epoch,
+        pin_memory=torch.cuda.is_available(),
     )
 
     # eval
     eval_dataset = build_dataset(
         task_config.eval_config.dataset,
-        transform=model.pre_process,
+        transform=seq_to_seq.pre_process,
         target_transform=target_transform,
         add_seq_len_to_transforms=seq_len_support,
     )
     eval_loader = torch.utils.data.DataLoader(
         dataset=eval_dataset,
         batch_size=task_config.eval_config.batch_size,
-        num_workers=8,
+        num_workers=num_workers,
         collate_fn=seq_to_seq_collate_fn,
+        pin_memory=torch.cuda.is_available(),
     )
 
     return (
-        model,
+        seq_to_seq,
         task_config.train_config.epochs,
-        optim,
         train_loader,
         eval_loader,
     )
