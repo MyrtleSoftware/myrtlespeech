@@ -1,6 +1,7 @@
 import csv
 import pathlib
 from collections.abc import Container
+from datetime import datetime
 from typing import Optional
 from typing import Union
 
@@ -10,7 +11,9 @@ from myrtlespeech.run.callbacks.callback import Callback
 class CSVLogger(Callback):
     r"""Logs at the end of an epoch to the file at ``path`` in CSV format.
 
-    The first entry in each row of the CSV file will be a string denoting the
+    The first entry in each row of the CSV file denotes the date and time the
+    entry was logged in ISO 8601 format (:py:meth:`datetime.isoformat`). The
+    second entry in each row of the CSV file will be a string denoting the
     current stage. This will either be ``train`` or ``eval``.
 
     Args:
@@ -27,7 +30,8 @@ class CSVLogger(Callback):
             For example the key ``"foo/bar/baz/bang"`` refers to
             ``kwargs["foo"]["bar"]["baz"]["bang"]``.
 
-        exclude: Keys to exclude from the logs.
+        exclude: Keys to exclude from the logs. The first and second entires --
+            date + time and stage -- cannot be excluded.
 
     Example:
         >>> # imports
@@ -48,11 +52,16 @@ class CSVLogger(Callback):
         >>> _ = cb_handler.train(mode=False)
         >>> _ = cb_handler.on_epoch_end()
         >>>
-        >>> # read file
-        >>> print(open(temp.name, 'r').read())
-        stage,epoch
-        train,0
-        eval,1
+        >>> # read and print file
+        >>> # note the first entry in each CSV row is the date
+        >>> # this will change per each doctest invocation so it is ignored
+        >>> # using ellipsis (...)
+        >>> csv_contents = open(temp.name, 'r').read()
+        >>> print("example_output:\n", csv_contents)  # doctest:+ELLIPSIS
+        example_output:
+        ...,stage,epoch
+        ...,train,0
+        ...,eval,1
         <BLANKLINE>
     """
 
@@ -82,14 +91,18 @@ class CSVLogger(Callback):
         """Initializes ``CSVLogger.keys`` if ``None`` and writes CSV header."""
         if self.keys is None:
             self.keys = [metric for metric, _ in self._get_reports(kwargs)]
-        keys = ["stage"] + self.keys
+        keys = ["datetime.isoformat", "stage"] + self.keys
         with self.path.open("w", newline="") as f:
             csv.writer(f).writerow(keys)
 
     def on_epoch_end(self, **kwargs):
         """Writes current stage and ``CSVLogger.keys`` values to CSV file."""
         vals = dict(self._get_reports(kwargs))
-        vals = [vals[k] for k in self.keys]
-        vals = ["train" if self.training else "eval"] + vals
+        if "stage" not in vals:
+            vals["stage"] = "train" if self.training else "eval"
+        if "datetime.isoformat" not in vals:
+            vals["datetime.isoformat"] = datetime.now().isoformat()
+        keys = ["datetime.isoformat", "stage"] + self.keys
+        vals = [vals[k] for k in keys]
         with self.path.open("a", newline="") as f:
             csv.writer(f).writerow(vals)

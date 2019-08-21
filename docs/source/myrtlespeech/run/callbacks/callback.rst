@@ -10,6 +10,11 @@
     :undoc-members:
     :show-inheritance:
 
+.. autoclass:: myrtlespeech.run.callbacks.callback.ModelCallback
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 .. autoclass:: myrtlespeech.run.callbacks.callback.CallbackHandler
     :members:
     :show-inheritance:

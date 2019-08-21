@@ -74,7 +74,8 @@ class ModelCallback(Callback):
     """Base class for callbacks that need access to the model.
 
     Args:
-        See Attributes.
+        model: See Attributes.
+        training: See Attributes.
 
     Attributes:
         model: A :py:class:`torch.nn.Module`.
