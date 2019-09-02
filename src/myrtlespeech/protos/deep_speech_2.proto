@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "google/protobuf/empty.proto";
+
+import "myrtlespeech/protos/conv_layer.proto";
+import "myrtlespeech/protos/fully_connected.proto";
+import "myrtlespeech/protos/rnn.proto";
+
+
+// Configuration for Deep Speech 2 model:
+//     http://proceedings.mlr.press/v48/amodei16.pdf
+message DeepSpeech2 {
+  repeated ConvLayer conv_layer = 1;
+
+  RNN rnn = 2;
+
+  oneof supported_lookaheads {
+    google.protobuf.Empty no_lookahead = 3;
+    ConvLayer lookahead = 4;
+  }
+
+  FullyConnected fully_connected = 5;
+}

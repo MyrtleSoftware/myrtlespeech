@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "google/protobuf/wrappers.proto";
+
+
+// Conv layer configuration.
+message ConvLayer {
+  enum PADDING {
+    // No padding.
+    VALID = 0;
+  }
+
+  // Number of output channels.
+  uint32 output_channels = 1;
+
+  // Size of each kernel dimension.
+  repeated uint32 kernel_dim = 2;
+
+  // Size of stride in each kernel dimension.
+  repeated uint32 stride = 3;
+
+  // Padding.
+  PADDING padding = 4;
+
+  // Add a learnable bias to the output.
+  bool bias = 5;
+}

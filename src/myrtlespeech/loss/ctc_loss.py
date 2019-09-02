@@ -1,3 +1,4 @@
+import warnings
 from typing import Tuple
 
 import torch
@@ -38,7 +39,7 @@ class CTCLoss(torch.nn.Module):
         self,
         blank: int = 0,
         reduction: str = "mean",
-        zero_infinity: bool = True,
+        zero_infinity: bool = False,
         dim: int = -1,
     ):
         super().__init__()
@@ -92,10 +93,40 @@ class CTCLoss(torch.nn.Module):
             y = y.cuda()
             y_lens = y_lens.cuda()
 
+        target_lens = []
+        for batch_idx in range(targets[0].size(0)):
+            target_len = targets[1][batch_idx]
+            # increase required length by number of blank symbols necessary
+            prev = None
+            for symbol_idx in targets[0][batch_idx]:
+                if prev is not None and symbol_idx == prev:
+                    target_len += 1
+                prev = symbol_idx
+            target_lens.append(target_len)
+
+        target_lens = torch.tensor(
+            target_lens,
+            dtype=torch.long,
+            requires_grad=False
+        )
+
+        if torch.any(x_lens < target_lens.cuda()):
+            print(x.size(), x_lens, y_lens, target_lens, sep="\n")
+            warnings.warn(
+                "output sequence lengths less than target sequence lengths"
+            )
+            print()
+            print()
+
         log_probs = self.log_softmax(x)
-        return self.ctc_loss(
+        loss = self.ctc_loss(
             log_probs=log_probs,
             targets=y,
             input_lengths=x_lens,
             target_lengths=y_lens,
         )
+
+        if loss == float("inf") or loss == float("-inf"):
+            print(f"loss is {loss}")
+
+        return loss

@@ -5,7 +5,7 @@ package myrtlespeech.protos;
 import "myrtlespeech/protos/ctc_beam_decoder.proto";
 import "myrtlespeech/protos/ctc_greedy_decoder.proto";
 import "myrtlespeech/protos/ctc_loss.proto";
-import "myrtlespeech/protos/encoder_decoder.proto";
+import "myrtlespeech/protos/deep_speech_2.proto";
 import "myrtlespeech/protos/pre_process_step.proto";
 
 
@@ -17,7 +17,7 @@ message SpeechToText {
 
   // Supported networks.
   oneof supported_models {
-    EncoderDecoder encoder_decoder = 3;
+    DeepSpeech2 deepspeech_2 = 3;
   }
 
   // Supported loss functions.

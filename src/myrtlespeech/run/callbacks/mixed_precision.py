@@ -60,11 +60,17 @@ class MixedPrecision(ModelCallback):
         return {"last_input": last_input}
 
     def on_backward_begin(self, **kwargs) -> None:
-        """Automatically scales ``kwargs["last_loss"]`` to avoid underflow."""
-        self.stack.enter_context(
-            amp.scale_loss(kwargs["last_loss"], self.model.optim)
-        )
+        """Scales ``kwargs["last_loss"]`` to avoid over/underflow."""
+        if not self.training:
+            return
+        return {
+            "last_loss": self.stack.enter_context(
+                amp.scale_loss(kwargs["last_loss"], self.model.optim)
+            )
+        }
 
-    def on_batch_end(self, **kwargs) -> None:
-        """Ends automatic scaling process."""
+    def on_backward_end(self, **kwargs) -> None:
+        """'Un'scales gradients if loss scaled during ``on_backward_begin``."""
+        if not self.training:
+            return
         self.stack.close()

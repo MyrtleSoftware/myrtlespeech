@@ -1,0 +1,114 @@
+speech_to_text {
+  alphabet: "_abcdefghijklmnopqrstuvwxyz '";
+
+  pre_process_step {
+    stage: TRAIN_AND_EVAL;
+    mfcc {
+      numcep: 83;
+      winlen: 0.025;
+      winstep: 0.010;
+    }
+  }
+
+  pre_process_step {
+    stage: TRAIN_AND_EVAL;
+    standardize {
+      mean: true;
+      reduce_dim: 1;
+    }
+  }
+
+
+  deepspeech_2 {
+    conv_layer {
+      output_channels: 32;
+      kernel_dim: 41;
+      kernel_dim: 11;
+      stride: 2;
+      stride: 2;
+      bias: true;
+    }
+
+    conv_layer {
+      output_channels: 32;
+      kernel_dim: 21;
+      kernel_dim: 11;
+      stride: 2;
+      stride: 1;
+      bias: true;
+    }
+
+    rnn {
+      rnn_type: GRU;
+      hidden_size: 2560;
+      num_layers: 3;
+      bias: true;
+      bidirectional: false;
+    }
+
+    lookahead {
+      output_channels: 1;
+      kernel_dim: 80;
+      stride: 1;
+      bias: false;
+    }
+
+    fully_connected {
+      num_hidden_layers: 1;
+      hidden_size: 1600;
+      hidden_activation_fn: RELU;
+    }
+  }
+
+  ctc_loss {
+    blank_index: 0;
+    reduction: MEAN;
+  }
+
+  ctc_beam_decoder {
+    blank_index: 0;
+    beam_width: 16;
+    prune_threshold: 0.001;
+    separator_index {
+      value: 27;
+    }
+    language_model {
+      no_lm { }
+    }
+    word_weight: 2.0;
+  }
+}
+
+train_config {
+  batch_size: 64;
+  epochs: 1;
+  sgd {
+    learning_rate: 0.001;
+    momentum {
+      value: 0.9;
+    }
+    l2_weight_decay {
+      value: 0.0005;
+    }
+  }
+  dataset {
+    librispeech {
+      root: "~/Data/";
+      subset: TRAIN_CLEAN_100;
+      max_secs {
+        value: 16.7;
+      }
+    }
+  }
+  shuffle_batches_before_every_epoch: true;
+}
+
+eval_config {
+  batch_size: 64;
+  dataset {
+    librispeech {
+      root: "~/Data/";
+      subset: DEV_CLEAN;
+    }
+  }
+}

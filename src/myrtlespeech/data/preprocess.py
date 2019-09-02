@@ -1,6 +1,8 @@
 """
 Utilities for preprocessing audio data.
 """
+import operator
+from functools import reduce
 from typing import Tuple
 
 import python_speech_features
@@ -97,3 +99,58 @@ class AddSequenceLength:
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + f"(length_dim={self.length_dim})"
+
+
+class Standardize:
+    """TODO: tidy-up"""
+
+    def __init__(self, mean=True, dim=None, training=True):
+        self._apply_mean = mean
+        self._training = training
+        self._mean = None
+        self._sum = None
+        self._n = 0
+        self._dim = dim
+        if dim is not None:
+            if isinstance(dim, int):
+                self._dim = (dim,)
+            else:
+                self._dim = tuple(dim)
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        if self._training:
+            size = x.size()
+            self._n += (
+                1
+                if self._dim is None
+                else reduce(operator.mul, [size[d] for d in self._dim], 1)
+            )
+            if self._sum is None:
+                self._sum = x.sum(dim=self._dim, keepdim=True)
+            else:
+                self._sum += x.sum(dim=self._dim, keepdim=True)
+            return x
+        if self._apply_mean:
+            x -= self.mean
+
+        return x
+
+    @property
+    def mean(self):
+        if not self._training:
+            return self._mean
+        if self._sum is None or self._n == 0:
+            raise ValueError("not trained")
+        return self._sum / self._n
+
+    @property
+    def training(self):
+        return self._training
+
+    @training.setter
+    def training(self, val):
+        self._training = val
+        if not self._training and self._sum is not None:
+            self._mean = self._sum / self._n
+        else:
+            self._mean = None

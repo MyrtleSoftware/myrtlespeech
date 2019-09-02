@@ -7,16 +7,18 @@ from myrtlespeech.builders.ctc_beam_decoder import (
     build as build_ctc_beam_decoder,
 )
 from myrtlespeech.builders.ctc_loss import build as build_ctc_loss
-from myrtlespeech.builders.encoder_decoder import build as build_encoder_decoder
 from myrtlespeech.builders.pre_process_step import (
     build as build_pre_process_step,
 )
 from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.data.preprocess import MFCC
+from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.model.speech_to_text import SpeechToText
 from myrtlespeech.post_process.ctc_greedy_decoder import CTCGreedyDecoder
 from myrtlespeech.protos import speech_to_text_pb2
 from myrtlespeech.run.stage import Stage
+
+# from myrtlespeech.builders.encoder_decoder import build as build_encoder_decoder
 
 
 def build(
@@ -115,6 +117,9 @@ def build(
         step = build_pre_process_step(step_cfg)
         if isinstance(step[0], MFCC):
             input_features = step[0].numcep
+        elif isinstance(step[0], Standardize):
+            """TODO: tidy"""
+            pass
         else:
             raise ValueError(f"unknown step={step[0]}")
         pre_process_steps.append(step)
@@ -129,16 +134,20 @@ def build(
 
     # model
     model_type = stt_cfg.WhichOneof("supported_models")
-    if model_type == "encoder_decoder":
-        model = build_encoder_decoder(
-            encoder_decoder_cfg=stt_cfg.encoder_decoder,
-            input_features=input_features,
-            output_features=len(alphabet),
-            input_channels=input_channels,
-            seq_len_support=seq_len_support,
-        )
-    else:
-        raise ValueError(f"model={model_type} not supported")
+    # if model_type == "encoder_decoder":
+    import torch
+
+    model = torch.nn.Linear(1, 1)
+    # model = build_encoder_decoder(
+    #    encoder_decoder_cfg=stt_cfg.encoder_decoder,
+    #    input_features=input_features,
+    #    output_features=len(alphabet),
+    #    input_channels=input_channels,
+    #    seq_len_support=seq_len_support,
+    # )
+    # else:
+    # TODO: add error check back in
+    #    raise ValueError(f"model={model_type} not supported")
 
     # capture "blank_index"s in all CTC-based components and check all match
     ctc_blank_indices: List[int] = []

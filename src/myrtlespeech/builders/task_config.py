@@ -5,6 +5,7 @@ import torch
 from myrtlespeech.builders.dataset import build as build_dataset
 from myrtlespeech.builders.speech_to_text import build as build_stt
 from myrtlespeech.data.batch import seq_to_seq_collate_fn
+from myrtlespeech.data.sampler import RandomBatchSampler
 from myrtlespeech.model.seq_to_seq import SeqToSeq
 from myrtlespeech.protos import task_config_pb2
 
@@ -112,12 +113,17 @@ def build(
         target_transform=target_transform,
         add_seq_len_to_transforms=seq_len_support,
     )
+
     train_loader = torch.utils.data.DataLoader(
         dataset=train_dataset,
-        batch_size=task_config.train_config.batch_size,
+        batch_sampler=RandomBatchSampler(
+            indices=range(len(train_dataset)),
+            batch_size=task_config.train_config.batch_size,
+            shuffle=task_config.train_config.shuffle_batches_before_every_epoch,
+            drop_last=False
+        ),
         num_workers=num_workers,
         collate_fn=seq_to_seq_collate_fn,
-        shuffle=task_config.train_config.shuffle_batches_before_every_epoch,
         pin_memory=torch.cuda.is_available(),
     )
 
