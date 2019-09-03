@@ -35,17 +35,3 @@ class Encoder(torch.nn.Module):
             ``max_out_seq_len``.
         """
         raise NotImplementedError()
-
-
-def conv_to_rnn_size(x: torch.Tensor) -> torch.Tensor:
-    r"""Returns a 3D :py:class:`torch.Tensor` given a 4D input.
-
-    Args:
-        x: :py:class:`torch.Tensor` with size ``[batch, channels, features,
-            seq_len]``
-
-    Returns:
-        ``x`` but resized to ``[seq_len, batch, channels*features]``
-    """
-    batch, channels, features, seq_len = x.size()
-    return x.view(batch, channels * features, seq_len).permute(2, 0, 1)
