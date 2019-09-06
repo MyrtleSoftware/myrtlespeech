@@ -6,12 +6,6 @@ The `Sphinx <http://www.sphinx-doc.org>`_ tool is used to generate the
 documentation from the files in the ``docs/`` directory plus the docstrings in
 the code.
 
-.. note::
-
-    The initial version of this documentation was based off of
-    Sam's `Repaper repository <https://github.com/samgd/repaper>`_ and hence
-    the documentation may be similar.
-
 Build
 ------
 
