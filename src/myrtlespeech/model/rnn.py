@@ -1,7 +1,6 @@
 from enum import IntEnum
 from typing import Optional
 from typing import Tuple
-from typing import Union
 
 import torch
 
@@ -123,5 +122,10 @@ class RNN(torch.nn.Module):
         """
         if self.use_cuda:
             x = (x[0].cuda(), x[1].cuda())
-        h, _ = self.rnn(x[0])
-        return h, x[1]
+
+        input = torch.nn.utils.rnn.pack_padded_sequence(
+            x[0], x[1], enforce_sorted=False
+        )
+        h, _ = self.rnn(input)
+        h, lengths = torch.nn.utils.rnn.pad_packed_sequence(h)
+        return h.data, lengths
