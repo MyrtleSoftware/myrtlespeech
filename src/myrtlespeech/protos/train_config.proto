@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "myrtlespeech/protos/dataset.proto";
+import "myrtlespeech/protos/optimizer.proto";
+
+
+// Configuration for training.
+message TrainConfig {
+  // Batch size of training.
+  uint32 batch_size = 1;
+
+  // Number of epochs to train for.
+  uint32 epochs = 2;
+
+  oneof supported_optimizers {
+    SGD sgd = 3;
+    Adam adam = 4;
+  }
+
+  Dataset dataset = 5;
+
+  oneof supported_shuffles {
+    // Shuffle batches before every epoch.
+    bool shuffle_batches_before_every_epoch = 6;
+  }
+}

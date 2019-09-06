@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "google/protobuf/empty.proto";
+
+
+message LanguageModel {
+  oneof supported_lms {
+    // No language model.
+    google.protobuf.Empty no_lm = 1;
+  }
+}

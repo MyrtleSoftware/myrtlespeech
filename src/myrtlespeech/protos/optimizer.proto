@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "google/protobuf/wrappers.proto";
+
+
+// See PyTorch ``torch.optim.SGD``.
+message SGD {
+  // Learning rate.
+  float learning_rate = 1;
+
+  // Momentum factor.
+  google.protobuf.FloatValue momentum = 2;
+
+  // Weight decay (L2 penalty).
+  google.protobuf.FloatValue l2_weight_decay = 3;
+
+  // Enable Nesterov momentum.
+  bool nesterov_momentum = 4;
+}
+
+
+// See PyTorch ``torch.optim.Adam``.
+message Adam {
+  // Learning rate.
+  float learning_rate = 1;
+
+  // Coefficient used for computing running average of gradient.
+  google.protobuf.FloatValue beta_1 = 2;
+
+  // Coefficient used for computing running average of gradient squared.
+  google.protobuf.FloatValue beta_2 = 3;
+
+  // Term added to denominator to improve numerical stability.
+  google.protobuf.FloatValue eps = 4;
+
+  // Weight decay (L2 penalty).
+  google.protobuf.FloatValue l2_weight_decay = 5;
+
+  // If true, use AMSGrad variant.
+  bool amsgrad = 6;
+}

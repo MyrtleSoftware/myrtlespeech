@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "google/protobuf/wrappers.proto";
+
+
+// Recurrent neural network configuration.
+message RNN {
+  enum RNN_TYPE {
+    LSTM = 0;
+    GRU = 1;
+    BASIC_RNN = 2;
+  }
+
+  // Type of RNN to apply.
+  RNN_TYPE rnn_type = 1;
+
+  // The number of features in the hidden state.
+  uint32 hidden_size = 2;
+
+  // Number of recurrent layers.
+  uint32 num_layers = 3;
+
+  // If false then each recurrent layer does not add any bias.
+  bool bias = 4;
+
+  // If true then each recurrent layer is bidirectional.
+  bool bidirectional = 5;
+
+  // When using an LSTM and bias is True then, if set, the total forget gate
+  // bias will be initialised to this value.
+  google.protobuf.FloatValue forget_gate_bias = 6;
+}

@@ -1,0 +1,74 @@
+# Git pre-commit hooks: https://pre-commit.com
+repos:
+  # type checking
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: v0.701
+  hooks:
+  - id: mypy
+
+# automatically re-order Python imports
+- repo: https://github.com/asottile/reorder_python_imports
+  rev: v1.6.1
+  hooks:
+  -   id: reorder-python-imports
+
+  # automatic code formatting
+- repo: https://github.com/python/black
+  rev: stable
+  hooks:
+    - id: black
+      language_version: python3.7
+  # run black on Python code blocks in documentation files
+- repo: https://github.com/asottile/blacken-docs
+  rev: v1.0.0
+  hooks:
+  - id: blacken-docs
+
+  # terraform
+- repo: git://github.com/antonbabenko/pre-commit-terraform
+  rev: v1.11.0
+  hooks:
+    # disabled due to https://github.com/antonbabenko/pre-commit-terraform/issues/8
+    # should be an easy fix, waiting for author to confirm my analysis
+    # - id: terraform_fmt
+    - id: terraform_docs
+
+  # helm
+- repo: https://github.com/gruntwork-io/pre-commit
+  rev: v0.0.8
+  hooks:
+    - id: helmlint
+
+  # nbstripout: remove notebook output before commit to prevent VCS bloat
+- repo: https://github.com/kynan/nbstripout
+  rev: master
+  hooks:
+    - id: nbstripout
+      files: ".ipynb"
+
+  # pre-commit built-in hooks
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v2.2.3
+  hooks:
+  - id: check-added-large-files
+  - id: check-ast
+  - id: check-builtin-literals
+  - id: check-docstring-first
+    # vgg.py documents a module-level variable
+    exclude: 'src/myrtlespeech/model/encoder_decoder/encoder/vgg.py'
+  - id: check-executables-have-shebangs
+  - id: check-json
+  - id: check-merge-conflict
+  - id: check-symlinks
+  - id: check-vcs-permalinks
+  - id: check-xml
+  - id: check-yaml
+  - id: debug-statements
+  - id: detect-aws-credentials
+    args: [--allow-missing-credentials]
+  - id: detect-private-key
+  - id: end-of-file-fixer
+  - id: mixed-line-ending
+  - id: no-commit-to-branch
+    args: [--branch, master]
+  - id: trailing-whitespace

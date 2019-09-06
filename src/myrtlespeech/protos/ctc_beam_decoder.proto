@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "google/protobuf/wrappers.proto";
+
+import "myrtlespeech/protos/language_model.proto";
+
+
+message CTCBeamDecoder {
+  // Index in Alphabet of the blank label.
+  uint32 blank_index = 1;
+
+  uint32 beam_width = 2;
+
+  float prune_threshold = 3;
+
+  LanguageModel language_model = 4;
+
+  google.protobuf.FloatValue lm_weight = 5;
+
+  google.protobuf.UInt32Value separator_index = 6;
+
+  float word_weight = 7;
+}

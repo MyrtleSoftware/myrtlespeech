@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+
+// Lookahead layer:
+//     http://proceedings.mlr.press/v48/amodei16.pdf
+message Lookahead {
+  // Number of activation timesteps to linearly combine (tau in paper).
+  uint32 context = 1;
+}

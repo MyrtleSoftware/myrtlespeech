@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "myrtlespeech/protos/stage.proto";
+
+
+// Preprocessing steps to apply to the input data.
+message PreProcessStep {
+  Stage stage = 1;
+
+  oneof pre_process_step {
+    MFCC mfcc = 2;
+    Standardize standardize = 3;
+  }
+}
+
+// Computes Mel-frequency cepstral coefficients (MFCC).
+message MFCC {
+  // Number of cepstrum.
+  uint32 numcep = 1;
+
+  // Length of the analysis window in seconds.
+  float winlen = 2;
+
+  // Step between successive windows in seconds.
+  float winstep = 3;
+}
+
+
+// Standardize the input using training set statistics.
+message Standardize {
+  // Zero-center mean.
+  bool mean = 1;
+
+  // Reduce dimension of each individual input.
+  repeated uint32 reduce_dim = 2;
+}

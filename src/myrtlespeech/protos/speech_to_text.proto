@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "myrtlespeech/protos/ctc_beam_decoder.proto";
+import "myrtlespeech/protos/ctc_greedy_decoder.proto";
+import "myrtlespeech/protos/ctc_loss.proto";
+import "myrtlespeech/protos/deep_speech_2.proto";
+import "myrtlespeech/protos/pre_process_step.proto";
+
+
+message SpeechToText {
+  // Output alphabet.
+  string alphabet = 1;
+
+  repeated PreProcessStep pre_process_step = 2;
+
+  // Supported networks.
+  oneof supported_models {
+    DeepSpeech2 deep_speech_2 = 3;
+  }
+
+  // Supported loss functions.
+  oneof supported_losses {
+    CTCLoss ctc_loss = 4;
+  }
+
+  // Supported post processing of network output.
+  oneof supported_post_processes {
+    CTCGreedyDecoder ctc_greedy_decoder = 5;
+    CTCBeamDecoder ctc_beam_decoder = 6;
+  }
+}

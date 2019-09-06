@@ -1,0 +1,40 @@
+from typing import Dict
+from typing import Tuple
+from typing import Union
+
+import hypothesis.strategies as st
+from myrtlespeech.protos import fully_connected_pb2
+
+from tests.protos.utils import all_fields_set
+
+
+# Fixtures and Strategies -----------------------------------------------------
+
+
+@st.composite
+def fully_connecteds(
+    draw, return_kwargs: bool = False, valid_only: bool = False
+) -> Union[
+    st.SearchStrategy[fully_connected_pb2.FullyConnected],
+    st.SearchStrategy[Tuple[fully_connected_pb2.FullyConnected, Dict]],
+]:
+    """Returns a SearchStrategy for a FC layer plus maybe the kwargs."""
+    kwargs = {}
+
+    kwargs["num_hidden_layers"] = draw(st.integers(0, 3))
+    if valid_only and kwargs["num_hidden_layers"] == 0:
+        kwargs["hidden_size"] = None
+        kwargs["hidden_activation_fn"] = fully_connected_pb2.FullyConnected.NONE
+    else:
+        kwargs["hidden_size"] = draw(st.integers(1, 32))
+        kwargs["hidden_activation_fn"] = draw(
+            st.sampled_from(
+                fully_connected_pb2.FullyConnected.ACTIVATION_FN.values()
+            )
+        )
+
+    all_fields_set(fully_connected_pb2.FullyConnected, kwargs)
+    fc = fully_connected_pb2.FullyConnected(**kwargs)
+    if not return_kwargs:
+        return fc
+    return fc, kwargs

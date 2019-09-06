@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "google/protobuf/wrappers.proto";
+
+import "myrtlespeech/protos/range.proto";
+
+
+message Dataset {
+  message FakeSpeechToText {
+    uint32 dataset_len = 1;
+
+    // Generated audio duration bounds (ms) (closed interval).
+    Range audio_ms = 2;
+
+    // Symbols to draw from for generated labels.
+    string label_symbols = 3;
+
+    // Generated label duration bounds (closed interval).
+    Range label_len = 4;
+  }
+
+  message LibriSpeech {
+    enum SUBSET {
+      DEV_CLEAN = 0;
+      DEV_OTHER = 1;
+      TEST_CLEAN = 2;
+      TEST_OTHER = 3;
+      TRAIN_CLEAN_100 = 4;
+      TRAIN_CLEAN_360 = 5;
+      TRAIN_OTHER_500 = 6;
+    }
+
+    // Path to directory that contains the LibriSpeech directory.
+    string root = 1;
+
+    // Which LibriSpeech subset(s) to use.
+    repeated SUBSET subset = 2;
+
+    // All samples greater than this length will be dropped.
+    google.protobuf.FloatValue max_secs = 3;
+  }
+
+  oneof supported_datasets {
+    FakeSpeechToText fake_speech_to_text = 1;
+    LibriSpeech librispeech = 2;
+  }
+}

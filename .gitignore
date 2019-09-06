@@ -102,3 +102,14 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# helm
+requirements.lock
+charts/
+
+# terraform
+.terraform
+
+# protobuf
+*_pb2.py
+*_pb2.pyi

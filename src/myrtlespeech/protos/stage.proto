@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+
+enum Stage {
+  TRAIN = 0;
+  EVAL = 1;
+  TRAIN_AND_EVAL = 2;
+}
