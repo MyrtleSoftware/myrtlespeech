@@ -6,6 +6,7 @@ import "google/protobuf/empty.proto";
 
 import "myrtlespeech/protos/conv_layer.proto";
 import "myrtlespeech/protos/fully_connected.proto";
+import "myrtlespeech/protos/lookahead.proto";
 import "myrtlespeech/protos/rnn.proto";
 
 
@@ -18,7 +19,7 @@ message DeepSpeech2 {
 
   oneof supported_lookaheads {
     google.protobuf.Empty no_lookahead = 3;
-    ConvLayer lookahead = 4;
+    Lookahead lookahead = 4;
   }
 
   FullyConnected fully_connected = 5;

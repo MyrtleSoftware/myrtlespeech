@@ -47,16 +47,13 @@ speech_to_text {
     }
 
     lookahead {
-      output_channels: 1;
-      kernel_dim: 80;
-      stride: 1;
-      bias: false;
+      context: 80;
     }
 
     fully_connected {
       num_hidden_layers: 1;
       hidden_size: 1600;
-      hidden_activation_fn: RELU;
+      hidden_activation_fn: RELU20;
     }
   }
 

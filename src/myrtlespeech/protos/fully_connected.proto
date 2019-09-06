@@ -8,6 +8,7 @@ message FullyConnected {
   enum ACTIVATION_FN {
     NONE = 0;
     RELU = 1;
+    RELU20 = 2;
   }
 
   // The number of hidden layers (0 means a single affine transformation).
