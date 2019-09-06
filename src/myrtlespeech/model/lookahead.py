@@ -40,8 +40,9 @@ class Lookahead(torch.nn.Module):
             A :py:class:`torch.Tensor` with size ``(batch,  in_features,
             out_seq_len)`` where ``out_seq_len = seq_len - context + 1``.
         """
+        input = torch.nn.functional.pad(x, (0, self.context - 1))
         return torch.nn.functional.conv1d(
-            input=x, weight=self.weight, groups=self.in_features
+            input=input, weight=self.weight, groups=self.in_features
         )
 
     def extra_repr(self) -> str:
