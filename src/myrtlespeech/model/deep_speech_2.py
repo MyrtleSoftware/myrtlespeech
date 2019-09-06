@@ -103,7 +103,8 @@ class DeepSpeech2(torch.nn.Module):
         self.use_cuda = torch.cuda.is_available()
 
         if self.use_cuda:
-            self.cnn = self.cnn.cuda()
+            if self.cnn is not None:
+                self.cnn = self.cnn.cuda()
             self.rnn = self.rnn.cuda()
             if self.lookahead is not None:
                 self.lookahead = self.lookahead.cuda()
@@ -143,7 +144,8 @@ class DeepSpeech2(torch.nn.Module):
         if self.use_cuda:
             h = (h[0].cuda(), h[1].cuda())
 
-        h = self.cnn(h)
+        if self.cnn is not None:
+            h = self.cnn(h)
         h = (self._conv_to_rnn_size(h[0]), h[1])
 
         h = self.rnn(h)
