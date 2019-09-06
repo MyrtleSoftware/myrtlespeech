@@ -14,7 +14,7 @@ _ToCuda = TypeVar("_ToCuda", torch.Tensor, Dict, Tuple, List)
 
 
 class MixedPrecision(ModelCallback):
-    """Enables mixed-precision training.
+    r"""Enables mixed-precision training.
 
     See `Mixed Precision Training <https://arxiv.org/abs/1710.03740>`_.
 
@@ -59,7 +59,7 @@ class MixedPrecision(ModelCallback):
         last_input = self._to_cuda(kwargs["last_input"])
         return {"last_input": last_input}
 
-    def on_backward_begin(self, **kwargs) -> None:
+    def on_backward_begin(self, **kwargs):
         """Scales ``kwargs["last_loss"]`` to avoid over/underflow."""
         if not self.training:
             return

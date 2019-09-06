@@ -1,6 +1,3 @@
-"""Based on Sam's Repaper `FakeDataset testing
-<https://github.com/samgd/repaper/blob/c7332d96ac8b0db0d92ec2dbed63496a5ce0ed5f/tests/data/test_fake.py>`_.
-"""
 import warnings
 from typing import Dict
 from typing import Tuple

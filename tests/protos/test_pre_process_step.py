@@ -1,8 +1,10 @@
+import warnings
 from typing import Dict
 from typing import Tuple
 from typing import Union
 
 import hypothesis.strategies as st
+from hypothesis import assume
 from myrtlespeech.protos import pre_process_step_pb2
 
 from tests.protos.test_stage import stages
@@ -33,6 +35,9 @@ def pre_process_steps(
 
     if step_type_str == "mfcc":
         kwargs["mfcc"] = draw(_mfccs())
+    elif step_type_str == "standardize":
+        warnings.warn("TODO")
+        assume(False)
     else:
         raise ValueError(f"unknown pre_process_step type {step_type_str}")
 

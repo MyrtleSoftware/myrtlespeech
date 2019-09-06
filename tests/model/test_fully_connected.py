@@ -6,9 +6,7 @@ import hypothesis.strategies as st
 import pytest
 import torch
 from hypothesis import given
-from myrtlespeech.model.encoder_decoder.decoder.fully_connected import (
-    FullyConnected,
-)
+from myrtlespeech.model.fully_connected import FullyConnected
 
 from tests.utils.utils import tensors
 
@@ -150,7 +148,7 @@ def test_fully_connected_raises_value_error_hidden_activation_fn_not_none(
 
 @given(
     fully_connected_kwargs=fully_connecteds(return_kwargs=True),
-    tensor=tensors(min_n_dims=2, max_n_dims=5),
+    tensor=tensors(min_n_dims=3, max_n_dims=3),
 )
 def test_fully_connected_forward_returns_correct_size(
     fully_connected_kwargs: Tuple[FullyConnected, Dict], tensor: torch.Tensor

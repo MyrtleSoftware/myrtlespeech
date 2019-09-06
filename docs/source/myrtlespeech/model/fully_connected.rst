@@ -5,7 +5,7 @@
 Python
 ------
 
-.. automodule:: myrtlespeech.model.encoder_decoder.decoder.fully_connected
+.. automodule:: myrtlespeech.model.fully_connected
     :members:
     :show-inheritance:
 
@@ -15,7 +15,7 @@ Protobuf
 Message
 ~~~~~~~
 
-.. literalinclude:: ../../../../../../src/myrtlespeech/protos/fully_connected.proto
+.. literalinclude:: ../../../../src/myrtlespeech/protos/fully_connected.proto
     :language: protobuf
 
 Builder

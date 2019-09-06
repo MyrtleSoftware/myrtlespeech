@@ -5,7 +5,7 @@
 Python
 ------
 
-.. automodule:: myrtlespeech.model.encoder_decoder.encoder.rnn
+.. automodule:: myrtlespeech.model.rnn
     :members:
     :undoc-members:
     :show-inheritance:
@@ -16,7 +16,7 @@ Protobuf
 Message
 ~~~~~~~
 
-.. literalinclude:: ../../../../../../src/myrtlespeech/protos/rnn.proto
+.. literalinclude:: ../../../../src/myrtlespeech/protos/rnn.proto
     :language: protobuf
 
 Builder

@@ -5,8 +5,8 @@ import pytest
 import torch
 from hypothesis import assume
 from hypothesis import given
-from myrtlespeech.model.encoder_decoder.encoder.rnn import RNN
-from myrtlespeech.model.encoder_decoder.encoder.rnn import RNNType
+from myrtlespeech.model.rnn import RNN
+from myrtlespeech.model.rnn import RNNType
 
 
 # Fixtures and Strategies -----------------------------------------------------
@@ -88,4 +88,4 @@ def test_error_raised_for_unknown_rnn_type(rnn_type: int) -> None:
     """Ensures error raised when unknown RNNType used."""
     assume(rnn_type not in list(RNNType))
     with pytest.raises(ValueError):
-        RNN(rnn_type=rnn_type, input_size=1, hidden_size=1)
+        RNN(rnn_type=rnn_type, input_size=1, hidden_size=1)  # type: ignore

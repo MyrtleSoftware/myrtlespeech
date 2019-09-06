@@ -201,9 +201,6 @@ FakeT = TypeVar("FakeT")
 class FakeDataset(Dataset, Generic[FakeT]):
     r"""A dataset of generated values.
 
-    Based on Sam's Repaper `FakeDataset
-    <https://github.com/samgd/repaper/blob/c7332d96ac8b0db0d92ec2dbed63496a5ce0ed5f/src/repaper/data/fake.py>`_.
-
     Samples in a :py:class:`FakeDataset` are generated using ``generator`` each
     time they are accessed rather than being generated and stored when the
     dataset is created. This lazy generation makes it possible to have a large

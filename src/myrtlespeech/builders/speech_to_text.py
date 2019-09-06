@@ -1,4 +1,5 @@
 """Builds an :py:class:`.SpeechToText` model from a protobuf configuration."""
+import warnings
 from typing import Callable
 from typing import List
 from typing import Tuple
@@ -18,13 +19,11 @@ from myrtlespeech.post_process.ctc_greedy_decoder import CTCGreedyDecoder
 from myrtlespeech.protos import speech_to_text_pb2
 from myrtlespeech.run.stage import Stage
 
-# from myrtlespeech.builders.encoder_decoder import build as build_encoder_decoder
-
 
 def build(
     stt_cfg: speech_to_text_pb2.SpeechToText, seq_len_support: bool = False
 ) -> SpeechToText:
-    """Returns a :py:class:`.SpeechToText` model based on the ``stt_cfg``.
+    r"""Returns a :py:class:`.SpeechToText` model based on the ``stt_cfg``.
 
     .. note::
 
@@ -47,61 +46,7 @@ def build(
         :py:class:`ValueError`: On invalid configuration.
 
     Example:
-        >>> from google.protobuf import text_format
-        >>> cfg_text = '''
-        ... alphabet: "_acgt";
-        ... encoder_decoder {
-        ...   encoder {
-        ...     cnn_rnn_encoder {
-        ...       no_cnn {
-        ...       }
-        ...       rnn {
-        ...         rnn_type: LSTM;
-        ...         hidden_size: 128;
-        ...         num_layers: 2;
-        ...         bias: true;
-        ...         bidirectional: false;
-        ...       }
-        ...     }
-        ...   }
-        ...   decoder {
-        ...     fully_connected {
-        ...       num_hidden_layers: 0;
-        ...     }
-        ...   }
-        ... }
-        ... ctc_loss {
-        ...   blank_index: 0;
-        ...   reduction: MEAN;
-        ... }
-        ... ctc_greedy_decoder {
-        ...   blank_index: 0;
-        ... }
-        ... '''
-        >>> cfg = text_format.Merge(
-        ...     cfg_text,
-        ...     speech_to_text_pb2.SpeechToText()
-        ... )
-        >>> build(cfg)
-        SpeechToText(
-          (alphabet): Alphabet(symbols=['_', 'a', 'c', 'g', 't'])
-          (model): EncoderDecoder(
-            (encoder): CNNRNNEncoder(
-              (cnn_to_rnn): Lambda()
-              (rnn): RNN(
-                (rnn): LSTM(1, 128, num_layers=2)
-              )
-            )
-            (decoder): FullyConnected(
-              (fully_connected): Linear(in_features=128, out_features=5, bias=True)
-            )
-          )
-          (loss): CTCLoss(
-            (log_softmax): LogSoftmax()
-            (ctc_loss): CTCLoss()
-          )
-          (post_process): CTCGreedyDecoder(blank_index=0)
-        )
+        TODO now EncoderDecoder removed
     """
     alphabet = Alphabet(list(stt_cfg.alphabet))
 
@@ -134,20 +79,13 @@ def build(
 
     # model
     model_type = stt_cfg.WhichOneof("supported_models")
-    # if model_type == "encoder_decoder":
-    import torch
+    if model_type == "deep_speech_2":
+        import torch
 
-    model = torch.nn.Linear(1, 1)
-    # model = build_encoder_decoder(
-    #    encoder_decoder_cfg=stt_cfg.encoder_decoder,
-    #    input_features=input_features,
-    #    output_features=len(alphabet),
-    #    input_channels=input_channels,
-    #    seq_len_support=seq_len_support,
-    # )
-    # else:
-    # TODO: add error check back in
-    #    raise ValueError(f"model={model_type} not supported")
+        model = torch.nn.Linear(1, 1)
+        warnings.warn("DeepSpeech2 not implemented, returning Linear(1, 1)!")
+    else:
+        raise ValueError(f"model={model_type} not supported")
 
     # capture "blank_index"s in all CTC-based components and check all match
     ctc_blank_indices: List[int] = []

@@ -17,7 +17,7 @@ message SpeechToText {
 
   // Supported networks.
   oneof supported_models {
-    DeepSpeech2 deepspeech_2 = 3;
+    DeepSpeech2 deep_speech_2 = 3;
   }
 
   // Supported loss functions.

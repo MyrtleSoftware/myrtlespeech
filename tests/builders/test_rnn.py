@@ -4,7 +4,7 @@ import torch
 from hypothesis import assume
 from hypothesis import given
 from myrtlespeech.builders.rnn import build
-from myrtlespeech.model.encoder_decoder.encoder.rnn import RNN
+from myrtlespeech.model.rnn import RNN
 from myrtlespeech.protos import rnn_pb2
 
 from tests.protos.test_rnn import rnns

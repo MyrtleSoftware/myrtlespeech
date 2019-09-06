@@ -1,6 +1,6 @@
 import torch
-from myrtlespeech.model.encoder_decoder.encoder.rnn import RNN
-from myrtlespeech.model.encoder_decoder.encoder.rnn import RNNType
+from myrtlespeech.model.rnn import RNN
+from myrtlespeech.model.rnn import RNNType
 from myrtlespeech.protos import rnn_pb2
 
 

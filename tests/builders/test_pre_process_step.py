@@ -1,9 +1,12 @@
+import warnings
 from typing import Tuple
+from typing import Union
 
 import pytest
 from hypothesis import given
 from myrtlespeech.builders.pre_process_step import build
 from myrtlespeech.data.preprocess import MFCC
+from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.protos import pre_process_step_pb2
 from myrtlespeech.run.stage import Stage
 
@@ -14,7 +17,8 @@ from tests.protos.test_pre_process_step import pre_process_steps
 
 
 def pre_process_step_match_cfg(
-    step: Tuple[MFCC, Stage], step_cfg: pre_process_step_pb2.PreProcessStep
+    step: Tuple[Union[MFCC, Standardize], Stage],
+    step_cfg: pre_process_step_pb2.PreProcessStep,
 ) -> None:
     """Ensures preprocessing step matches protobuf configuration."""
     assert step[1] == Stage(step_cfg.stage)
@@ -22,9 +26,13 @@ def pre_process_step_match_cfg(
     step_str = step_cfg.WhichOneof("pre_process_step")
 
     if step_str == "mfcc":
+        assert isinstance(step[0], MFCC)
+        assert isinstance(step_cfg, pre_process_step_pb2.MFCC)
         assert step[0].numcep == step_cfg.mfcc.numcep
         assert step[0].winlen == step_cfg.mfcc.winlen
         assert step[0].winstep == step_cfg.mfcc.winstep
+    elif step_str == "standardize":
+        warnings.warn("TODO")
     else:
         raise ValueError(f"unknown pre_process_step {step_str}")
 

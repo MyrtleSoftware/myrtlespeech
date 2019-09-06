@@ -3,10 +3,9 @@ from typing import Tuple
 from typing import Union
 
 import torch
-from myrtlespeech.model.encoder_decoder.decoder.decoder import Decoder
 
 
-class FullyConnected(Decoder):
+class FullyConnected(torch.nn.Module):
     r"""A fully connected neural network.
 
     All parameters and buffers are moved to the GPU with
@@ -114,14 +113,25 @@ class FullyConnected(Decoder):
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
         initialisation.
 
-        See :py:meth:`.Decoder.forward`.
+        Args
+            x: A tuple where the first element is the network input (a
+                :py:class:`torch.Tensor`) with size ``[max_seq_len, batch,
+                in_features]`` and the second element is
+                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+                represents the sequence length of the corresponding *input*
+                sequence.
+
+        Returns:
+            The first element of the Tuple return value is the result after
+            applying the module to ``x[0]``. It has size ``[max_seq_len, batch,
+            out_features]``.  The second element of the Tuple return value is a
+            :py:class:`torch.Tensor` with size ``[batch]`` where each entry
+            represents the sequence length of the corresponding *output*
+            sequence.
         """
         if self.use_cuda:
             x = (x[0].cuda(), x[1].cuda())
 
-        # PyTorch linear layer documentation states batch must be the first
-        # dimension but applying with seq_len first and batch second achieves
-        # what we want without transposes (e.g. Linear applied to each timestep
-        # for each batch element)
-        result = self.fully_connected(x[0])
+        x_input = x[0].permute(1, 0, 2)
+        result = self.fully_connected(x_input).permute(1, 0, 2)
         return result, x[1]

@@ -30,8 +30,8 @@ def build(
             winstep=pre_process_step_cfg.mfcc.winstep,
         )
     elif step_type == "standardize":
-        """TODO: tidy"""
-        step = Standardize(
+        # TODO
+        step = Standardize(  # type: ignore
             mean=pre_process_step_cfg.standardize.mean,
             dim=pre_process_step_cfg.standardize.reduce_dim,
         )
