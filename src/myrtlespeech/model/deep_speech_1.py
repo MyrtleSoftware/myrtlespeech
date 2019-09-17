@@ -1,164 +1,171 @@
-from typing import Optional
 from typing import Tuple
 
 import torch
+from torch.nn.utils.rnn import pack_padded_sequence
+from torch.nn.utils.rnn import pad_packed_sequence
 
 
-class DeepSpeech2(torch.nn.Module):
-    r"""`Deep Speech 2 <http://proceedings.mlr.press/v48/amodei16.pdf>`_ model.
+class DeepSpeech1(torch.nn.Module):
+    """A `Deep Speech 1 <https://arxiv.org/abs/1412.5567>`_ -like model.
 
     Args:
-        cnn: A :py:class:`torch.nn.Module` containing the convolution part of
-            the Deep Speech 2 model.
+        in_features: Number of input features per step per batch.
 
-            Must accept as input a tuple where the first element is the network
-            input (a :py:`torch.Tensor`) with size ``[batch, channels,
-            features, max_input_seq_len]`` and the second element is a
-            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-            represents the sequence length of the corresponding *input*
-            sequence to the cnn.
+        n_hidden: Internal hidden unit size.
 
-            It must return a tuple where the first element is the result after
-            applying the module to the network input. It must have size
-            ``[batch, out_channels, out_features, max_cnn_seq_len]``. The
-            second element of the tuple return value is a
-            :py:class:`torch.Tensor` with size ``[batch]`` where each entry
-            represents the sequence length of the corresponding *output*
-            sequence. These may be different than the input sequence lengths
-            due to striding and pooling.
+        out_features: Number of output features per step per batch.
 
-        rnn: A :py:class:`torch.nn.Module` containing the recurrent part of
-            the Deep Speech 2 model.
+        drop_prob: Dropout drop probability.
 
-            Must accept as input a tuple where the first element is the network
-            input (a :py:`torch.Tensor`) with size ``[max_cnn_seq_len, batch,
-            out_channels*out_features]`` and the second element is a
-            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-            represents the sequence length of the corresponding *input*
-            sequence to the rnn.
+        relu_clip: ReLU clamp value: `min(max(0, x), relu_clip)`.
 
-            It must return a tuple where the first element is the result after
-            applying the module to the cnn output. It must have size
-            ``[max_rnn_seq_len, batch, rnn_features]``. The second element of
-            the tuple return value is a :py:class:`torch.Tensor` with size
-            ``[batch]`` where each entry represents the sequence length of the
-            corresponding *output* sequence. These may be different than the
-            input sequence lengths due to downsampling.
+        forget_gate_bias: Total initialized value of the bias used in the
+            forget gate. Set to :py:data:`None` to use PyTorch's default
+            initialisation.  (For more information, see `An Empirical
+            Exploration of Recurrent Network Architectures
+            <http://proceedings.mlr.press/v37/jozefowicz15.pdf>`_)
 
-        lookahead: An optional :py:class:`torch.nn.Module` containing the
-            lookahead part of the Deep Speech 2 model. If :py:data:`None` then
-            no lookahead is applied (e.g. not required when using bidirectional
-            rnns).
-
-            If not :py:data:`None` it must accept as input a tuple where the
-            first element is the network input (a :py:`torch.Tensor`) with size
-            ``[batch, rnn_features, max_rnn_seq_len]`` and the second element
-            is a :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-            represents the sequence length of the corresponding *input*
-            sequence to the lookahead layer.
-
-            It must return a tuple where the first element is the result after
-            applying the module to the rnn output. It must have size
-            ``[batch, la_features, max_la_seq_len]``. The second element of the
-            tuple return value is a :py:class:`torch.Tensor` with size
-            ``[batch]`` where each entry represents the sequence length of the
-            corresponding *output* sequence. These will usually be equal to the
-            input sequence lengths.
-
-        fully_connected: A :py:class:`torch.nn.Module` containing the fully
-            connected part of the Deep Speech 2 model.
-
-            Must accept as input a tuple where the first element is the network
-            input (a :py:`torch.Tensor`) with size ``[batch, max_fc_in_seq_len,
-            max_fc_in_features]`` and the second element is a
-            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-            represents the sequence length of the corresponding *input*
-            sequence to the fully connected layer(s). ``max_fc_in_seq_len`` and
-            ``max_fc_in_features`` will either be ``max_rnn_seq_len`` and
-            ``rnn_features`` or ``max_la_seq_len`` and ``la_features``
-            depending on whether lookahead is :py:data:`None`.
-
-            It must return a tuple where the first element is the result after
-            applying the module to the previous layers output. It must have
-            size ``[batch, max_out_seq_len, out_features]``. The second element
-            of the tuple return value is a :py:class:`torch.Tensor` with size
-            ``[batch]`` where each entry represents the sequence length of the
-            corresponding *output* sequence.
+    Example:
+        >>> ds1 = DeepSpeech1(
+        ...     in_features=5,
+        ...     n_hidden=10,
+        ...     out_features=26,
+        ...     drop_prob=0.25,
+        ...     relu_clip=10.0,
+        ...     forget_gate_bias=1.0
+        ... )
+        >>> ds1
+        DeepSpeech1(
+          (fc1): Sequential(
+            (0): Linear(in_features=5, out_features=10, bias=True)
+            (1): Hardtanh(min_val=0, max_val=10.0, inplace=True)
+            (2): Dropout(p=0.25, inplace=False)
+          )
+          (fc2): Sequential(
+            (0): Linear(in_features=10, out_features=10, bias=True)
+            (1): Hardtanh(min_val=0, max_val=10.0, inplace=True)
+            (2): Dropout(p=0.25, inplace=False)
+          )
+          (fc3): Sequential(
+            (0): Linear(in_features=10, out_features=20, bias=True)
+            (1): Hardtanh(min_val=0, max_val=10.0, inplace=True)
+            (2): Dropout(p=0.25, inplace=False)
+          )
+          (bi_lstm): LSTM(20, 10, batch_first=True, bidirectional=True)
+          (fc4): Sequential(
+            (0): Linear(in_features=20, out_features=10, bias=True)
+            (1): Hardtanh(min_val=0, max_val=10.0, inplace=True)
+            (2): Dropout(p=0.25, inplace=False)
+          )
+          (out): Linear(in_features=10, out_features=26, bias=True)
+        )
     """
 
     def __init__(
         self,
-        cnn: torch.nn.Module,
-        rnn: torch.nn.Module,
-        lookahead: Optional[torch.nn.Conv1d],
-        fully_connected: torch.nn.Module,
+        in_features: int,
+        n_hidden: int,
+        out_features: int,
+        drop_prob: float,
+        relu_clip: float = 20.0,
+        forget_gate_bias: float = 1.0,
     ):
         super().__init__()
 
-        self.cnn = cnn
-        self.rnn = rnn
-        self.lookahead = lookahead
-        self.fully_connected = fully_connected
-
         self.use_cuda = torch.cuda.is_available()
 
+        self._relu_clip = relu_clip
+        self._drop_prob = drop_prob
+
+        self.fc1 = self._fully_connected(in_features, n_hidden)
+        self.fc2 = self._fully_connected(n_hidden, n_hidden)
+        self.fc3 = self._fully_connected(n_hidden, 2 * n_hidden)
+        self.bi_lstm = self._bi_lstm(2 * n_hidden, n_hidden, forget_gate_bias)
+        self.fc4 = self._fully_connected(2 * n_hidden, n_hidden)
+        self.out = self._fully_connected(
+            n_hidden, out_features, relu=False, dropout=False
+        )
         if self.use_cuda:
-            if self.cnn is not None:
-                self.cnn = self.cnn.cuda()
-            self.rnn = self.rnn.cuda()
-            if self.lookahead is not None:
-                self.lookahead = self.lookahead.cuda()
-            self.fully_connected = self.fully_connected.cuda()
+            self.cuda()
 
-    def _conv_to_rnn_size(self, x: torch.Tensor) -> torch.Tensor:
-        """(batch, chnls, feature, seq_len)->(seq_len, batch, chnls*feature)"""
-        batch, channels, features, seq_len = x.size()
-        return x.view(batch, channels * features, seq_len).permute(2, 0, 1)
+    def _fully_connected(
+        self, in_f: int, out_f: int, relu: bool = True, dropout: bool = True
+    ) -> torch.nn.Module:
+        layers = [torch.nn.Linear(in_f, out_f)]
+        if relu:
+            layers.append(torch.nn.Hardtanh(0, self._relu_clip, inplace=True))
+        if dropout:
+            layers.append(torch.nn.Dropout(p=self._drop_prob))
+        if len(layers) == 1:
+            return layers[0]
+        return torch.nn.Sequential(*layers)
 
-    def _rnn_to_lookahead_size(self, x: torch.Tensor) -> torch.Tensor:
-        """(seq_len, batch, features) -> (batch, features, seq_len)"""
-        return x.permute(1, 2, 0)
+    def _bi_lstm(
+        self, input_size: int, hidden_size: int, forget_gate_bias: float
+    ) -> torch.nn.LSTM:
+        lstm = torch.nn.LSTM(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            batch_first=True,
+            bidirectional=True,
+        )
+        if forget_gate_bias is not None:
+            for name in ["bias_ih_l0", "bias_ih_l0_reverse"]:
+                bias = getattr(lstm, name)
+                bias.data[hidden_size : 2 * hidden_size].fill_(forget_gate_bias)
+            for name in ["bias_hh_l0", "bias_hh_l0_reverse"]:
+                bias = getattr(lstm, name)
+                bias.data[hidden_size : 2 * hidden_size].fill_(0)
+        return lstm
 
     def forward(
         self, x: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Returns the result of applying the Deep Speech 2 model to the input.
+        r"""Returns the result of applying the model to ``x[0]``.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
         initialisation.
 
-        See :py:class:`.DeepSpeech2` for detailed information about the input
-        and output of each module.
-
-        Args:
-            x: Input for the cnn module. See initialisation docstring.
+        Args
+            x: A tuple where the first element is the network input (a
+                :py:class:`torch.Tensor`) with size ``[batch, channels,
+                features, seq_len]`` and the second element is
+                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+                represents the sequence length of the corresponding *input*
+                sequence.
 
         Returns:
-            Output from the fully connected layer but with the ``batch`` and
-            ``max_out_seq_len`` dimensions transposed. See initialisation
-            docstring.
+            The first element of the Tuple return value is the result after
+            applying the model to ``x[0]``. It must have size ``[seq_len,
+            batch, out_features]``.
+
+            The second element of the Tuple return value is a
+            :py:class:`torch.Tensor` with size ``[batch]`` where each entry
+            represents the sequence length of the corresponding *output*
+            sequence. This will be equal to ``x[1]`` as this layer does not
+            currently change sequence length.
         """
-        h = x
-
+        h, seq_lens = x
         if self.use_cuda:
-            h = (h[0].cuda(), h[1].cuda())
+            h = h.cuda()
+            seq_lens = seq_lens.cuda()
 
-        if self.cnn is not None:
-            h = self.cnn(h)
-        h = (self._conv_to_rnn_size(h[0]), h[1])
+        batch, channels, features, seq_len = h.size()
+        h = h.view(batch, channels * features, seq_len).permute(0, 2, 1)
 
-        h = self.rnn(h)
+        h = self.fc1(h)
+        h = self.fc2(h)
+        h = self.fc3(h)
 
-        if self.lookahead is not None:
-            h = (self._rnn_to_lookahead_size(h[0]), h[1])
-            h = self.lookahead(h)
-            h = (h[0].transpose(1, 2), h[1])
-        else:
-            h = (h[0].transpose(0, 1), h[1])
+        h = pack_padded_sequence(
+            input=h, lengths=seq_lens, batch_first=True, enforce_sorted=False
+        )
+        h, _ = self.bi_lstm(h)
+        h, seq_lens = pad_packed_sequence(sequence=h, batch_first=True)
 
-        h = self.fully_connected(h)
+        h = self.fc4(h)
+        out = self.out(h)
+        out = out.transpose(0, 1)
 
-        h = (h[0].transpose(0, 1), h[1])
-
-        return h
+        return out, seq_lens

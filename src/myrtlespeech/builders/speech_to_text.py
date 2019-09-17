@@ -1,5 +1,4 @@
 """Builds an :py:class:`.SpeechToText` model from a protobuf configuration."""
-import warnings
 from typing import Callable
 from typing import List
 from typing import Tuple
@@ -12,12 +11,14 @@ from myrtlespeech.builders.pre_process_step import (
     build as build_pre_process_step,
 )
 from myrtlespeech.data.alphabet import Alphabet
-from myrtlespeech.data.preprocess import MFCC
+from myrtlespeech.data.preprocess import AddContextFrames
 from myrtlespeech.data.preprocess import Standardize
+from myrtlespeech.model.deep_speech_1 import DeepSpeech1
 from myrtlespeech.model.speech_to_text import SpeechToText
 from myrtlespeech.post_process.ctc_greedy_decoder import CTCGreedyDecoder
 from myrtlespeech.protos import speech_to_text_pb2
 from myrtlespeech.run.stage import Stage
+from torchaudio.transforms import MFCC
 
 
 def build(
@@ -51,39 +52,32 @@ def build(
     alphabet = Alphabet(list(stt_cfg.alphabet))
 
     # preprocessing
-    input_channels = None
+    input_channels = 1
     input_features = 1
-    pre_process_steps: List[Tuple[Callable, Stage]] = [
-        # ensure raw audio signal is in floating-point format
-        # why? e.g. MFCC computation truncates when in integer format
-        (lambda x: x.float(), Stage.TRAIN_AND_EVAL)
-    ]
+    pre_process_steps: List[Tuple[Callable, Stage]] = []
     for step_cfg in stt_cfg.pre_process_step:
         step = build_pre_process_step(step_cfg)
         if isinstance(step[0], MFCC):
-            input_features = step[0].numcep
+            input_features = step[0].n_mfcc
         elif isinstance(step[0], Standardize):
-            """TODO: tidy"""
             pass
+        elif isinstance(step[0], AddContextFrames):
+            input_channels = 2 * step[0].n_context + 1
         else:
             raise ValueError(f"unknown step={step[0]}")
         pre_process_steps.append(step)
 
-    if input_channels is None:
-        # data after all other steps has size [features, seq_len], convert to
-        # [channels (1), features, seq_len]
-        pre_process_steps.append(
-            (lambda x: x.unsqueeze(0), Stage.TRAIN_AND_EVAL)
-        )
-        input_channels = 1
-
     # model
     model_type = stt_cfg.WhichOneof("supported_models")
-    if model_type == "deep_speech_2":
-        import torch
-
-        model = torch.nn.Linear(1, 1)
-        warnings.warn("DeepSpeech2 not implemented, returning Linear(1, 1)!")
+    if model_type == "deep_speech_1":
+        model = DeepSpeech1(
+            in_features=input_channels * input_features,
+            n_hidden=stt_cfg.deep_speech_1.n_hidden,
+            out_features=len(alphabet),
+            drop_prob=stt_cfg.deep_speech_1.drop_prob,
+            relu_clip=stt_cfg.deep_speech_1.relu_clip,
+            forget_gate_bias=stt_cfg.deep_speech_1.forget_gate_bias,
+        )
     else:
         raise ValueError(f"model={model_type} not supported")
 

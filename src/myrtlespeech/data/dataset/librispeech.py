@@ -2,6 +2,7 @@ import fnmatch
 import os
 import shutil
 import tarfile
+import warnings
 from typing import Callable
 from typing import List
 from typing import Optional
@@ -9,8 +10,8 @@ from typing import Sequence
 from typing import Tuple
 
 import requests
-import soundfile
 import torch
+import torchaudio
 from myrtlespeech.data.dataset import utils
 from torch.utils.data import Dataset
 
@@ -109,14 +110,19 @@ class LibriSpeech(Dataset):
 
         if not skip_integrity_check:
             self.check_integrity()
+        else:
+            warnings.warn("skipping integrity check")
 
         self.load_data()
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, str]:
-        """Returns the sample at ``index`` in the dataset.
+        r"""Returns the sample at ``index`` in the dataset.
 
         The samples are in ascending order by *untransformed* audio sample
         length.
+
+        Untransformed samples are :py:class:`torch.Tensor` with size ``(1,
+        samples)``.
 
         Args:
             index: Index.
@@ -127,12 +133,11 @@ class LibriSpeech(Dataset):
             target transcription.
         """
         path = self.paths[index]
-        audio, rate = soundfile.read(path, dtype="int16")
-        audio = torch.tensor(audio, requires_grad=False)
+        audio, rate = torchaudio.load(path)
 
         assert rate == 16000, f"{path} sample rate == {rate} != 16000"
         assert (
-            len(audio) / rate == self.durations[index]
+            audio.size(1) / rate == self.durations[index]
         ), f"{path} sample duration != expected duration"
 
         if self._transform is not None:
@@ -246,7 +251,8 @@ class LibriSpeech(Dataset):
     def _process_audio(self, root: str, id: str) -> bool:
         """Returns True if sample was dropped due to being too long."""
         path = os.path.join(root, id + ".flac")
-        duration = soundfile.info(path).duration
+        si, _ = torchaudio.info(path)
+        duration = (si.length / si.channels) / si.rate
         if self.max_duration is not None and duration > self.max_duration:
             return True
         self.paths.append(path)

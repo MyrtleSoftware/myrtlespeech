@@ -2,25 +2,19 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
-import "google/protobuf/empty.proto";
 
-import "myrtlespeech/protos/conv_layer.proto";
-import "myrtlespeech/protos/fully_connected.proto";
-import "myrtlespeech/protos/lookahead.proto";
-import "myrtlespeech/protos/rnn.proto";
+// Configuration for Deep Speech 1 model:
+//     https://arxiv.org/abs/1412.5567
+message DeepSpeech1 {
+  // Number of hidden units.
+  uint32 n_hidden = 1;
 
+  // Dropout drop probability.
+  float drop_prob = 2;
 
-// Configuration for Deep Speech 2 model:
-//     http://proceedings.mlr.press/v48/amodei16.pdf
-message DeepSpeech2 {
-  repeated ConvLayer conv_layer = 1;
+  // ReLU clamp value: `min(max(0, x), relu_clip)`.
+  float relu_clip = 3;
 
-  RNN rnn = 2;
-
-  oneof supported_lookaheads {
-    google.protobuf.Empty no_lookahead = 3;
-    Lookahead lookahead = 4;
-  }
-
-  FullyConnected fully_connected = 5;
+  // Total initialized value of the bias used in the forget gate.
+  float forget_gate_bias = 4;
 }

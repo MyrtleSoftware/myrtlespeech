@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
-import "google/protobuf/wrappers.proto";
-
 
 // Conv layer configuration.
 message ConvLayer {
