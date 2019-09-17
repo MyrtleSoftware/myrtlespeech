@@ -1,10 +1,9 @@
 """
 Utilities for preprocessing audio data.
 """
-import operator
-from functools import reduce
 from typing import Tuple
 
+import numpy as np
 import python_speech_features
 import torch
 
@@ -102,55 +101,102 @@ class AddSequenceLength:
 
 
 class Standardize:
-    """TODO: tidy-up"""
+    """Standardize a tensor to have zero mean and one standard deviation.
 
-    def __init__(self, mean=True, dim=None, training=True):
-        self._apply_mean = mean
-        self._training = training
-        self._mean = None
-        self._sum = None
-        self._n = 0
-        self._dim = dim
-        if dim is not None:
-            if isinstance(dim, int):
-                self._dim = (dim,)
-            else:
-                self._dim = tuple(dim)
+    Example:
+        >>> # Scale and shift standard normal distribution
+        >>> x = 5*torch.empty(10000000).normal_() + 3
+        >>> standardize = Standardize()
+        >>> x_std = standardize(x)
+        >>> bool(-0.001 <= x_std.mean() <= 0.001)
+        True
+        >>> bool(0.999 <= x_std.std() <= 1.001)
+        True
+    """
+
+    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
+        """Returns a tensor after subtracting mean and dividing by std.
+
+        Args:
+           tensor: A :py:class:`torch.Tensor` with any number of dimensions.
+        """
+        return (tensor - tensor.mean()) / tensor.std()
+
+    def __repr__(self) -> str:
+        return self.__class__.__name__ + "()"
+
+
+class AddContextFrames:
+    """Adds context frames to each step in the input sequence.
+
+    Args:
+        n_context: The number of context frames (channels) to add to each frame
+            in the input sequence.
+
+    Example:
+        >>> features = 3
+        >>> seq_len = 5   # steps
+        >>> x = torch.arange(features*seq_len).reshape(features, seq_len)
+        >>> x
+        tensor([[ 0,  1,  2,  3,  4],
+                [ 5,  6,  7,  8,  9],
+                [10, 11, 12, 13, 14]])
+        >>> # compute expected result
+        >>> exp = torch.tensor([
+        ...     [[ 0,  0,  0,  1,  2],
+        ...      [ 0,  0,  5,  6,  7],
+        ...      [ 0,  0, 10, 11, 12]],
+        ...     [[ 0,  0,  1,  2,  3],
+        ...      [ 0,  5,  6,  7,  8],
+        ...      [ 0, 10, 11, 12, 13]],
+        ...     [[ 0,  1,  2,  3,  4],
+        ...      [ 5,  6,  7,  8,  9],
+        ...      [10, 11, 12, 13, 14]],
+        ...     [[ 1,  2,  3,  4,  0],
+        ...      [ 6,  7,  8,  9,  0],
+        ...      [11, 12, 13, 14,  0]],
+        ...     [[ 2,  3,  4,  0,  0],
+        ...      [ 7,  8,  9,  0,  0],
+        ...      [12, 13, 14,  0,  0]]
+        ... ])
+        >>> add_context_frames = AddContextFrames(n_context=2)
+        >>> add_context_frames
+        AddContextFrames(n_context=2)
+        >>> bool(torch.all(add_context_frames(x) == exp))
+        True
+    """
+
+    def __init__(self, n_context: int):
+        self.n_context = n_context
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
-        if self._training:
-            size = x.size()
-            self._n += (
-                1
-                if self._dim is None
-                else reduce(operator.mul, [size[d] for d in self._dim], 1)
-            )
-            if self._sum is None:
-                self._sum = x.sum(dim=self._dim, keepdim=True)
-            else:
-                self._sum += x.sum(dim=self._dim, keepdim=True)
-            return x
-        if self._apply_mean:
-            x -= self.mean
+        """Returns the :py:class:`torch.Tensor` after adding context frames.
 
-        return x
+        Args:
+            x: :py:class:`torch.Tensor` with size ``(features, seq_len)``.
 
-    @property
-    def mean(self):
-        if not self._training:
-            return self._mean
-        if self._sum is None or self._n == 0:
-            raise ValueError("not trained")
-        return self._sum / self._n
+        Returns:
+            A :py:class:`torch.Tensor` with size ``(2*n_context + 1, features,
+            seq_len)``.
+        """
+        # Pad to ensure first and last n_context frames in original sequence
+        # have at least n_context frames to their left and right respectively.
+        x = x.T
+        steps, features = x.shape
+        padding = torch.zeros((self.n_context, features), dtype=x.dtype)
+        x = torch.cat((padding, x, padding))
 
-    @property
-    def training(self):
-        return self._training
+        window_size = self.n_context + 1 + self.n_context
+        strides = x.stride()
+        strided_x = torch.as_strided(
+            x,
+            # Shape of the new array.
+            (steps, window_size, features),
+            # Strides of the new array (bytes to step in each dim).
+            (strides[0], strides[0], strides[1]),
+        )
 
-    @training.setter
-    def training(self, val):
-        self._training = val
-        if not self._training and self._sum is not None:
-            self._mean = self._sum / self._n
-        else:
-            self._mean = None
+        return strided_x.clone().detach().permute(1, 2, 0)
+
+    def __repr__(self) -> str:
+        return self.__class__.__name__ + f"(n_context={self.n_context})"
