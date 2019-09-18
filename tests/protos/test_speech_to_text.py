@@ -10,7 +10,7 @@ from myrtlespeech.protos import speech_to_text_pb2
 from tests.data.test_alphabet import random_alphabet
 from tests.protos.test_ctc_beam_decoder import ctc_beam_decoders
 from tests.protos.test_ctc_loss import ctc_losses
-from tests.protos.test_deep_speech_2 import deep_speech_2s
+from tests.protos.test_deep_speech_1 import deep_speech_1s
 from tests.protos.test_pre_process_step import pre_process_steps
 from tests.protos.utils import all_fields_set
 
@@ -37,8 +37,8 @@ def speech_to_texts(
             [f.name for f in descript.oneofs_by_name["supported_models"].fields]
         )
     )
-    if model_str == "deep_speech_2":
-        kwargs[model_str] = draw(deep_speech_2s(valid_only=True))
+    if model_str == "deep_speech_1":
+        kwargs[model_str] = draw(deep_speech_1s())
     else:
         raise ValueError(f"unknown model type {model_str}")
 

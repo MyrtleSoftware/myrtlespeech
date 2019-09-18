@@ -1,4 +1,3 @@
-import warnings
 from typing import Dict
 from typing import Tuple
 from typing import Union
@@ -36,8 +35,9 @@ def pre_process_steps(
     if step_type_str == "mfcc":
         kwargs["mfcc"] = draw(_mfccs())
     elif step_type_str == "standardize":
-        warnings.warn("TODO")
-        assume(False)
+        kwargs["standardize"] = draw(_standardizes())
+    elif step_type_str == "context_frames":
+        kwargs["context_frames"] = draw(_context_frames())
     else:
         raise ValueError(f"unknown pre_process_step type {step_type_str}")
 
@@ -59,9 +59,9 @@ def _mfccs(
     """Returns a SearchStrategy for MFCCs plus maybe the kwargs."""
     kwargs: Dict = {}
 
-    kwargs["numcep"] = draw(st.integers(1, 128))
-    kwargs["winlen"] = draw(st.floats(0.01, 0.9))
-    kwargs["winstep"] = draw(st.floats(0.01, 0.9))
+    kwargs["n_mfcc"] = draw(st.integers(1, 128))
+    kwargs["win_length"] = draw(st.integers(100, 400))
+    kwargs["hop_length"] = draw(st.integers(50, kwargs["win_length"]))
 
     # initialise and return
     all_fields_set(pre_process_step_pb2.MFCC, kwargs)
@@ -69,3 +69,41 @@ def _mfccs(
     if not return_kwargs:
         return mfcc
     return mfcc, kwargs
+
+
+@st.composite
+def _standardizes(
+    draw, return_kwargs: bool = False
+) -> Union[
+    st.SearchStrategy[pre_process_step_pb2.Standardize],
+    st.SearchStrategy[Tuple[pre_process_step_pb2.Standardize, Dict]],
+]:
+    """Returns a SearchStrategy for Standardizes plus maybe the kwargs."""
+    kwargs: Dict = {}
+
+    # initialise and return
+    all_fields_set(pre_process_step_pb2.Standardize, kwargs)
+    std = pre_process_step_pb2.Standardize(**kwargs)  # type: ignore
+    if not return_kwargs:
+        return std
+    return std, kwargs
+
+
+@st.composite
+def _context_frames(
+    draw, return_kwargs: bool = False
+) -> Union[
+    st.SearchStrategy[pre_process_step_pb2.ContextFrames],
+    st.SearchStrategy[Tuple[pre_process_step_pb2.ContextFrames, Dict]],
+]:
+    """Returns a SearchStrategy for ContextFrames plus maybe the kwargs."""
+    kwargs: Dict = {}
+
+    kwargs["n_context"] = draw(st.integers(1, 18))
+
+    # initialise and return
+    all_fields_set(pre_process_step_pb2.ContextFrames, kwargs)
+    cf = pre_process_step_pb2.ContextFrames(**kwargs)  # type: ignore
+    if not return_kwargs:
+        return cf
+    return cf, kwargs

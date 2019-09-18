@@ -1,8 +1,8 @@
 from typing import Tuple
 
 import torch
-from torch.nn.utils.rnn import pack_padded_sequence
-from torch.nn.utils.rnn import pad_packed_sequence
+from myrtlespeech.model.rnn import RNN
+from myrtlespeech.model.rnn import RNNType
 
 
 class DeepSpeech1(torch.nn.Module):
@@ -51,7 +51,9 @@ class DeepSpeech1(torch.nn.Module):
             (1): Hardtanh(min_val=0, max_val=10.0, inplace=True)
             (2): Dropout(p=0.25, inplace=False)
           )
-          (bi_lstm): LSTM(20, 10, batch_first=True, bidirectional=True)
+          (bi_lstm): RNN(
+            (rnn): LSTM(20, 10, batch_first=True, bidirectional=True)
+          )
           (fc4): Sequential(
             (0): Linear(in_features=20, out_features=10, bias=True)
             (1): Hardtanh(min_val=0, max_val=10.0, inplace=True)
@@ -80,7 +82,16 @@ class DeepSpeech1(torch.nn.Module):
         self.fc1 = self._fully_connected(in_features, n_hidden)
         self.fc2 = self._fully_connected(n_hidden, n_hidden)
         self.fc3 = self._fully_connected(n_hidden, 2 * n_hidden)
-        self.bi_lstm = self._bi_lstm(2 * n_hidden, n_hidden, forget_gate_bias)
+        self.bi_lstm = RNN(
+            rnn_type=RNNType.LSTM,
+            input_size=2 * n_hidden,
+            hidden_size=n_hidden,
+            num_layers=1,
+            bias=True,
+            bidirectional=True,
+            forget_gate_bias=forget_gate_bias,
+            batch_first=True,
+        )
         self.fc4 = self._fully_connected(2 * n_hidden, n_hidden)
         self.out = self._fully_connected(
             n_hidden, out_features, relu=False, dropout=False
@@ -99,24 +110,6 @@ class DeepSpeech1(torch.nn.Module):
         if len(layers) == 1:
             return layers[0]
         return torch.nn.Sequential(*layers)
-
-    def _bi_lstm(
-        self, input_size: int, hidden_size: int, forget_gate_bias: float
-    ) -> torch.nn.LSTM:
-        lstm = torch.nn.LSTM(
-            input_size=input_size,
-            hidden_size=hidden_size,
-            batch_first=True,
-            bidirectional=True,
-        )
-        if forget_gate_bias is not None:
-            for name in ["bias_ih_l0", "bias_ih_l0_reverse"]:
-                bias = getattr(lstm, name)
-                bias.data[hidden_size : 2 * hidden_size].fill_(forget_gate_bias)
-            for name in ["bias_hh_l0", "bias_hh_l0_reverse"]:
-                bias = getattr(lstm, name)
-                bias.data[hidden_size : 2 * hidden_size].fill_(0)
-        return lstm
 
     def forward(
         self, x: Tuple[torch.Tensor, torch.Tensor]
@@ -158,11 +151,7 @@ class DeepSpeech1(torch.nn.Module):
         h = self.fc2(h)
         h = self.fc3(h)
 
-        h = pack_padded_sequence(
-            input=h, lengths=seq_lens, batch_first=True, enforce_sorted=False
-        )
-        h, _ = self.bi_lstm(h)
-        h, seq_lens = pad_packed_sequence(sequence=h, batch_first=True)
+        h, _ = self.bi_lstm((h, seq_lens))
 
         h = self.fc4(h)
         out = self.out(h)

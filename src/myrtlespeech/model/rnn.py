@@ -18,6 +18,10 @@ class RNN(torch.nn.Module):
     :py:class:`torch.nn.RNN` for more information as these are used internally
     (see Attributes).
 
+    This wrapper ensures the sequence length information is correctly used by
+    the RNN (i.e. using :py:func:`torch.nn.utils.rnn.pad_packed_sequence` and
+    :py:func:`torch.nn.utils.rnn.pad_packed_sequence`).
+
     Args:
         rnn_type: The type of recurrent neural network cell to use. See
             :py:class:`RNNType` for a list of the supported types.
@@ -45,6 +49,9 @@ class RNN(torch.nn.Module):
             See `Jozefowicz et al., 2015
             <http://www.jmlr.org/proceedings/papers/v37/jozefowicz15.pdf>`_.
 
+        batch_first: If :py:data:`True`, then the input and output tensors are
+            provided as ``[batch, seq_len, in_features]``.
+
     Attributes:
         rnn: A :py:class:`torch.LSTM`, :py:class:`torch.GRU`, or
             :py:class:`torch.RNN` instance.
@@ -60,6 +67,7 @@ class RNN(torch.nn.Module):
         dropout: float = 0.0,
         bidirectional: bool = False,
         forget_gate_bias: Optional[float] = None,
+        batch_first: bool = False,
     ):
         super().__init__()
         if rnn_type == RNNType.LSTM:
@@ -71,12 +79,14 @@ class RNN(torch.nn.Module):
         else:
             raise ValueError(f"unknown rnn_type {rnn_type}")
 
+        self.batch_first = batch_first
+
         self.rnn = rnn_cls(
             input_size=input_size,
             hidden_size=hidden_size,
             num_layers=num_layers,
             bias=bias,
-            batch_first=False,
+            batch_first=self.batch_first,
             dropout=dropout,
             bidirectional=bidirectional,
         )
@@ -104,7 +114,8 @@ class RNN(torch.nn.Module):
         Args
             x: A tuple where the first element is the network input (a
                 :py:class:`torch.Tensor`) with size ``[seq_len, batch,
-                in_features]`` and the second element is
+                in_features]`` or ``[batch, seq_len, in_features]`` if
+                ``batch_first=True`` and the second element is
                 :py:class:`torch.Tensor` of size ``[batch]`` where each entry
                 represents the sequence length of the corresponding *input*
                 sequence.
@@ -112,7 +123,8 @@ class RNN(torch.nn.Module):
         Returns:
             The first element of the Tuple return value is the result after
             applying the RNN to ``x[0]``. It must have size ``[seq_len,
-            batch, out_features]``.
+            batch, out_features]`` or ``[batch, seq_len, out_features]`` if
+            ``batch_first=True``.
 
             The second element of the Tuple return value is a
             :py:class:`torch.Tensor` with size ``[batch]`` where each entry
@@ -123,9 +135,17 @@ class RNN(torch.nn.Module):
         if self.use_cuda:
             x = (x[0].cuda(), x[1].cuda())
 
+        # Record sequence length to enable DataParallel
+        # https://pytorch.org/docs/stable/notes/faq.html#pack-rnn-unpack-with-data-parallelism
+        total_length = x[0].size(0 if not self.batch_first else 1)
         input = torch.nn.utils.rnn.pack_padded_sequence(
-            x[0], x[1], enforce_sorted=False
+            input=x[0],
+            lengths=x[1],
+            batch_first=self.batch_first,
+            enforce_sorted=False,
         )
         h, _ = self.rnn(input)
-        h, lengths = torch.nn.utils.rnn.pad_packed_sequence(h)
-        return h.data, lengths
+        h, lengths = torch.nn.utils.rnn.pad_packed_sequence(
+            sequence=h, batch_first=self.batch_first, total_length=total_length
+        )
+        return h, lengths

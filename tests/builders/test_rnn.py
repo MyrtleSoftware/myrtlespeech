@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import hypothesis.strategies as st
 import pytest
 import torch
@@ -48,6 +50,17 @@ def rnn_match_cfg(rnn: RNN, rnn_cfg: rnn_pb2.RNN, input_features: int) -> None:
         assert torch.allclose(bias, torch.tensor(forget_gate_bias))
 
 
+@st.composite
+def rnn_cfg_tensors(
+    draw
+) -> st.SearchStrategy[Tuple[torch.nn.Module, rnn_pb2.RNN, torch.Tensor]]:
+    """Returns a search strategy for RNNs built from a config + valid input."""
+    rnn_cfg = draw(rnns())
+    tensor = draw(tensors(min_n_dims=3, max_n_dims=3))
+    rnn = build(rnn_cfg, input_features=tensor.size(2))
+    return rnn, rnn_cfg, tensor
+
+
 # Tests -----------------------------------------------------------------------
 
 
@@ -60,13 +73,13 @@ def test_build_rnn_returns_correct_rnn_with_valid_params(
     rnn_match_cfg(rnn, rnn_cfg, input_features)
 
 
-@given(rnn_cfg=rnns(), tensor=tensors(min_n_dims=3, max_n_dims=3))
+@given(rnn_cfg_tensor=rnn_cfg_tensors())
 def test_build_rnn_rnn_forward_output_correct_size(
-    rnn_cfg: rnn_pb2.RNN, tensor: torch.Tensor
+    rnn_cfg_tensor: Tuple[torch.nn.Module, rnn_pb2.RNN, torch.Tensor]
 ) -> None:
     """Ensures returned RNN forward produces output with correct size."""
+    rnn, rnn_cfg, tensor = rnn_cfg_tensor
     seq_len, batch, input_features = tensor.size()
-    rnn = build(rnn_cfg, input_features)
 
     in_seq_lens = torch.randint(low=1, high=1 + seq_len, size=(batch,))
 

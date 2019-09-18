@@ -2,17 +2,8 @@
  Deep Speech 1
 ===============
 
-Based on the Deep Speech 2 configuration as described in `Deep Speech: Scaling
-up end-to-end speech recognition <https://arxiv.org/abs/1412.5567>`_.
-
-Results
--------
-
-+-----------+-----+
-| Dataset   | WER |
-+===========+=====+
-| dev-clean |     |
-+-----------+-----+
+Based on Deep Speech as described in `Deep Speech: Scaling up end-to-end speech
+recognition <https://arxiv.org/abs/1412.5567>`_.
 
 Model Protobuf Configuration
 ----------------------------
