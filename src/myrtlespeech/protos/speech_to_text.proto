@@ -6,6 +6,7 @@ import "myrtlespeech/protos/ctc_beam_decoder.proto";
 import "myrtlespeech/protos/ctc_greedy_decoder.proto";
 import "myrtlespeech/protos/ctc_loss.proto";
 import "myrtlespeech/protos/deep_speech_1.proto";
+import "myrtlespeech/protos/deep_speech_2.proto";
 import "myrtlespeech/protos/pre_process_step.proto";
 
 
@@ -18,16 +19,17 @@ message SpeechToText {
   // Supported networks.
   oneof supported_models {
     DeepSpeech1 deep_speech_1 = 3;
+    DeepSpeech2 deep_speech_2 = 4;
   }
 
   // Supported loss functions.
   oneof supported_losses {
-    CTCLoss ctc_loss = 4;
+    CTCLoss ctc_loss = 5;
   }
 
   // Supported post processing of network output.
   oneof supported_post_processes {
-    CTCGreedyDecoder ctc_greedy_decoder = 5;
-    CTCBeamDecoder ctc_beam_decoder = 6;
+    CTCGreedyDecoder ctc_greedy_decoder = 6;
+    CTCBeamDecoder ctc_beam_decoder = 7;
   }
 }
