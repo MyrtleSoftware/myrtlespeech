@@ -304,14 +304,165 @@ class MaskConv1d(torch.nn.Conv1d):
         Args
             x: A tuple where the first element is the network input (a
                 :py:class:`torch.Tensor`) with size ``[batch, in_channels,
-                seq_len]`` and the second element is :py:class:`torch.Tensor`
-                of size ``[batch]`` where each entry represents the sequence
-                length of the corresponding *input* sequence.
+                in_seq_len]`` and the second element is
+                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+                represents the sequence length of the corresponding *input*
+                sequence.
 
         Returns:
             The first element of the Tuple return value is the result after
             applying the module to ``x[0]``. It must have size ``[batch,
-            out_channels, seq_len]``.
+            out_channels, out_seq_len]``.
+
+            The second element of the Tuple return value is a
+            :py:class:`torch.Tensor` with size ``[batch]`` where each entry
+            represents the sequence length of the corresponding *output*
+            sequence.
+        """
+        if self.use_cuda:
+            x = (x[0].cuda(), x[1].cuda())
+
+        acts, seq_lens = x
+
+        self._mask_(acts, seq_lens)
+
+        acts, seq_lens = self._pad(acts, seq_lens)
+
+        acts = super().forward(acts)
+
+        return acts, seq_lens
+
+    def extra_repr(self) -> str:
+        return super().extra_repr() + f", padding_mode={self.padding_mode}"
+
+
+class MaskConv2d(torch.nn.Conv2d):
+    """Applies a 2D convolution over an input signal with a given length.
+
+    This wrapper ensures the sequence length information is correctly used by
+    the :py:class:`torch.nn.Conv2d`. Each signal in a batch has an associated
+    length. For each signal the layer first sets all values at indices greater
+    than the corresponding length to zero. It then concatenates the padding, if
+    any, before applying the :py:class:`torch.nn.Conv1d`.
+
+    Args:
+        in_channels: See :py:class:`torch.nn.Conv1d`.
+
+        out_channels: See :py:class:`torch.nn.Conv1d`.
+
+        kernel_size: See :py:class:`torch.nn.Conv1d`.
+
+        stride: See :py:class:`torch.nn.Conv1d`.
+
+        padding_mode: The :py:class:`PaddingMode` to apply.
+
+        dilation: See :py:class:`torch.nn.Conv1d`.
+
+        groups: See :py:class:`torch.nn.Conv1d`.
+
+        bias: See :py:class:`torch.nn.Conv1d`.
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        stride: int = 1,
+        padding_mode: PaddingMode = PaddingMode.NONE,
+        dilation: int = 1,
+        groups: int = 1,
+        bias: bool = True,
+    ):
+        super().__init__(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            dilation=dilation,
+            groups=groups,
+            bias=bias,
+        )
+        self.padding_mode = padding_mode
+        self.use_cuda = torch.cuda.is_available()
+        if self.use_cuda:
+            super().cuda()
+
+    def _pad(
+        self, acts: torch.Tensor, seq_lens: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Pads the input activations."""
+        batch, channels, features, max_seq_len = acts.size()
+
+        if self.padding_mode == PaddingMode.NONE:
+            pad_len = (0, 0)
+        elif self.padding_mode == PaddingMode.SAME:
+            pad_len = pad_same(
+                length=max_seq_len,
+                kernel_size=self.kernel_size[1],
+                stride=self.stride[1],
+                dilation=self.dilation[1],
+            )
+            pad_features = pad_same(
+                length=features,
+                kernel_size=self.kernel_size[0],
+                stride=self.stride[0],
+                dilation=self.dilation[0],
+            )
+            acts = torch.nn.functional.pad(acts, pad_len + pad_features)
+        else:
+            raise ValueError(f"unknown padding mode {self.padding_mode}")
+
+        seq_lens = out_lens(
+            seq_lens,
+            kernel_size=self.kernel_size[1],
+            stride=self.stride[1],
+            dilation=self.dilation[1],
+            padding=sum(pad_len),
+        )
+        return acts, seq_lens
+
+    def _mask_(self, acts: torch.Tensor, seq_lens: torch.Tensor) -> None:
+        """Sets all elements longer than each signals length to zero."""
+        max_seq_len = acts.size(3)
+
+        mask = (
+            torch.arange(max_seq_len)
+            .to(seq_lens.device)
+            .expand(len(seq_lens), max_seq_len)
+        )
+        mask = mask >= seq_lens.unsqueeze(1)
+        mask = (
+            mask.unsqueeze(1)  # add channels and features dims, these will be
+            .unsqueeze(1)  # broadcast so OK to be set to 1
+            .type(torch.bool)
+            .to(device=acts.device)
+        )
+
+        acts.masked_fill_(mask, 0)
+        del mask
+
+    def forward(
+        self, x: Tuple[torch.Tensor, torch.Tensor]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        r"""Returns the result of applying the module to ``x[0]``.
+
+        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
+        :py:func:`torch.cuda.is_available` was :py:data:`True` on
+        initialisation.
+
+        Args
+            x: A tuple where the first element is the network input (a
+                :py:class:`torch.Tensor`) with size ``[batch, in_channels,
+                in_features, in_seq_len]`` and the second element is
+                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+                represents the sequence length of the corresponding *input*
+                sequence.
+
+        Returns:
+            The first element of the Tuple return value is the result after
+            applying the module to ``x[0]``. It must have size ``[batch,
+            out_channels, out_features, out_seq_len]``.
 
             The second element of the Tuple return value is a
             :py:class:`torch.Tensor` with size ``[batch]`` where each entry
