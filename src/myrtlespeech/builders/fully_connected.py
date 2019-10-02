@@ -45,7 +45,9 @@ def build(
     """
     pb2_fc = fully_connected_pb2.FullyConnected
     if fully_connected_cfg.hidden_activation_fn == pb2_fc.RELU:
-        hidden_activation_fn = torch.nn.ReLU()
+        hidden_activation_fn = torch.nn.Hardtanh(
+            0, 20, inplace=True
+        )  # torch.nn.ReLU()
     elif fully_connected_cfg.hidden_activation_fn == pb2_fc.NONE:
         hidden_activation_fn = None
     else:

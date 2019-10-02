@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "google/protobuf/empty.proto";
+
+
+// Configuration for an activation function.
+message Activation {
+  // Hardtanh: f(x) = min(max(min_val, x), max_val)
+  message Hardtanh {
+    float min_val = 1;
+    float max_val = 2;
+  }
+
+  // ReLU: f(x) = max(0, x)
+  message ReLU {
+  }
+
+  oneof activation {
+    google.protobuf.Empty identity = 1;
+    Hardtanh hardtanh = 2;
+    ReLU relu = 3;
+  }
+}
