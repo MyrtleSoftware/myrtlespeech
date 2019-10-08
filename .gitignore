@@ -113,3 +113,5 @@ charts/
 # protobuf
 *_pb2.py
 *_pb2.pyi
+
+/notebooks/api_development2.ipynb
