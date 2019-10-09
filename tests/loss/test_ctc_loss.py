@@ -105,4 +105,4 @@ def test_ctc_loss_matches_torch(args) -> None:
 
     assert actual.size() == expected.size()
 
-    assert torch.allclose(actual, expected)
+    assert torch.allclose(actual, expected.to(actual.device))

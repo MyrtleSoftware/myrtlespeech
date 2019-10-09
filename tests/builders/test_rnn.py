@@ -51,6 +51,8 @@ def rnn_match_cfg(
         assert torch.allclose(
             bias, torch.tensor(forget_gate_bias).to(bias.device)
         )
+<<<<<<< HEAD
+>>>>>>> Updated tests so that none fail as a result of device errors by sending tensors to the same device before comparing
 
 
 # Tests -----------------------------------------------------------------------
