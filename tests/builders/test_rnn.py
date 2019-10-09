@@ -47,7 +47,9 @@ def rnn_match_cfg(rnn: RNN, rnn_cfg: rnn_pb2.RNN, input_features: int) -> None:
     for l in range(rnn_cfg.num_layers):
         bias = getattr(rnn.rnn, f"bias_ih_l{l}")[hidden_size : 2 * hidden_size]
         bias += getattr(rnn.rnn, f"bias_hh_l{l}")[hidden_size : 2 * hidden_size]
-        assert torch.allclose(bias, torch.tensor(forget_gate_bias))
+        assert torch.allclose(
+            bias, torch.tensor(forget_gate_bias).to(bias.device)
+        )
 
 
 @st.composite
@@ -93,7 +95,7 @@ def test_build_rnn_rnn_forward_output_correct_size(
         expected_out_features *= 2
     assert out_features == expected_out_features
 
-    assert torch.all(in_seq_lens == out_seq_lens)
+    assert torch.all(in_seq_lens == out_seq_lens.to(in_seq_lens.device))
 
 
 @given(

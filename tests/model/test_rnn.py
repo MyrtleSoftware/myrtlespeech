@@ -80,7 +80,8 @@ def test_correct_rnn_type_and_size_returned(
     for l in range(num_layers):
         bias = getattr(rnn.rnn, f"bias_ih_l{l}")[hidden_size : 2 * hidden_size]
         bias += getattr(rnn.rnn, f"bias_hh_l{l}")[hidden_size : 2 * hidden_size]
-        assert torch.allclose(bias, torch.tensor(forget_gate_bias))
+        bias = torch.tensor(bias).cpu()
+        assert torch.allclose(bias, torch.tensor(forget_gate_bias).cpu())
 
 
 @given(rnn_type=st.integers(min_value=100, max_value=300))
