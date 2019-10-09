@@ -98,7 +98,7 @@ def test_fully_connected_module_returns_correct_seq_lens(
 
     _, act_seq_lens = fully_connected((tensor, in_seq_lens))
 
-    assert torch.all(act_seq_lens == in_seq_lens)
+    assert torch.all(act_seq_lens == in_seq_lens.to(act_seq_lens.device))
 
 
 @given(

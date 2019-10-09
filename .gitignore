@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+#dependencies
+/deps
+
 # Distribution / packaging
 .Python
 build/
@@ -34,6 +37,7 @@ MANIFEST
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
+pip-wheel-metadata/
 
 # Unit test / coverage reports
 htmlcov/
