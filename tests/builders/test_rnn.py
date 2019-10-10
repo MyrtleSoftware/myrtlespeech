@@ -98,6 +98,31 @@ def test_build_rnn_rnn_forward_output_correct_size(
     assert torch.all(in_seq_lens == out_seq_lens.to(in_seq_lens.device))
 
 
+@given(rnn_cfg=rnns(), tensor=tensors(min_n_dims=3, max_n_dims=3))
+def test_build_rnn_rnn_forward_output_correct_size_with_hidden_state(
+    rnn_cfg: rnn_pb2.RNN, tensor: torch.Tensor
+) -> None:
+    """Ensures returned RNN forward produces output with correct size when
+    hidden state is passed."""
+    seq_len, batch, input_features = tensor.size()
+    rnn = build(rnn_cfg, input_features)
+
+    in_seq_lens = torch.randint(low=1, high=1 + seq_len, size=(batch,))
+
+    hidden = None
+    (out, hid), out_seq_lens = rnn(((tensor, hidden), in_seq_lens))
+    out_seq_len, out_batch, out_features = out.size()
+    assert isinstance(hid, (torch.Tensor, tuple))
+    assert out_seq_len == seq_len
+    assert out_batch == batch
+    expected_out_features = rnn_cfg.hidden_size
+    if rnn_cfg.bidirectional:
+        expected_out_features *= 2
+    assert out_features == expected_out_features
+
+    assert torch.all(in_seq_lens == out_seq_lens.to(in_seq_lens.device))
+
+
 @given(
     rnn_cfg=rnns(),
     input_features=st.integers(1, 128),
