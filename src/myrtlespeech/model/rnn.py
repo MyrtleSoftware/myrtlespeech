@@ -67,7 +67,7 @@ class RNN(torch.nn.Module):
         dropout: float = 0.0,
         bidirectional: bool = False,
         forget_gate_bias: Optional[float] = None,
-        batch_first: bool = False,
+        batch_first: Optional[bool] = False,
     ):
         super().__init__()
         if rnn_type == RNNType.LSTM:
@@ -192,4 +192,3 @@ class RNN(torch.nn.Module):
             return (out, hid), lengths
         else:
             return out, lengths
-        
