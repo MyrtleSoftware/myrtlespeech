@@ -7,23 +7,24 @@ from myrtlespeech.builders.ctc_beam_decoder import (
     build as build_ctc_beam_decoder,
 )
 from myrtlespeech.builders.ctc_loss import build as build_ctc_loss
+from myrtlespeech.builders.deep_speech_2 import build as build_deep_speech_2
 from myrtlespeech.builders.pre_process_step import (
     build as build_pre_process_step,
 )
 from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.data.preprocess import AddContextFrames
 from myrtlespeech.data.preprocess import Standardize
+from myrtlespeech.model.cnn import Conv1dTo2d
 from myrtlespeech.model.deep_speech_1 import DeepSpeech1
 from myrtlespeech.model.speech_to_text import SpeechToText
 from myrtlespeech.post_process.ctc_greedy_decoder import CTCGreedyDecoder
+from myrtlespeech.protos import pre_process_step_pb2
 from myrtlespeech.protos import speech_to_text_pb2
 from myrtlespeech.run.stage import Stage
 from torchaudio.transforms import MFCC
 
 
-def build(
-    stt_cfg: speech_to_text_pb2.SpeechToText, seq_len_support: bool = False
-) -> SpeechToText:
+def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
     r"""Returns a :py:class:`.SpeechToText` model based on the ``stt_cfg``.
 
     .. note::
@@ -35,11 +36,6 @@ def build(
         stt_cfg: A :py:class:`speech_to_text_pb2.SpeechToText` protobuf object
             containing the config for the desired :py:class:`.SpeechToText`.
 
-        seq_len_support: If :py:data:`True`, the
-            :py:meth:`torch.nn.Module.forward` method of the returned
-            :py:meth:`.SpeechToText.model` must optionally accept a
-            ``seq_lens`` kwarg.
-
     Returns:
         An :py:class:`.SpeechToText` based on the config.
 
@@ -47,25 +43,111 @@ def build(
         :py:class:`ValueError`: On invalid configuration.
 
     Example:
-        TODO now EncoderDecoder removed
+        >>> from google.protobuf import text_format
+        >>> cfg_text = '''
+        ... alphabet: "acgt_";
+        ...
+        ... pre_process_step {
+        ...   stage: TRAIN_AND_EVAL;
+        ...   mfcc {
+        ...     n_mfcc: 80;
+        ...     win_length: 400;
+        ...     hop_length: 160;
+        ...   }
+        ... }
+        ...
+        ... pre_process_step {
+        ...   stage: TRAIN_AND_EVAL;
+        ...   standardize {
+        ...   }
+        ... }
+        ...
+        ... deep_speech_2 {
+        ...   conv_block {
+        ...     conv1d {
+        ...       output_channels: 4;
+        ...       kernel_time: 5;
+        ...       stride_time: 2;
+        ...       padding_mode: SAME;
+        ...       bias: true;
+        ...     }
+        ...     activation {
+        ...       hardtanh {
+        ...         min_val: 0.0;
+        ...         max_val: 20.0;
+        ...       }
+        ...     }
+        ...   }
+        ...
+        ...   rnn {
+        ...     rnn_type: LSTM;
+        ...     hidden_size: 1024;
+        ...     num_layers: 3;
+        ...     bias: true;
+        ...     bidirectional: true;
+        ...     forget_gate_bias {
+        ...       value: 1.0;
+        ...     }
+        ...   }
+        ...
+        ...   fully_connected {
+        ...     num_hidden_layers: 1;
+        ...     hidden_size: 1024;
+        ...     activation {
+        ...       hardtanh {
+        ...         min_val: 0.0;
+        ...         max_val: 20.0;
+        ...       }
+        ...     }
+        ...   }
+        ... }
+        ...
+        ... ctc_loss {
+        ...   blank_index: 4;
+        ...   reduction: SUM;
+        ... }
+        ...
+        ... ctc_greedy_decoder {
+        ...   blank_index: 4;
+        ... }
+        ... '''
+        >>> cfg = text_format.Merge(
+        ...     cfg_text,
+        ...     speech_to_text_pb2.SpeechToText()
+        ... )
+        >>> build(cfg)
+        SpeechToText(
+          (alphabet): Alphabet(symbols=['a', 'c', 'g', 't', '_'])
+          (model): DeepSpeech2(
+            (cnn): Sequential(
+              (0): Conv2dTo1d(seq_len_support=True)
+              (1): MaskConv1d(80, 4, kernel_size=(5,), stride=(2,), padding_mode=PaddingMode.SAME)
+              (2): Conv1dTo2d(seq_len_support=True)
+            )
+            (rnn): RNN(
+              (rnn): LSTM(4, 1024, num_layers=3, bidirectional=True)
+            )
+            (fully_connected): FullyConnected(
+              (fully_connected): Sequential(
+                (0): Linear(in_features=2048, out_features=1024, bias=True)
+                (1): Hardtanh(min_val=0.0, max_val=20.0)
+                (2): Linear(in_features=1024, out_features=5, bias=True)
+              )
+            )
+          )
+          (loss): CTCLoss(
+            (log_softmax): LogSoftmax()
+            (ctc_loss): CTCLoss()
+          )
+          (post_process): CTCGreedyDecoder(blank_index=4)
+        )
     """
     alphabet = Alphabet(list(stt_cfg.alphabet))
 
     # preprocessing
-    input_channels = 1
-    input_features = 1
-    pre_process_steps: List[Tuple[Callable, Stage]] = []
-    for step_cfg in stt_cfg.pre_process_step:
-        step = build_pre_process_step(step_cfg)
-        if isinstance(step[0], MFCC):
-            input_features = step[0].n_mfcc
-        elif isinstance(step[0], Standardize):
-            pass
-        elif isinstance(step[0], AddContextFrames):
-            input_channels = 2 * step[0].n_context + 1
-        else:
-            raise ValueError(f"unknown step={step[0]}")
-        pre_process_steps.append(step)
+    pre_process_steps, input_features, input_channels = _build_pre_process_steps(
+        stt_cfg.pre_process_step
+    )
 
     # model
     model_type = stt_cfg.WhichOneof("supported_models")
@@ -77,6 +159,13 @@ def build(
             drop_prob=stt_cfg.deep_speech_1.drop_prob,
             relu_clip=stt_cfg.deep_speech_1.relu_clip,
             forget_gate_bias=stt_cfg.deep_speech_1.forget_gate_bias,
+        )
+    elif model_type == "deep_speech_2":
+        model = build_deep_speech_2(
+            deep_speech_2_cfg=stt_cfg.deep_speech_2,
+            input_features=input_features,
+            input_channels=input_channels,
+            output_features=len(alphabet),
         )
     else:
         raise ValueError(f"model={model_type} not supported")
@@ -140,3 +229,31 @@ def build(
         post_process=post_process,
     )
     return stt
+
+
+def _build_pre_process_steps(
+    pre_process_step_cfg: List[pre_process_step_pb2.PreProcessStep]
+) -> Tuple[List[Tuple[Callable, Stage]], int, int]:
+    """Returns the preprocessing steps, features, and channels."""
+    input_features = None
+    input_channels = 1
+    pre_process_steps: List[Tuple[Callable, Stage]] = []
+    for step_cfg in pre_process_step_cfg:
+        step = build_pre_process_step(step_cfg)
+        if isinstance(step[0], MFCC):
+            input_features = step[0].n_mfcc
+        elif isinstance(step[0], Standardize):
+            pass
+        elif isinstance(step[0], AddContextFrames):
+            input_channels = 2 * step[0].n_context + 1
+        else:
+            raise ValueError(f"unknown step={step[0]}")
+        pre_process_steps.append(step)
+
+    if input_features is None:
+        pre_process_steps.append(
+            (Conv1dTo2d(seq_len_support=False), Stage.TRAIN_AND_EVAL)
+        )
+        input_features = 1
+
+    return pre_process_steps, input_features, input_channels

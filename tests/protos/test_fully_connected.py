@@ -4,6 +4,7 @@ from typing import Union
 
 import hypothesis.strategies as st
 from google.protobuf import empty_pb2
+from myrtlespeech.protos import activation_pb2
 from myrtlespeech.protos import fully_connected_pb2
 
 from tests.protos.test_activation import activations
@@ -26,7 +27,9 @@ def fully_connecteds(
     kwargs["num_hidden_layers"] = draw(st.integers(0, 3))
     if valid_only and kwargs["num_hidden_layers"] == 0:
         kwargs["hidden_size"] = None
-        kwargs["activation"] = empty_pb2.Empty()
+        kwargs["activation"] = activation_pb2.Activation(
+            identity=empty_pb2.Empty()
+        )
     else:
         kwargs["hidden_size"] = draw(st.integers(1, 32))
         kwargs["activation"] = draw(activations())

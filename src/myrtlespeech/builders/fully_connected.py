@@ -1,4 +1,5 @@
 import torch
+from myrtlespeech.builders.activation import build as build_activation
 from myrtlespeech.model.fully_connected import FullyConnected
 from myrtlespeech.protos import fully_connected_pb2
 
@@ -26,7 +27,9 @@ def build(
         >>> cfg_text = '''
         ... num_hidden_layers: 2;
         ... hidden_size: 64;
-        ... hidden_activation_fn: RELU;
+        ... activation {
+        ...   relu { }
+        ... }
         ... '''
         >>> cfg = text_format.Merge(
         ...     cfg_text,
@@ -43,15 +46,9 @@ def build(
           )
         )
     """
-    pb2_fc = fully_connected_pb2.FullyConnected
-    if fully_connected_cfg.hidden_activation_fn == pb2_fc.RELU:
-        hidden_activation_fn = torch.nn.Hardtanh(
-            0, 20, inplace=True
-        )  # torch.nn.ReLU()
-    elif fully_connected_cfg.hidden_activation_fn == pb2_fc.NONE:
-        hidden_activation_fn = None
-    else:
-        raise ValueError("unsupported activation_fn")
+    activation = build_activation(fully_connected_cfg.activation)
+    if isinstance(activation, torch.nn.Identity):
+        activation = None
 
     hidden_size = None
     if fully_connected_cfg.hidden_size > 0:
@@ -62,5 +59,5 @@ def build(
         out_features=output_features,
         num_hidden_layers=fully_connected_cfg.num_hidden_layers,
         hidden_size=hidden_size,
-        hidden_activation_fn=hidden_activation_fn,
+        hidden_activation_fn=activation,
     )

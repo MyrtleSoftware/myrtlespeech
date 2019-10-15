@@ -7,5 +7,6 @@
     :caption: Contents:
 
     callbacks/index
+    run
     stage
     train

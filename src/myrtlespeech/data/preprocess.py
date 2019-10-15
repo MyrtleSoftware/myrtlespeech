@@ -54,7 +54,7 @@ class Standardize:
         Args:
            tensor: A :py:class:`torch.Tensor` with any number of dimensions.
         """
-        return (tensor - tensor.mean()) / tensor.std()
+        return ((tensor - tensor.mean()) / tensor.std()).detach()
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + "()"

@@ -57,7 +57,7 @@ def rnn_cfg_tensors(
     """Returns a search strategy for RNNs built from a config + valid input."""
     rnn_cfg = draw(rnns())
     tensor = draw(tensors(min_n_dims=3, max_n_dims=3))
-    rnn = build(rnn_cfg, input_features=tensor.size(2))
+    rnn, _ = build(rnn_cfg, input_features=tensor.size(2))
     return rnn, rnn_cfg, tensor
 
 
@@ -69,7 +69,7 @@ def test_build_rnn_returns_correct_rnn_with_valid_params(
     rnn_cfg: rnn_pb2.RNN, input_features: int
 ) -> None:
     """Test that build_rnn returns the correct RNN with valid params."""
-    rnn = build(rnn_cfg, input_features)
+    rnn, rnn_output_size = build(rnn_cfg, input_features)
     rnn_match_cfg(rnn, rnn_cfg, input_features)
 
 

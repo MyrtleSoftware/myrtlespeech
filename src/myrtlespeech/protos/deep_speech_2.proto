@@ -4,6 +4,7 @@ package myrtlespeech.protos;
 
 import "google/protobuf/empty.proto";
 
+import "myrtlespeech/protos/activation.proto";
 import "myrtlespeech/protos/conv_layer.proto";
 import "myrtlespeech/protos/fully_connected.proto";
 import "myrtlespeech/protos/lookahead.proto";
@@ -13,14 +14,28 @@ import "myrtlespeech/protos/rnn.proto";
 // Configuration for Deep Speech 2 model:
 //     http://proceedings.mlr.press/v48/amodei16.pdf
 message DeepSpeech2 {
-  repeated ConvLayer conv_layer = 1;
+  message ConvBlock {
+    oneof convnd {
+      Conv1d conv1d = 1;
+      Conv2d conv2d = 2;
+    }
+    Activation activation = 3;
+  }
+
+  // If no_lookahead, activation is ignored.
+  message LookaheadBlock {
+    oneof supported_lookaheads {
+      google.protobuf.Empty no_lookahead = 1;
+      Lookahead lookahead = 2;
+    }
+    Activation activation = 3;
+  }
+
+  repeated ConvBlock conv_block = 1;
 
   RNN rnn = 2;
 
-  oneof supported_lookaheads {
-    google.protobuf.Empty no_lookahead = 3;
-    Lookahead lookahead = 4;
-  }
+  LookaheadBlock lookahead_block = 3;
 
-  FullyConnected fully_connected = 5;
+  FullyConnected fully_connected = 4;
 }

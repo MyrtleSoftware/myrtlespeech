@@ -12,7 +12,7 @@ class DeepSpeech2(torch.nn.Module):
             the Deep Speech 2 model.
 
             Must accept as input a tuple where the first element is the network
-            input (a :py:`torch.Tensor`) with size ``[batch, channels,
+            input (a :py:class:`torch.Tensor`) with size ``[batch, channels,
             features, max_input_seq_len]`` and the second element is a
             :py:class:`torch.Tensor` of size ``[batch]`` where each entry
             represents the sequence length of the corresponding *input*
@@ -31,8 +31,8 @@ class DeepSpeech2(torch.nn.Module):
             the Deep Speech 2 model.
 
             Must accept as input a tuple where the first element is the network
-            input (a :py:`torch.Tensor`) with size ``[max_cnn_seq_len, batch,
-            out_channels*out_features]`` and the second element is a
+            input (a :py:class:`torch.Tensor`) with size ``[max_cnn_seq_len,
+            batch, out_channels*out_features]`` and the second element is a
             :py:class:`torch.Tensor` of size ``[batch]`` where each entry
             represents the sequence length of the corresponding *input*
             sequence to the rnn.
@@ -51,11 +51,11 @@ class DeepSpeech2(torch.nn.Module):
             rnns).
 
             If not :py:data:`None` it must accept as input a tuple where the
-            first element is the network input (a :py:`torch.Tensor`) with size
-            ``[batch, rnn_features, max_rnn_seq_len]`` and the second element
-            is a :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-            represents the sequence length of the corresponding *input*
-            sequence to the lookahead layer.
+            first element is the network input (a :py:class:`torch.Tensor`)
+            with size ``[batch, rnn_features, max_rnn_seq_len]`` and the second
+            element is a :py:class:`torch.Tensor` of size ``[batch]`` where
+            each entry represents the sequence length of the corresponding
+            *input* sequence to the lookahead layer.
 
             It must return a tuple where the first element is the result after
             applying the module to the rnn output. It must have size
@@ -69,9 +69,9 @@ class DeepSpeech2(torch.nn.Module):
             connected part of the Deep Speech 2 model.
 
             Must accept as input a tuple where the first element is the network
-            input (a :py:`torch.Tensor`) with size ``[batch, max_fc_in_seq_len,
-            max_fc_in_features]`` and the second element is a
-            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+            input (a :py:class:`torch.Tensor`) with size ``[batch,
+            max_fc_in_seq_len, max_fc_in_features]`` and the second element is
+            a :py:class:`torch.Tensor` of size ``[batch]`` where each entry
             represents the sequence length of the corresponding *input*
             sequence to the fully connected layer(s). ``max_fc_in_seq_len`` and
             ``max_fc_in_features`` will either be ``max_rnn_seq_len`` and

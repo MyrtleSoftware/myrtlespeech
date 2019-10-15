@@ -1,9 +1,12 @@
+import warnings
 from typing import Dict
 from typing import Optional
 from typing import Tuple
 from typing import Union
 
 import hypothesis.strategies as st
+from hypothesis import assume
+from myrtlespeech.builders.speech_to_text import _build_pre_process_steps
 from myrtlespeech.protos import ctc_greedy_decoder_pb2
 from myrtlespeech.protos import speech_to_text_pb2
 
@@ -11,9 +14,9 @@ from tests.data.test_alphabet import random_alphabet
 from tests.protos.test_ctc_beam_decoder import ctc_beam_decoders
 from tests.protos.test_ctc_loss import ctc_losses
 from tests.protos.test_deep_speech_1 import deep_speech_1s
+from tests.protos.test_deep_speech_2 import deep_speech_2s
 from tests.protos.test_pre_process_step import pre_process_steps
 from tests.protos.utils import all_fields_set
-
 
 # Fixtures and Strategies -----------------------------------------------------
 
@@ -31,6 +34,16 @@ def speech_to_texts(
 
     descript = speech_to_text_pb2.SpeechToText.DESCRIPTOR
 
+    # preprocess step
+    kwargs["pre_process_step"] = []
+    if draw(st.booleans()):
+        kwargs["pre_process_step"].append(draw(pre_process_steps()))
+
+    # record input_features and input_channels to ensure built model is valid
+    _, input_features, input_channels = _build_pre_process_steps(
+        kwargs["pre_process_step"]
+    )
+
     # model
     model_str = draw(
         st.sampled_from(
@@ -39,6 +52,12 @@ def speech_to_texts(
     )
     if model_str == "deep_speech_1":
         kwargs[model_str] = draw(deep_speech_1s())
+    elif model_str == "deep_speech_2":
+        kwargs[model_str] = draw(deep_speech_2s())
+        warnings.warn(
+            "TODO: fix hack that assumes input_features > 200 for deep_speech_2"
+        )
+        assume(input_features > 200)
     else:
         raise ValueError(f"unknown model type {model_str}")
 
@@ -58,11 +77,6 @@ def speech_to_texts(
         ctc_blank_index = kwargs["ctc_loss"].blank_index
     else:
         raise ValueError(f"unknown loss type {loss_str}")
-
-    # preprocess step
-    kwargs["pre_process_step"] = []
-    if draw(st.booleans()):
-        kwargs["pre_process_step"].append(draw(pre_process_steps()))
 
     # post process
     post_str = draw(

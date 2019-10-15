@@ -1,14 +1,14 @@
 from enum import Enum
+from typing import List
 from typing import Tuple
+from typing import TypeVar
+from typing import Union
 
 import torch
 
 
 class PaddingMode(Enum):
-    """Available padding modes.
-
-    TODO
-    """
+    """Available padding modes."""
 
     NONE = 0
     SAME = 1
@@ -367,8 +367,8 @@ class MaskConv2d(torch.nn.Conv2d):
         self,
         in_channels: int,
         out_channels: int,
-        kernel_size: int,
-        stride: int = 1,
+        kernel_size: Union[int, List[int]],
+        stride: Union[int, List[int]] = 1,
         padding_mode: PaddingMode = PaddingMode.NONE,
         dilation: int = 1,
         groups: int = 1,
@@ -484,3 +484,100 @@ class MaskConv2d(torch.nn.Conv2d):
 
     def extra_repr(self) -> str:
         return super().extra_repr() + f", padding_mode={self.padding_mode}"
+
+
+SeqLenT = TypeVar("SeqLenT", torch.Tensor, Tuple[torch.Tensor, torch.Tensor])
+
+
+class Conv2dTo1d(torch.nn.Module):
+    """Collapses input channel and feature dimensions for a 1d convolution."""
+
+    def __init__(self, seq_len_support: bool = True):
+        super().__init__()
+        self.seq_len_support = seq_len_support
+
+    def forward(self, x: SeqLenT) -> SeqLenT:
+        """Converts ``[N, C, H, W] -> [N, C*H, W]``.
+
+        Args:
+            x: A tuple where the first element is the input to reshape (a
+                :py:class:`torch.Tensor`) with size ``[batch, channels,
+                features, seq_len]`` and the second element is
+                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+                represents the sequence length of the corresponding *input*
+                sequence.
+
+        Returns:
+            The first element of the tuple return value contains the reshaped
+            ``x[0]`` with size ``[batch, channels*features, seq_len]`` and the
+            second element is ``x[1]`` (sequence lengths not modified).
+
+        Example:
+            >>> conv_2d_to_1d = Conv2dTo1d()
+            >>> batch, channels, features, seq_len = 3, 5, 7, 11
+            >>> x = torch.empty([batch, channels, features, seq_len]).normal_()
+            >>> seq_lens = torch.tensor([9, 10, 11])
+            >>> out_x, out_seq_lens = conv_2d_to_1d((x, seq_lens))
+            >>> out_x.size() == torch.Size([batch, channels*features, seq_len])
+            True
+        """
+        if self.seq_len_support:
+            acts, seq_lens = x
+        else:
+            acts = x
+
+        batch, channels, features, seq_len = acts.size()
+        acts = acts.view(batch, channels * features, seq_len)
+
+        if self.seq_len_support:
+            return acts, seq_lens
+        return acts
+
+    def extra_repr(self) -> str:
+        return f"seq_len_support={self.seq_len_support}"
+
+
+class Conv1dTo2d(torch.nn.Module):
+    """Adds a channel dimension for a 2d convolution."""
+
+    def __init__(self, seq_len_support: bool = True):
+        super().__init__()
+        self.seq_len_support = seq_len_support
+
+    def forward(self, x: SeqLenT) -> SeqLenT:
+        """Converts ``[N, C, W] -> [N, 1, C, W]``.
+
+        Args:
+            x: A tuple where the first element is the input to reshape (a
+                :py:class:`torch.Tensor`) with size ``[batch, channels,
+                seq_len]`` and the second element is :py:class:`torch.Tensor`
+                of size ``[batch]`` where each entry represents the sequence
+                length of the corresponding *input* sequence.
+
+        Returns:
+            The first element of the tuple return value contains the reshaped
+            ``x[0]`` with size ``[batch, 1, channels, seq_len]`` and the second
+            element is ``x[1]`` (sequence lengths not modified).
+
+        Example:
+            >>> conv_1d_to_2d = Conv1dTo2d()
+            >>> batch, channels, seq_len = 3, 5, 7
+            >>> x = torch.empty([batch, channels, seq_len]).normal_()
+            >>> seq_lens = torch.tensor([9, 10, 11])
+            >>> out_x, out_seq_lens = conv_1d_to_2d((x, seq_lens))
+            >>> out_x.size() == torch.Size([batch, 1, channels, seq_len])
+            True
+        """
+        if self.seq_len_support:
+            acts, seq_lens = x
+        else:
+            acts = x
+
+        acts = acts.unsqueeze(1)
+
+        if self.seq_len_support:
+            return acts, seq_lens
+        return acts
+
+    def extra_repr(self) -> str:
+        return f"seq_len_support={self.seq_len_support}"

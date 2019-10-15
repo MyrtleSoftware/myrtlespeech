@@ -1,10 +1,14 @@
+from typing import Tuple
+
 import torch
 from myrtlespeech.model.rnn import RNN
 from myrtlespeech.model.rnn import RNNType
 from myrtlespeech.protos import rnn_pb2
 
 
-def build(rnn_cfg: rnn_pb2.RNN, input_features: int) -> torch.nn.Module:
+def build(
+    rnn_cfg: rnn_pb2.RNN, input_features: int
+) -> Tuple[torch.nn.Module, int]:
     """Returns a :py:class:`myrtlespeech.model.enocder.rnn.RNN` based on cfg.
 
     Args:
@@ -14,7 +18,9 @@ def build(rnn_cfg: rnn_pb2.RNN, input_features: int) -> torch.nn.Module:
         input_features: The number of features for the input.
 
     Returns:
-        A :py:class:`myrtlespeech.model.encoder.rnn.RNN` based on the config.
+        A tuple containing an :py:class:`myrtlespeech.model.encoder.rnn.RNN`
+        based on the config and the number of features that the final layer
+        will output.
 
         The module's :py:meth:`torch.nn.Module.forward` method accepts
         :py:class:`torch.Tensor` input with size ``[max_input_seq_len, batch,
@@ -40,9 +46,9 @@ def build(rnn_cfg: rnn_pb2.RNN, input_features: int) -> torch.nn.Module:
         ...     rnn_pb2.RNN()
         ... )
         >>> build(rnn_cfg, input_features=512)
-        RNN(
+        (RNN(
           (rnn): LSTM(512, 1024, num_layers=5, bidirectional=True)
-        )
+        ), 2048)
     """
     rnn_type_map = {
         rnn_pb2.RNN.LSTM: RNNType.LSTM,
@@ -68,4 +74,8 @@ def build(rnn_cfg: rnn_pb2.RNN, input_features: int) -> torch.nn.Module:
         forget_gate_bias=forget_gate_bias,
     )
 
-    return rnn
+    out_features = rnn_cfg.hidden_size
+    if rnn_cfg.bidirectional:
+        out_features *= 2
+
+    return rnn, out_features
