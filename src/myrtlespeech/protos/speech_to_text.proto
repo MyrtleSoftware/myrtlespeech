@@ -8,7 +8,7 @@ import "myrtlespeech/protos/ctc_loss.proto";
 import "myrtlespeech/protos/deep_speech_1.proto";
 import "myrtlespeech/protos/deep_speech_2.proto";
 import "myrtlespeech/protos/pre_process_step.proto";
-
+import "myrtlespeech/protos/rnn_t.proto";
 
 message SpeechToText {
   // Output alphabet.
@@ -20,6 +20,7 @@ message SpeechToText {
   oneof supported_models {
     DeepSpeech1 deep_speech_1 = 3;
     DeepSpeech2 deep_speech_2 = 4;
+    RNNT rnn_t = 7;
   }
 
   // Supported loss functions.
