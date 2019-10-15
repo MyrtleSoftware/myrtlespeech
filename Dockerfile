@@ -1,5 +1,8 @@
 FROM continuumio/miniconda3
 
+# fix https://github.com/conda/conda/issues/7267
+RUN chown 1000:1000 /opt/conda/
+
 # create non-root user
 RUN useradd --create-home --shell /bin/bash user
 USER user
