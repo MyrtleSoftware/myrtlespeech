@@ -195,7 +195,7 @@ def run() -> None:
     parser = argparse.ArgumentParser(description="Run myrtlespeech")
     parser.add_argument("config")
     parser.add_argument("--log_dir")
-    parser.add_argument("--mixed_precision", action="store_true")
+    parser.add_argument("--disable_mixed_precision", action="store_true")
     parser.add_argument("--stop_epoch_after", type=int)
     args = parser.parse_args()
 
@@ -219,7 +219,7 @@ def run() -> None:
         ]
     )
 
-    if args.mixed_precision:
+    if not args.disable_mixed_precision:
         callbacks.append(MixedPrecision(seq_to_seq, opt_level="O1"))
 
     if args.stop_epoch_after is not None:
