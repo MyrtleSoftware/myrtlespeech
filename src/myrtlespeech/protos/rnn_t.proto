@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "myrtlespeech/protos/rnn_t_encoder.proto";
+
+// Configuration for RNN-T model:
+//     http://proceedings.mlr.press/v48/amodei16.pdf
+message RNNT {
+  RNNTEncoder rnn_t_encoder = 1;
+  //RNNTDec
+  //RNNTJoint
+}
