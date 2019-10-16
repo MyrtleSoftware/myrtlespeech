@@ -122,7 +122,11 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
             (cnn): Sequential(
               (0): Conv2dTo1d(seq_len_support=True)
               (1): MaskConv1d(80, 4, kernel_size=(5,), stride=(2,), padding_mode=PaddingMode.SAME)
-              (2): Conv1dTo2d(seq_len_support=True)
+              (2): SeqLenWrapper(
+                (module): Hardtanh(min_val=0.0, max_val=20.0)
+                (seq_lens_fn): Identity()
+              )
+              (3): Conv1dTo2d(seq_len_support=True)
             )
             (rnn): RNN(
               (rnn): LSTM(4, 1024, num_layers=3, bidirectional=True)

@@ -85,7 +85,11 @@ def build(
           (cnn): Sequential(
             (0): Conv2dTo1d(seq_len_support=True)
             (1): MaskConv1d(3, 8, kernel_size=(5,), stride=(1,), padding_mode=PaddingMode.NONE)
-            (2): Conv1dTo2d(seq_len_support=True)
+            (2): SeqLenWrapper(
+              (module): ReLU()
+              (seq_lens_fn): Identity()
+            )
+            (3): Conv1dTo2d(seq_len_support=True)
           )
           (rnn): RNN(
             (rnn): LSTM(8, 32, bidirectional=True)
