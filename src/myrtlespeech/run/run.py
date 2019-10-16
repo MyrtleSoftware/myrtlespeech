@@ -112,9 +112,9 @@ class ReportCTCDecoder(Callback):
 class TensorBoardLogger(ModelCallback):
     """TODO"""
 
-    def __init__(self, model, histograms=False):
+    def __init__(self, path: Union[str, Path], model, histograms=False):
         super().__init__(model)
-        self.writer = SummaryWriter(log_dir=f"/tmp/writer/{time.time()}")
+        self.writer = SummaryWriter(log_dir=str(path))
         self.histograms = histograms
 
     def on_backward_begin(self, **kwargs):
@@ -215,7 +215,7 @@ def run() -> None:
             ReportCTCDecoder(
                 seq_to_seq.post_process, seq_to_seq.alphabet, WordSegmentor(" ")
             ),
-            TensorBoardLogger(seq_to_seq.model, histograms=False),
+            TensorBoardLogger(log_dir, seq_to_seq.model, histograms=False),
         ]
     )
 
@@ -223,7 +223,7 @@ def run() -> None:
         callbacks.append(MixedPrecision(seq_to_seq, opt_level="O1"))
 
     if args.stop_epoch_after is not None:
-        callbacks.append(StopEpochAfter(epoch_batches=1))
+        callbacks.append(StopEpochAfter(epoch_batches=args.stop_epoch_after))
 
     callbacks.extend(
         [CSVLogger(log_dir.joinpath("log.csv")), Saver(log_dir, seq_to_seq)]
