@@ -12,3 +12,10 @@ sphinx:
 # Configuration for Conda support
 conda:
   environment: environment.yml
+
+# Configuration of the Python environment
+python:
+  version: 3.7
+  install:
+  - method: pip
+    path: .
