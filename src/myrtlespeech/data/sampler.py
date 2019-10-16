@@ -6,11 +6,7 @@ class RandomBatchSampler:
 
     def __init__(self, indices, batch_size, shuffle, drop_last=False):
         self.shuffle = shuffle
-        self.batch_indices = self._batch_indices(
-            indices,
-            batch_size,
-            drop_last
-        )
+        self.batch_indices = self._batch_indices(indices, batch_size, drop_last)
 
     def _batch_indices(self, indices, batch_size, drop_last):
         batches = []
