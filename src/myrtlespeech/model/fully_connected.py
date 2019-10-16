@@ -115,7 +115,7 @@ class FullyConnected(torch.nn.Module):
 
         Args
             x: A tuple where the first element is the network input (a
-                :py:class:`torch.Tensor`) with size ``[max_seq_len, batch,
+                :py:class:`torch.Tensor`) with size ``[batch, max_seq_len,
                 in_features]`` and the second element is
                 :py:class:`torch.Tensor` of size ``[batch]`` where each entry
                 represents the sequence length of the corresponding *input*
@@ -123,7 +123,7 @@ class FullyConnected(torch.nn.Module):
 
         Returns:
             The first element of the Tuple return value is the result after
-            applying the module to ``x[0]``. It has size ``[max_seq_len, batch,
+            applying the module to ``x[0]``. It has size ``[batch, max_seq_len,
             out_features]``.  The second element of the Tuple return value is a
             :py:class:`torch.Tensor` with size ``[batch]`` where each entry
             represents the sequence length of the corresponding *output*
@@ -132,6 +132,5 @@ class FullyConnected(torch.nn.Module):
         if self.use_cuda:
             x = (x[0].cuda(), x[1].cuda())
 
-        x_input = x[0].permute(1, 0, 2)
-        result = self.fully_connected(x_input).permute(1, 0, 2)
+        result = self.fully_connected(x[0])
         return result, x[1]

@@ -55,5 +55,5 @@ class ReportMeanBatchLoss(Callback):
         """Sets ``kwargs["reports"]["ReportMeanBatchLoss"]`` to mean loss."""
         self.loss = 0.0 if self.loss is None else self.loss
         kwargs["reports"][self.__class__.__name__] = self.loss / float(
-            kwargs["epoch_batches"]
+            max(1, kwargs["epoch_batches"])
         )

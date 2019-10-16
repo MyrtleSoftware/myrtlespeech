@@ -2,14 +2,26 @@
  preprocess
 ============
 
-.. autoclass:: myrtlespeech.data.preprocess.MFCC
+.. autoclass:: torchaudio.transforms.MFCC
+    :members:
+    :show-inheritance:
+
+
+.. autoclass:: myrtlespeech.data.preprocess.AddSequenceLength
     :members:
     :show-inheritance:
 
     .. automethod:: __call__
 
 
-.. autoclass:: myrtlespeech.data.preprocess.AddSequenceLength
+.. autoclass:: myrtlespeech.data.preprocess.Standardize
+    :members:
+    :show-inheritance:
+
+    .. automethod:: __call__
+
+
+.. autoclass:: myrtlespeech.data.preprocess.AddContextFrames
     :members:
     :show-inheritance:
 

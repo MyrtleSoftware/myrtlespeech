@@ -1,10 +1,11 @@
 from typing import Tuple
 from typing import Union
 
-from myrtlespeech.data.preprocess import MFCC
+from myrtlespeech.data.preprocess import AddContextFrames
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.protos import pre_process_step_pb2
 from myrtlespeech.run.stage import Stage
+from torchaudio.transforms import MFCC
 
 
 def build(
@@ -25,17 +26,19 @@ def build(
     step_type = pre_process_step_cfg.WhichOneof("pre_process_step")
     if step_type == "mfcc":
         step = MFCC(
-            numcep=pre_process_step_cfg.mfcc.numcep,
-            winlen=pre_process_step_cfg.mfcc.winlen,
-            winstep=pre_process_step_cfg.mfcc.winstep,
+            n_mfcc=pre_process_step_cfg.mfcc.n_mfcc,
+            melkwargs={
+                "win_length": pre_process_step_cfg.mfcc.win_length,
+                "hop_length": pre_process_step_cfg.mfcc.hop_length,
+            },
         )
     elif step_type == "standardize":
-        # TODO
-        step = Standardize(  # type: ignore
-            mean=pre_process_step_cfg.standardize.mean,
-            dim=pre_process_step_cfg.standardize.reduce_dim,
+        step = Standardize()
+    elif step_type == "context_frames":
+        step = AddContextFrames(
+            n_context=pre_process_step_cfg.context_frames.n_context
         )
     else:
-        raise ValueError("unknown pre_process_step '{step_type}'")
+        raise ValueError(f"unknown pre_process_step '{step_type}'")
 
     return step, Stage(pre_process_step_cfg.stage)

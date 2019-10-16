@@ -1,14 +1,14 @@
-import warnings
 from typing import Tuple
 from typing import Union
 
 import pytest
 from hypothesis import given
 from myrtlespeech.builders.pre_process_step import build
-from myrtlespeech.data.preprocess import MFCC
+from myrtlespeech.data.preprocess import AddContextFrames
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.protos import pre_process_step_pb2
 from myrtlespeech.run.stage import Stage
+from torchaudio.transforms import MFCC
 
 from tests.protos.test_pre_process_step import pre_process_steps
 
@@ -27,12 +27,14 @@ def pre_process_step_match_cfg(
 
     if step_str == "mfcc":
         assert isinstance(step[0], MFCC)
-        assert isinstance(step_cfg, pre_process_step_pb2.MFCC)
-        assert step[0].numcep == step_cfg.mfcc.numcep
-        assert step[0].winlen == step_cfg.mfcc.winlen
-        assert step[0].winstep == step_cfg.mfcc.winstep
+        assert step[0].n_mfcc == step_cfg.mfcc.n_mfcc
+        assert step[0].MelSpectrogram.win_length == step_cfg.mfcc.win_length
+        assert step[0].MelSpectrogram.hop_length == step_cfg.mfcc.hop_length
     elif step_str == "standardize":
-        warnings.warn("TODO")
+        assert isinstance(step[0], Standardize)
+    elif step_str == "context_frames":
+        assert isinstance(step[0], AddContextFrames)
+        assert step[0].n_context == step_cfg.context_frames.n_context
     else:
         raise ValueError(f"unknown pre_process_step {step_str}")
 

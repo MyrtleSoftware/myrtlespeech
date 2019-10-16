@@ -2,14 +2,11 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
+import "myrtlespeech/protos/activation.proto";
+
+
 // Configuration for a fully connected decoder.
 message FullyConnected {
-  // The supported activation functions.
-  enum ACTIVATION_FN {
-    NONE = 0;
-    RELU = 1;
-  }
-
   // The number of hidden layers (0 means a single affine transformation).
   uint32 num_hidden_layers = 1;
 
@@ -23,5 +20,5 @@ message FullyConnected {
   //
   // ``activation_fn`` has no meaning when ``num_hidden_layers: 0`` as there is
   // only an output layer and no hidden layers!
-  ACTIVATION_FN hidden_activation_fn = 3;
+  Activation activation = 3;
 }

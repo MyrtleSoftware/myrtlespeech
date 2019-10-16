@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+
+// Configuration for Deep Speech 1 model:
+//     https://arxiv.org/abs/1412.5567
+message DeepSpeech1 {
+  // Number of hidden units.
+  uint32 n_hidden = 1;
+
+  // Dropout drop probability.
+  float drop_prob = 2;
+
+  // ReLU clamp value: `min(max(0, x), relu_clip)`.
+  float relu_clip = 3;
+
+  // Total initialized value of the bias used in the forget gate.
+  float forget_gate_bias = 4;
+}

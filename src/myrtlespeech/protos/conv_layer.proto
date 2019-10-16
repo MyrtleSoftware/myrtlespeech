@@ -2,28 +2,55 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
-import "google/protobuf/wrappers.proto";
+
+enum PADDING_MODE {
+  // No padding.
+  NONE = 0;
+
+  // Same padding.
+  SAME = 1;
+}
 
 
-// Conv layer configuration.
-message ConvLayer {
-  enum PADDING {
-    // No padding.
-    VALID = 0;
-  }
-
+// Conv1d layer configuration.
+message Conv1d {
   // Number of output channels.
   uint32 output_channels = 1;
 
-  // Size of each kernel dimension.
-  repeated uint32 kernel_dim = 2;
+  // Kernel size in the time dimension.
+  uint32 kernel_time = 2;
 
-  // Size of stride in each kernel dimension.
-  repeated uint32 stride = 3;
+  // Kernel stride in the time dimension.
+  uint32 stride_time = 3;
 
-  // Padding.
-  PADDING padding = 4;
+  // Padding mode.
+  PADDING_MODE padding_mode = 4;
 
   // Add a learnable bias to the output.
   bool bias = 5;
+}
+
+
+// Conv2d layer configuration.
+message Conv2d {
+  // Number of output channels.
+  uint32 output_channels = 1;
+
+  // Kernel size in the time (width) dimension.
+  uint32 kernel_time = 2;
+
+  // Kernel size in the feature (height) dimension.
+  uint32 kernel_feature = 3;
+
+  // Kernel stride in the time (width) dimension.
+  uint32 stride_time = 4;
+
+  // Kernel stride in the feature (height) dimension.
+  uint32 stride_feature = 5;
+
+  // Padding mode.
+  PADDING_MODE padding_mode = 6;
+
+  // Add a learnable bias to the output.
+  bool bias = 7;
 }

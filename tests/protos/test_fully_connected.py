@@ -3,8 +3,11 @@ from typing import Tuple
 from typing import Union
 
 import hypothesis.strategies as st
+from google.protobuf import empty_pb2
+from myrtlespeech.protos import activation_pb2
 from myrtlespeech.protos import fully_connected_pb2
 
+from tests.protos.test_activation import activations
 from tests.protos.utils import all_fields_set
 
 
@@ -24,14 +27,12 @@ def fully_connecteds(
     kwargs["num_hidden_layers"] = draw(st.integers(0, 3))
     if valid_only and kwargs["num_hidden_layers"] == 0:
         kwargs["hidden_size"] = None
-        kwargs["hidden_activation_fn"] = fully_connected_pb2.FullyConnected.NONE
+        kwargs["activation"] = activation_pb2.Activation(
+            identity=empty_pb2.Empty()
+        )
     else:
         kwargs["hidden_size"] = draw(st.integers(1, 32))
-        kwargs["hidden_activation_fn"] = draw(
-            st.sampled_from(
-                fully_connected_pb2.FullyConnected.ACTIVATION_FN.values()
-            )
-        )
+        kwargs["activation"] = draw(activations())
 
     all_fields_set(fully_connected_pb2.FullyConnected, kwargs)
     fc = fully_connected_pb2.FullyConnected(**kwargs)

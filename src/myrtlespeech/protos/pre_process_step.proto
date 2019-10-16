@@ -12,27 +12,29 @@ message PreProcessStep {
   oneof pre_process_step {
     MFCC mfcc = 2;
     Standardize standardize = 3;
+    ContextFrames context_frames = 4;
   }
 }
 
 // Computes Mel-frequency cepstral coefficients (MFCC).
 message MFCC {
-  // Number of cepstrum.
-  uint32 numcep = 1;
+  // Number of mfc coefficients to retain.
+  uint32 n_mfcc = 1;
 
-  // Length of the analysis window in seconds.
-  float winlen = 2;
+  // Window size in number of frames.
+  uint32 win_length = 2;
 
-  // Step between successive windows in seconds.
-  float winstep = 3;
+  // Step between successive windows in number of frames.
+  uint32 hop_length = 3;
 }
 
 
-// Standardize the input using training set statistics.
+// Standardize the input.
 message Standardize {
-  // Zero-center mean.
-  bool mean = 1;
+}
 
-  // Reduce dimension of each individual input.
-  repeated uint32 reduce_dim = 2;
+
+message ContextFrames {
+  // Number of context frames (channels) to add.
+  uint32 n_context = 1;
 }

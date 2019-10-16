@@ -2,9 +2,8 @@
  Deep Speech 2
 ===============
 
-Based on the best-performing Deep Speech 2 configuration as described in
-`Deep Speech 2: End-to-End Speech Recognition in English and Mandarin
-<https://arxiv.org/abs/1512.02595>`_.
+Based on Deep Speech 2 as described in `Deep Speech 2: End-to-End Speech
+Recognition in English and Mandarin <https://arxiv.org/abs/1512.02595>`_.
 
 Model Protobuf Configuration
 ----------------------------
