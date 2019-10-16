@@ -1,6 +1,7 @@
 from enum import IntEnum
 from typing import Optional
 from typing import Tuple
+from typing import Union
 
 import torch
 
@@ -181,11 +182,12 @@ class RNN(torch.nn.Module):
             enforce_sorted=False,
         )
 
-
         out, hid = self.rnn(inp, hx=hid)
 
         out, lengths = torch.nn.utils.rnn.pad_packed_sequence(
-            sequence=out, batch_first=self.batch_first, total_length=total_length
+            sequence=out,
+            batch_first=self.batch_first,
+            total_length=total_length,
         )
 
         if return_tuple:
