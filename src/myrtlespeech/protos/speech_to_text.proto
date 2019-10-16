@@ -20,7 +20,7 @@ message SpeechToText {
   oneof supported_models {
     DeepSpeech1 deep_speech_1 = 3;
     DeepSpeech2 deep_speech_2 = 4;
-    RNNT rnn_t = 7;
+    RNNT rnn_t = 8;
   }
 
   // Supported loss functions.
