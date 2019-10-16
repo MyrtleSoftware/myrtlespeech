@@ -42,8 +42,29 @@ message Dataset {
     google.protobuf.FloatValue max_secs = 3;
   }
 
+  message CommonVoice {
+    enum SUBSET {
+      OTHER = 0;
+      TRAIN = 1;
+      DEV = 2;
+      INVALIDATED = 3;
+      TEST = 4;
+      VALIDATED = 5;
+    }
+
+    // Path to directory that contains the LibriSpeech directory.
+    string root = 1;
+
+    // Which LibriSpeech subset(s) to use.
+    repeated SUBSET subset = 2;
+
+    // All samples greater than this length will be dropped.
+    google.protobuf.FloatValue max_secs = 3;
+  }
+
   oneof supported_datasets {
     FakeSpeechToText fake_speech_to_text = 1;
     LibriSpeech librispeech = 2;
+    CommonVoice commonvoice = 3;
   }
 }
