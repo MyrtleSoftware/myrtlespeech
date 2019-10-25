@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
-import "google/protobuf/wrappers.proto";
 import "myrtlespeech/protos/rnn.proto";
 
 // RNN-T Encoder configuration
