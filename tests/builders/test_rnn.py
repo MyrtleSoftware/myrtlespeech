@@ -129,7 +129,7 @@ def test_build_rnn_rnn_forward_output_correct_size_with_hidden_state(
     """Ensures returned RNN forward produces output with correct size when
     hidden state is passed."""
     seq_len, batch, input_features = tensor.size()
-    rnn = build(rnn_cfg, input_features)
+    rnn, out_feat = build(rnn_cfg, input_features)
 
     in_seq_lens = torch.randint(low=1, high=1 + seq_len, size=(batch,))
 
