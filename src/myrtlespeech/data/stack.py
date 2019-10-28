@@ -45,7 +45,7 @@ class StackTime:
         self.time_reduction_factor = time_reduction_factor
         self.padding_value = padding_value
 
-    def forward(
+    def __call__(
         self, x: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         inp, lens = x
