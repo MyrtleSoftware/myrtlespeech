@@ -72,6 +72,7 @@ def build(
         bias=rnn_cfg.bias,
         bidirectional=rnn_cfg.bidirectional,
         forget_gate_bias=forget_gate_bias,
+        batch_first=rnn_cfg.batch_first,
     )
 
     out_features = rnn_cfg.hidden_size
