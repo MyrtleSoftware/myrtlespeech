@@ -11,6 +11,7 @@ from myrtlespeech.builders.deep_speech_2 import build as build_deep_speech_2
 from myrtlespeech.builders.pre_process_step import (
     build as build_pre_process_step,
 )
+from myrtlespeech.builders.rnn_t import build as build_rnn_t
 from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.data.preprocess import AddContextFrames
 from myrtlespeech.data.preprocess import SpecAugment
@@ -176,6 +177,12 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
             input_features=input_features,
             input_channels=input_channels,
             output_features=len(alphabet),
+        )
+    elif model_type == "rnn_t":
+        model = build_rnn_t(
+            rnn_t_cfg=stt_cfg.rnn_t,
+            input_features=input_features,
+            vocab_size=len(alphabet) - 1,  # i.e. excluding the blank symbol
         )
     else:
         raise ValueError(f"model={model_type} not supported")
