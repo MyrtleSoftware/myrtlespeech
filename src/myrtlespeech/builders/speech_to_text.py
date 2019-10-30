@@ -12,6 +12,12 @@ from myrtlespeech.builders.pre_process_step import (
     build as build_pre_process_step,
 )
 from myrtlespeech.builders.rnn_t import build as build_rnn_t
+from myrtlespeech.builders.rnn_t_beam_decoder import (
+    build as build_rnn_t_beam_decoder,
+)
+from myrtlespeech.builders.rnn_t_greedy_decoder import (
+    build as build_rnn_t_greedy_decoder,
+)
 from myrtlespeech.builders.rnn_t_loss import build as build_rnn_t_loss
 from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.data.preprocess import AddContextFrames
@@ -193,55 +199,84 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
 
     # loss
     loss_type = stt_cfg.WhichOneof("supported_losses")
-    if loss_type in ["ctc_loss", "rnn_t_loss"]:
-        if loss_type == "ctc_loss":
-            loss = build_ctc_loss(stt_cfg.ctc_loss)
-            blank_index = stt_cfg.ctc_loss.blank_index
-        elif loss_type == "rnn_t_loss":
-            loss = build_rnn_t_loss(stt_cfg.rnn_t_loss)
-            blank_index = stt_cfg.rnn_t_loss.blank_index
-        else:
-            raise ValueError(
-                f"loss_type={loss_type} is not in ['ctc_loss', 'rnn_t_loss']. \
-            Bug has been introduced: (this path should not execute)"
-            )
-
+    if loss_type == "ctc_loss":
+        loss = build_ctc_loss(stt_cfg.ctc_loss)
+        blank_index = stt_cfg.ctc_loss.blank_index
         blank_indices.append(blank_index)
         if not (0 <= blank_index <= max(0, len(alphabet) - 1)):
             raise ValueError(
                 f"{loss_type}.blank_index={blank_index} must be in "
                 f"[0, {max(0, len(alphabet) - 1)}]"
             )
+    elif loss_type == "rnn_t_loss":
+        loss = build_rnn_t_loss(stt_cfg.rnn_t_loss)
+        blank_index = stt_cfg.rnn_t_loss.blank_index
+        blank_indices.append(blank_index)
+        if not (blank_index == max(0, len(alphabet) - 1)):
+            raise ValueError(
+                f"{loss_type}.blank_index={blank_index} must be final element \
+                in stt_cfg.alphabet in order to use the same graphene/characters \
+                indexes in the prediction and joint rnnt networks"
+            )
+
     else:
         raise ValueError(f"loss={loss_type} not supported")
 
     # post processing
     post_process_type = stt_cfg.WhichOneof("supported_post_processes")
-    if post_process_type == "ctc_greedy_decoder":
-        blank_index = stt_cfg.ctc_greedy_decoder.blank_index
-        blank_indices.append(blank_index)
-        if not (0 <= blank_index <= max(0, len(alphabet) - 1)):
+    if post_process_type in ["ctc_greedy_decoder", "ctc_beam_decoder"]:
+        if post_process_type == "ctc_greedy_decoder":
+            blank_index_pp = stt_cfg.ctc_greedy_decoder.blank_index
+            post_process = CTCGreedyDecoder(blank_index=blank_index_pp)
+        elif post_process_type == "ctc_beam_decoder":
+            blank_index_pp = stt_cfg.ctc_beam_decoder.blank_index
+            if stt_cfg.ctc_beam_decoder.HasField("separator_index"):
+                separator_index = stt_cfg.ctc_beam_decoder.separator_index.value
+                if not (0 <= separator_index <= max(0, len(alphabet) - 1)):
+                    raise ValueError(
+                        f"ctc_beam_decoder.separator_index.value={separator_index} "
+                        f"[0, {max(0, len(alphabet) - 1)}]"
+                    )
+            post_process = build_ctc_beam_decoder(stt_cfg.ctc_beam_decoder)
+        else:
             raise ValueError(
-                f"ctc_greedy_decoder.blank_index={blank_index} must be in "
+                f"This path should not execute: post_process_type=\
+            {post_process_type} is not in ['ctc_greedy_decoder', 'ctc_beam_decoder']"
+            )
+
+        # check blank index:
+        blank_indices.append(blank_index_pp)
+        if not (0 <= blank_index_pp <= max(0, len(alphabet) - 1)):
+            raise ValueError(
+                f"{post_process_type}.blank_index={blank_index_pp} must be in "
                 f"[0, {max(0, len(alphabet) - 1)}]"
             )
-        post_process = CTCGreedyDecoder(blank_index=blank_index)
-    elif post_process_type == "ctc_beam_decoder":
-        blank_index = stt_cfg.ctc_beam_decoder.blank_index
-        blank_indices.append(blank_index)
-        if not (0 <= blank_index <= max(0, len(alphabet) - 1)):
-            raise ValueError(
-                f"ctc_beam_decoder.blank_index={blank_index} must be in "
-                f"[0, {max(0, len(alphabet) - 1)}]"
+
+    elif post_process_type in ["rnn_t_greedy_decoder", "rnn_t_beam_decoder"]:
+        if post_process_type == "rnn_t_greedy_decoder":
+            blank_index_pp = stt_cfg.rnn_t_greedy_decoder.blank_index
+            post_process = build_rnn_t_greedy_decoder(
+                stt_cfg.rnn_t_greedy_decoder, model=model
             )
-        if stt_cfg.ctc_beam_decoder.HasField("separator_index"):
-            separator_index = stt_cfg.ctc_beam_decoder.separator_index.value
-            if not (0 <= separator_index <= max(0, len(alphabet) - 1)):
-                raise ValueError(
-                    f"ctc_beam_decoder.separator_index.value={separator_index}"
-                    f" [0, {max(0, len(alphabet) - 1)}]"
-                )
-        post_process = build_ctc_beam_decoder(stt_cfg.ctc_beam_decoder)
+        elif post_process_type == "rnn_t_beam_decoder":
+            blank_index_pp = stt_cfg.rnn_t_beam_decoder.blank_index
+            post_process = build_rnn_t_beam_decoder(
+                stt_cfg.rnn_t_beam_decoder, model=model
+            )
+        else:
+            raise ValueError(
+                f"This path should not execute: post_process_type=\
+            {post_process_type} is not in ['rnn_t_greedy_decoder', 'rnn_t_beam_decoder']"
+            )
+        # check blank:
+        blank_indices.append(blank_index_pp)
+        if not (blank_index == max(0, len(alphabet) - 1)):
+            raise ValueError(
+                f"{loss_type}.blank_index={blank_index} must be final element \
+                in stt_cfg.alphabet in order to use the same graphene/characters \
+                indexes in the prediction and joint rnnt networks."
+            )
+
     else:
         raise ValueError(f"post_process={post_process_type} not supported")
 

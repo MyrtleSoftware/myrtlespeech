@@ -48,11 +48,9 @@ class RNNTLoss(torch.nn.Module):
             inputs: A tuple where the first element is the unnormalized network
                 :py:class:`torch.Tensor` outputs of size ``[batch, max_seq_len,
                 max_output_seq_len + 1, vocab_size + 1)``. The second element
-                is a :py:class:`torch.Tensor` that gives the length of the inputs
-                (each must be ``<= max_seq_len``).
-                Lengths are specified for each sequence to
-                achieve masking under the assumption that sequences are padded
-                to equal lengths.
+                is a Tuple of two :py:class:`torch.Tensor`s both of
+                size ``[batch]`` that contain the lengths of a) the audio features
+                logits and b) the target sequence logits.
 
             targets: A tuple where the first element is a
                 :py:class:`torch.Tensor` such that each entry in the target
@@ -66,14 +64,22 @@ class RNNTLoss(torch.nn.Module):
                 sequence to achieve masking under the assumption that sequences
                 are padded to equal lengths.
         """
-        x, x_lens = inputs
+        logits, (logit_lens, _) = inputs
         y, y_lens = targets
         if self.use_cuda:
-            x = x.cuda()
-            x_lens = x_lens.cuda()
+            logits = logits.cuda()
+            logit_lens = logit_lens.cuda()
             y = y.cuda()
             y_lens = y_lens.cuda()
 
-        return self.rnnt_loss(
-            acts=x, labels=y, act_lens=x_lens, label_lens=y_lens
+        if logit_lens.dtype != torch.int32:
+            logit_lens = logit_lens.int()
+
+        if y_lens.dtype != torch.int32:
+            y_lens = y_lens.int()
+
+        loss = self.rnnt_loss(
+            acts=logits, labels=y, act_lens=logit_lens, label_lens=y_lens
         )
+
+        return loss

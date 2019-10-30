@@ -24,7 +24,9 @@ def build(
     ##decoder/prediction network
     # can get embedding dims from the rnnt
     embedding = nn.Embedding(vocab_size, rnn_t_cfg.dec_rnn.hidden_size)
-    dec_rnn, prediction_out = build_rnn(rnn_t_cfg.dec_rnn, vocab_size)
+    dec_rnn, prediction_out = build_rnn(
+        rnn_t_cfg.dec_rnn, rnn_t_cfg.dec_rnn.hidden_size
+    )
 
     ##joint
     fc_in_dim = encoder_out + prediction_out  # features are concatenated

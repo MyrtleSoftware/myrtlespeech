@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+
+
+message RNNTBeamDecoder {
+  // Index in Alphabet of the blank label.
+  uint32 blank_index = 1;
+
+  uint32 beam_width = 2;
+
+  bool length_norm = 3;
+
+  uint32 max_symbols_per_step = 4; //if this is not provided there is no limit
+
+}
