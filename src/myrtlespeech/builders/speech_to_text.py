@@ -12,6 +12,7 @@ from myrtlespeech.builders.pre_process_step import (
     build as build_pre_process_step,
 )
 from myrtlespeech.builders.rnn_t import build as build_rnn_t
+from myrtlespeech.builders.rnn_t_loss import build as build_rnn_t_loss
 from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.data.preprocess import AddContextFrames
 from myrtlespeech.data.preprocess import Standardize
@@ -183,20 +184,30 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
     else:
         raise ValueError(f"model={model_type} not supported")
 
-    # capture "blank_index"s in all CTC-based components and check all match
-    ctc_blank_indices: List[int] = []
+    # capture "blank_index"s in all CTC/RNNT-based components and check all match
+    blank_indices: List[int] = []
 
     # loss
     loss_type = stt_cfg.WhichOneof("supported_losses")
-    if loss_type == "ctc_loss":
-        blank_index = stt_cfg.ctc_loss.blank_index
-        ctc_blank_indices.append(blank_index)
+    if loss_type in ["ctc_loss", "rnn_t_loss"]:
+        if loss_type == "ctc_loss":
+            loss = build_ctc_loss(stt_cfg.ctc_loss)
+            blank_index = stt_cfg.ctc_loss.blank_index
+        elif loss_type == "rnn_t_loss":
+            loss = build_rnn_t_loss(stt_cfg.rnn_t_loss)
+            blank_index = stt_cfg.rnn_t_loss.blank_index
+        else:
+            raise ValueError(
+                f"loss_type={loss_type} is not in ['ctc_loss', 'rnn_t_loss']. \
+            Bug has been introduced: (this path should not execute)"
+            )
+
+        blank_indices.append(blank_index)
         if not (0 <= blank_index <= max(0, len(alphabet) - 1)):
             raise ValueError(
-                f"ctc_loss.blank_index={blank_index} must be in "
+                f"{loss_type}.blank_index={blank_index} must be in "
                 f"[0, {max(0, len(alphabet) - 1)}]"
             )
-        loss = build_ctc_loss(stt_cfg.ctc_loss)
     else:
         raise ValueError(f"loss={loss_type} not supported")
 
@@ -204,7 +215,7 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
     post_process_type = stt_cfg.WhichOneof("supported_post_processes")
     if post_process_type == "ctc_greedy_decoder":
         blank_index = stt_cfg.ctc_greedy_decoder.blank_index
-        ctc_blank_indices.append(blank_index)
+        blank_indices.append(blank_index)
         if not (0 <= blank_index <= max(0, len(alphabet) - 1)):
             raise ValueError(
                 f"ctc_greedy_decoder.blank_index={blank_index} must be in "
@@ -213,7 +224,7 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
         post_process = CTCGreedyDecoder(blank_index=blank_index)
     elif post_process_type == "ctc_beam_decoder":
         blank_index = stt_cfg.ctc_beam_decoder.blank_index
-        ctc_blank_indices.append(blank_index)
+        blank_indices.append(blank_index)
         if not (0 <= blank_index <= max(0, len(alphabet) - 1)):
             raise ValueError(
                 f"ctc_beam_decoder.blank_index={blank_index} must be in "
@@ -231,8 +242,10 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
         raise ValueError(f"post_process={post_process_type} not supported")
 
     # check all "blank_index"s are equal
-    if ctc_blank_indices and not len(set(ctc_blank_indices)) == 1:
-        raise ValueError("all blank_index values of CTC components must match")
+    if blank_indices and not len(set(blank_indices)) == 1:
+        raise ValueError(
+            "all blank_index values of CTC/RNNT components must match"
+        )
 
     stt = SpeechToText(
         alphabet=alphabet,
