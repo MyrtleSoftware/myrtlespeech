@@ -15,8 +15,8 @@ class RNNT(torch.nn.Module):
         encoder: A :py:class:`RNNTEncoder` with initialised RNN-T encoder.
 
             Must accept as input a tuple where the first element is the network
-            input (a :py:`torch.Tensor`) with size ``[max_seq_len, batch,
-            in_features]`` and the second element is a
+            input (a :py:`torch.Tensor`) with size ``[batch, channels,
+            features, max_input_seq_len]`` and the second element is a
             :py:class:`torch.Tensor` of size ``[batch]`` where each entry
             represents the sequence length of the corresponding *input*
             sequence to the rnn.
@@ -85,7 +85,7 @@ class RNNT(torch.nn.Module):
             dec_rnn.batch_first == True
         ), "dec_rnn should be a batch_first rnn"
         self.encode = encoder
-        self.embedding = embedding
+        self._embedding = embedding
         self.dec_rnn = dec_rnn
         self.fully_connected = fully_connected
 
@@ -108,7 +108,7 @@ class RNNT(torch.nn.Module):
             x: A Tuple ``(x[0], x[1])``. ``x[0]`` is input to the network and is
                 a Tuple ``x[0] = (x[0][0], x[0][1])`` where both elements are
                 :py:class:`torch.Tensor`s. ``x[0][0]`` is the audio feature input
-                with size ``[max_seq_len, batch, in_features]`` while ``x[0][1]`` is
+                with  size ``[batch, channels, features, max_input_seq_len]`` while ``x[0][1]`` is
                 the target label tensor of size ``[batch, max_label_length]``.
                 ``x[1]`` is a Tuple of two :py:class:`torch.Tensor`s both of
                 size ``[batch]`` that contain the *input* lengths of a) the audio feature
@@ -127,13 +127,13 @@ class RNNT(torch.nn.Module):
         self._certify_inputs_forward(x)
 
         # Now use 'x_inp' to refer to audio features
-        (x_inp, y), (x_lens, y_lens) = x
-
-        if self.is_cuda:
+        ((x_inp, y), (x_lens, y_lens)) = x
+        if self.use_cuda:
             x_inp = x_inp.cuda()
             x_lens = x_lens.cuda()
             y = y.cuda()
             y_lens = y_lens.cuda()
+
         # TODO - convert to half precision here?
 
         X_ = (x_inp, x_lens)
@@ -171,17 +171,24 @@ class RNNT(torch.nn.Module):
         """
 
         y_vals, y_lens = x
-
         y_vals = self.embedding(y_vals)
         y_vals = self._append_SOS(y_vals)
         return self.dec_rnn((y_vals, y_lens))
+
+    def embedding(self, y):
+        "Wrapper function on `self._embedding` that casts inputs to int64 if necessary"
+
+        if y.dtype != torch.long:
+            y = y.long()
+
+        return self._embedding(y)
 
     def joint(
         self,
         x: Tuple[
             Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]
         ],
-    ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Returns the result of applying the RNN-T joint network to the encoder
         hidden state audio features ``x[0][0]`` and the prediction network
@@ -207,7 +214,7 @@ class RNNT(torch.nn.Module):
             B1 == B2
         ), "Batch size from prediction network and transcription must be equal"
 
-        f = f.transpose(1, 0)  # B1, T, H1
+        f = f.transpose(1, 0)  # (T, B, H1) -> (B, T, H1)
         f = f.unsqueeze(dim=2)  # (B, T, 1, H)
         f = f.expand((B1, T, U_, H1)).contiguous()
 
@@ -216,24 +223,37 @@ class RNNT(torch.nn.Module):
 
         joint_inp = torch.cat([f, g], dim=3).contiguous()  # (B, T, U_, H1 + H2)
 
-        return self.fully_connected((joint_inp, seq_lengths))
+        # fully_connected expects a single length (not a tuple of lengths)
+        # So pass seq_lengths[0] and ignore output:
+        out, _ = self.fully_connected((joint_inp, seq_lengths[0]))
+        return out, seq_lengths
 
     def _append_SOS(self, y):
         """Appends the SOS token (all zeros) to the start of the target tensor"""
 
         B, U, H = y.shape
         # preprend blank
-        start = torch.zeros((B, 1, H))
+        start = torch.zeros((B, 1, H)).type(y.dtype).to(y.device)
         y = torch.cat([start, y], dim=1)  # (B, U + 1, H)
         y = y.contiguous()
         return y
 
     def _certify_inputs_forward(self, inp):
-        # inp = (x, x_lens), (y, y_lens) #TODO <- change from this
-        inp = (x, y), (x_lens, y_lens)
-        T, B1, I = x.shape
+        try:
+            ((x, y), (x_lens, y_lens)) = inp
+        except ValueError:
+            raise ValueError(
+                "Unable to unpack inputs to RNNT. Are you using the \
+            `RNNTTraining()` callback found in `myrtlespeech.run.callbacks.rnn_t_training`?"
+            )
+        B1, C, I, T = x.shape
         B2, U = y.shape
-        assert B1 == B2, "Batch size must be the same for inputs and targets"
+
+        B3, = x_lens.shape
+        B4, = y_lens.shape
+        assert (
+            B1 == B2 and B1 == B3 and B1 == B4
+        ), "Batch size must be the same for inputs and targets"
 
 
 class RNNTEncoder(torch.nn.Module):
@@ -355,12 +375,27 @@ class RNNTEncoder(torch.nn.Module):
         and output of each module.
 
         Args:
-            x: Input for the first rnn module. See initialisation docstring.
+            x: Tuple where the first element is the encoder
+            input (a :py:`torch.Tensor`) with size ``[batch, channels,
+            features, max_input_seq_len]`` and the second element is a
+            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+            represents the sequence length of the corresponding *input*
+            sequence to the rnn. Currently the number of channels must = 1 and
+            this input is immediately reshaped for input to `rnn1`. The reshaping
+            operation is not dealt with in preprocessing so that a) this
+            model and `myrtlespeech.model.deep_speech_2` can share the same preprocessing
+            and b) because future edits to `myrtlespeech.model.rnn_t.RNNTEncoder`
+            may add convolutions before input to `rnn1`.
 
         Returns:
             Output from ``rnn2`` if present, else output from ``rnn1``. See initialisation
             docstring.
         """
+        self._certify_inputs_encode(x)
+
+        # NOTE: possibly add optional convolutions here in the future
+
+        x = self._prepare_inputs_encode(x)
 
         if self.use_cuda:
             h = (x[0].cuda(), x[1].cuda())
@@ -368,8 +403,27 @@ class RNNTEncoder(torch.nn.Module):
         h = self.rnn1(h)
 
         if self.time_reducer:
-            h = self.time_reducer(h, self.time_reduction_factor)
+            h = self.time_reducer(h)
 
             h = self.rnn2(h)
 
         return (h[0].contiguous(), h[1])
+
+    def _certify_inputs_encode(self, inp):
+
+        (x, x_lens) = inp
+        B1, C, I, T = x.shape
+        B2, = x_lens.shape
+        assert B1 == B2, "Batch size must be the same for inputs and targets"
+        assert C == 1, f"There should only be a single channel input but C={C}"
+
+    def _prepare_inputs_encode(self, inp):
+        """
+        Reshapes inputs to prepare them for `rnn1`.
+        """
+        (x, x_lens) = inp
+        B, C, I, T = x.shape
+
+        x = x.squeeze(1)  # B, I, T
+        x = x.permute(2, 0, 1).contiguous()  # T, B, I
+        return (x, x_lens)

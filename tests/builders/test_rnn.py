@@ -53,6 +53,24 @@ def rnn_match_cfg(
         )
 
 
+@st.composite
+def rnn_cfg_tensors(
+    draw,
+) -> st.SearchStrategy[
+    Tuple[torch.nn.Module, rnn_pb2.RNN, torch.Tensor, bool]
+]:
+    """Returns search strategy of [RNNs, config, valid input, batch_first]."""
+    batch_first = draw(st.booleans())
+    rnn_cfg = draw(rnns())
+    tensor = draw(tensors(min_n_dims=3, max_n_dims=3))
+    if batch_first:
+        tensor = tensor.transpose(1, 0)
+    rnn, _ = build(
+        rnn_cfg, input_features=tensor.size(2), batch_first=batch_first
+    )
+    return rnn, rnn_cfg, tensor, batch_first
+
+
 # Tests -----------------------------------------------------------------------
 
 
