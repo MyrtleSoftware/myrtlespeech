@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+message RNNTGreedyDecoder {
+  // Index in Alphabet of the blank label.
+  uint32 blank_index = 1;
+
+  uint32 max_symbols_per_step = 2; //if this is not provided there is no limit
+}
