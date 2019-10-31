@@ -400,16 +400,16 @@ class RNNTEncoder(torch.nn.Module):
 
         Args:
             x: Tuple where the first element is the encoder
-            input (a :py:`torch.Tensor`) with size ``[batch, channels,
-            features, max_input_seq_len]`` and the second element is a
-            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-            represents the sequence length of the corresponding *input*
-            sequence to the rnn. Currently the number of channels must = 1 and
-            this input is immediately reshaped for input to `rnn1`. The reshaping
-            operation is not dealt with in preprocessing so that a) this
-            model and `myrtlespeech.model.deep_speech_2` can share the same preprocessing
-            and b) because future edits to `myrtlespeech.model.rnn_t.RNNTEncoder`
-            may add convolutions before input to `rnn1`.
+                input (a :py:`torch.Tensor`) with size ``[batch, channels,
+                features, max_input_seq_len]`` and the second element is a
+                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+                represents the sequence length of the corresponding *input*
+                sequence to the rnn. Currently the number of channels must = 1 and
+                this input is immediately reshaped for input to `rnn1`. The reshaping
+                operation is not dealt with in preprocessing so that a) this
+                model and `myrtlespeech.model.deep_speech_2` can share the same preprocessing
+                and b) because future edits to `myrtlespeech.model.rnn_t.RNNTEncoder`
+                may add convolutions before input to `rnn1`.
 
         Returns:
             Output from ``rnn2`` if present, else output from ``rnn1``. See initialisation
