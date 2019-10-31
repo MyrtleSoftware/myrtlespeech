@@ -1,7 +1,9 @@
 from typing import Dict
 from typing import List
 from typing import Tuple
+from typing import Union
 
+import numpy as np
 import torch
 
 
@@ -99,3 +101,47 @@ def seq_to_seq_collate_fn(
     target_seq_lens = torch.tensor(target_seq_lens, requires_grad=False)
 
     return (inputs, in_seq_lens), (targets, target_seq_lens)
+
+
+def collate_label_list(
+    labels: List[List[int]], device: str
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Collates a list of label inputs from a list of label
+    indexes to a single fully padded torch.tensor. Created for use in rnnt
+    decoders.
+
+    Args:
+        labels: List of length ``[batch]`` where each element is a List of
+            ints (the indexes of symbols in the stt alphabet).
+        device: string representing a torch.device
+
+    Returns:
+        A tuple where the first element is the target label tensor of
+            size ``[batch, max_label_length]`` and the second is a
+            :py:class:`torch.Tensor` of size ``[batch]`` that contains the
+            lengths of these target label sequences.
+    """
+
+    if (
+        isinstance(labels, list)
+        and isinstance(labels[0], list)
+        and isinstance(labels[0][0], int)
+    ):
+
+        batch_size = len(labels)
+
+        fill_token = -2  # i.e. choose a symbol that is *not* valid
+        max_len = max(len(l) for l in labels)
+
+        lengths = torch.IntTensor([len(l) for l in labels]).to(device)
+
+        collated_labels = np.full(
+            (batch_size, max_len), fill_value=fill_token, dtype=np.int32
+        )
+
+        for e, l in enumerate(labels):
+            collated_labels[e, : len(l)] = torch.IntTensor(l)
+
+        return (torch.IntTensor(collated_labels).to(device), lengths)
+
+    raise ValueError(f"`labels` should be of type `List[List[int]]`")

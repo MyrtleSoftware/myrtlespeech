@@ -130,14 +130,19 @@ class RNN(torch.nn.Module):
             initialisation.
 
         Args
-            x: A Tuple ``(x[0], x[1])``. ``x[0]`` can take two forms: either it is a tuple ``x[0] = (inp, hid)``
-                or it is a torch tensor ``x[0] = inp``. In both cases, ``inp`` is the network input (a
-                :py:class:`torch.Tensor`) with size ``[seq_len, batch, in_features]``. In the first case,
-                ``hid`` is the RNN hidden state which is either a length 2 Tuple of :py:class:`torch.Tensor`s or
-                a single :py:class:`torch.Tensor` depending on the ``RNNType`` (see :py:class:`torch.nn`
-                documentation for more information). It is also possible to set ``hid=None`` and it will be initialized
-                to zero tensor(s) by `torch.nn`` - the user should do this at the start of a sequence if they would like
-                the hidden state to be returned (e.g. this is required in RNN-Transducer decoding).
+            x: A Tuple ``(x[0], x[1])``. ``x[0]`` can take two forms: either it
+                is a tuple ``x[0] = (inp, hid)`` or it is a torch tensor
+                ``x[0] = inp``. In both cases, ``inp`` is the network input (a
+                :py:class:`torch.Tensor`) with size ``[seq_len, batch, in_features]``.
+                In the first case, ``hid`` is the RNN hidden state which is
+                either a length 2 Tuple of :py:class:`torch.Tensor`s or
+                a single :py:class:`torch.Tensor` depending on the ``RNNType``
+                (see :py:class:`torch.nn` documentation for more information).
+                It is also possible to set ``hid=None`` and it will be initialized
+                to zero tensor(s) by `torch.nn``. Note that the return type `res[0]` will
+                be the same as the `x[0]` type so the user should pass hid=None
+                if they would like the hidden state returned but it is the start
+                of sequence (e.g. as is required at the start of RNN-Transducer decoding).
 
                 ``x[1]`` is a :py:class:`torch.Tensor` where each entry represents the sequence length
                 of the corresponding network *input* sequence.
@@ -170,7 +175,14 @@ class RNN(torch.nn.Module):
         if self.use_cuda:
             inp = inp.cuda()
             if hid is not None:
-                hid = hid.cuda()
+                if isinstance(hid, tuple):  # LSTM/GRU
+                    hid = hid[0].cuda(), hid[1].cuda()
+                elif isinstance(hid, torch.Tensor):  # Vanilla RNN
+                    hid = hid.cuda()
+                else:
+                    raise ValueError(
+                        "hid must be an instance of class in [torch.Tensor, tuple]"
+                    )
 
         # Record sequence length to enable DataParallel
         # https://pytorch.org/docs/stable/notes/faq.html#pack-rnn-unpack-with-data-parallelism
