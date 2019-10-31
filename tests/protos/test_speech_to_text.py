@@ -16,6 +16,10 @@ from tests.protos.test_ctc_loss import ctc_losses
 from tests.protos.test_deep_speech_1 import deep_speech_1s
 from tests.protos.test_deep_speech_2 import deep_speech_2s
 from tests.protos.test_pre_process_step import pre_process_steps
+from tests.protos.test_rnn_t import rnn_t
+from tests.protos.test_rnn_t_decoders import rnn_t_beam_decoder
+from tests.protos.test_rnn_t_decoders import rnn_t_greedy_decoder
+from tests.protos.test_rnn_t_losses import rnn_t_losses
 from tests.protos.utils import all_fields_set
 
 # Fixtures and Strategies -----------------------------------------------------
@@ -58,6 +62,11 @@ def speech_to_texts(
             "TODO: fix hack that assumes input_features > 200 for deep_speech_2"
         )
         assume(input_features > 200)
+    elif model_str == "rnn_t":
+        kwargs[model_str] = draw(rnn_t())
+        warnings.warn(
+            "TODO: fix hack that assumes input_features > 200 for deep_speech_2"
+        )
     else:
         raise ValueError(f"unknown model type {model_str}")
 
@@ -75,6 +84,11 @@ def speech_to_texts(
             ctc_losses(alphabet_len=len(kwargs["alphabet"]))
         )
         ctc_blank_index = kwargs["ctc_loss"].blank_index
+    elif loss_str == "rnn_t_loss":
+        kwargs["rnn_t_loss"] = draw(
+            rnn_t_losses(alphabet_len=len(kwargs["alphabet"]))
+        )
+        rnn_t_blank_index = kwargs["ctc_loss"].blank_index
     else:
         raise ValueError(f"unknown loss type {loss_str}")
 
@@ -102,6 +116,16 @@ def speech_to_texts(
         if ctc_blank_index is not None:
             beam_kwargs["blank_index"] = ctc_blank_index
         kwargs["ctc_beam_decoder"] = draw(ctc_beam_decoders(**beam_kwargs))
+    elif post_str == "rnn_t_beam_decoder":
+        beam_kwargs = {"alphabet_len": len(kwargs["alphabet"])}
+        if rnn_t_blank_index is not None:
+            beam_kwargs["blank_index"] = rnn_t_blank_index
+        kwargs["ctc_beam_decoder"] = draw(rnn_t_beam_decoder(**beam_kwargs))
+    elif post_str == "rnn_t_greedy_decoder":
+        beam_kwargs = {"alphabet_len": len(kwargs["alphabet"])}
+        if rnn_t_blank_index is not None:
+            beam_kwargs["blank_index"] = rnn_t_blank_index
+        kwargs["ctc_beam_decoder"] = draw(rnn_t_greedy_decoder(**beam_kwargs))
     else:
         raise ValueError(f"unknown post_process type {post_str}")
 

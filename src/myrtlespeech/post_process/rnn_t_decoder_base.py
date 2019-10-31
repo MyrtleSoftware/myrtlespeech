@@ -10,8 +10,11 @@ from myrtlespeech.model.rnn_t import RNNT
 SOS = -1  # Start of sequence
 
 
-class RNNTGreedyDecoder(torch.nn.Module):
-    """Decodes RNNT output using a greedy strategy.
+class RNNTDecoderBase(torch.nn.Module):
+    """
+    Base RNNT decoder class. This should not be instantiated directly. See individual
+    decoders (e.g. :py:class:`RNNTGreedyDecoder` or :py:class:`RNNTBeamDecoder`).
+    It makes commonly occuring methods available to the decoder
 
     Args:
         blank_index: Index of the "blank" symbol. It is advised that the blank symbol
@@ -26,6 +29,11 @@ class RNNTGreedyDecoder(torch.nn.Module):
             output sequence in a single time step. Default value is None: in this case
             the limit is set to 100 (to avoid the potentially infinite loop that
             could occur when with no limit).
+
+    Properties (see docstrings for more information):
+        _pred_step(label, hidden): performs a single step of prediction network
+        _joint_step(enc, pred): performs a single step of the joint network
+        _get_last_idx(label): gets final index of a list of indexes.
     """
 
     def __init__(
@@ -51,6 +59,7 @@ class RNNTGreedyDecoder(torch.nn.Module):
         # TODO: update this to support arbitrary cuda device idx
         self.device = "cuda:0" if self.model.use_cuda else "cpu"
 
+    @torch.no_grad()
     def forward(
         self,
         inputs: Tuple[torch.Tensor, torch.Tensor],
@@ -77,6 +86,8 @@ class RNNTGreedyDecoder(torch.nn.Module):
         Returns:
             A List of length Lists where each sublist contains the
         """
+        training_state = self.model.training
+        self.model.eval()
 
         # certify inputs and get dimensions
         dims = self.model._certify_inputs_forward((inputs, lengths))
@@ -92,53 +103,38 @@ class RNNTGreedyDecoder(torch.nn.Module):
             audio_features = audio_data[0][b, :, :, :audio_len].unsqueeze(0)
             audio_inp = (audio_features, audio_len)
 
-            sentence = self._greedy_decode(audio_inp)
+            sentence = self.decode(audio_inp)
             out.append(sentence)
+
+        # restore training state
+        self.model.train(training_state)
 
         return out
 
-    @torch.no_grad()
-    def _greedy_decode(self, inp):
-        training_state = self.model.training
-        self.model.eval()
+    def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
+        """
+        Args:
+            inp: Tuple where the first element is the encoder
+                input (a :py:`torch.Tensor`) with size ``[batch, channels,
+                features, max_input_seq_len]`` and the second element is a
+                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+                represents the sequence length of the corresponding *input*
+                sequence to the rnn. Currently the number of channels must = 1 and
+                this input is immediately reshaped for input to `rnn1`. Note that
+                `inp` is passed straight to :py:class:`myrtlespeech.model.rnn_t.RNNTEncoder`
+        Returns:
+            A List of length `[batch]` where each element is a List of indexes.
 
-        # compute encoder:
-        fs, fs_lens = self.model.encode(inp)
-        fs = fs[: fs_lens[0], :, :]  # size: seq_len, batch = 1, rnn_features
-        assert fs_lens[0] == fs.shape[0], "Time dimension comparison failed"
-
-        hidden = None
-        label = []
-
-        for t in range(fs.shape[0]):
-
-            f = fs[t, :, :].unsqueeze(0)
-            # add length
-            f = (f, torch.IntTensor([1]))
-            not_blank = True
-            symbols_added = 0
-            while not_blank and symbols_added < self.max_symbols_per_step:
-
-                g, hidden_prime = self._pred_step(
-                    self._get_last_symb(label), hidden
-                )
-                logp = self._joint_step(f, g)
-
-                # get index k, of max prob
-                max_val, idx = logp.max(0)
-                idx = idx.item()
-
-                if idx == self.blank_index:
-                    not_blank = False
-                else:
-                    label.append(idx)
-                    hidden = hidden_prime
-                symbols_added += 1
-
-        self.model.train(training_state)
-        return label
+        """
+        raise NotImplementedError(
+            "decode method not implemented. Do not \
+            instantiate `RNNTDecoderBase` directly. Instead use e.g. `RNNTGreedyDecoder`"
+        )
 
     def _pred_step(self, label, hidden):
+        """
+        Excecutes a step forward in the model prediction network during inference.
+        """
         if label == SOS:
             label_embedding = torch.zeros(
                 (1, 1, self.model.dec_rnn.rnn.hidden_size), device=self.device
@@ -161,15 +157,22 @@ class RNNTGreedyDecoder(torch.nn.Module):
         return (pred, pred_lens), hidden
 
     def _joint_step(self, enc, pred):
+        """
+        Excecutes a step forward in the model joint network during inference.
+        """
         input = self.model._enc_pred_to_joint(enc, pred)
 
         logits, _ = self.model.joint(input)
-        return torch.nn.functional.log_softmax(logits, dim=-1).squeeze()
+        res = torch.nn.functional.log_softmax(logits, dim=-1).squeeze()
+        assert (
+            len(res.shape) == 1
+        ), "this _joint_step result should have just one non-zero dimension"
 
-    @staticmethod
-    def _get_last_symb(labels):
+        del logits
+        return res
+
+    def _get_last_idx(self, labels):
+        """
+        Returns the final index of a list of labels
+        """
         return SOS if labels == [] else labels[-1]
-
-
-def log_aplusb(a, b):
-    return max(a, b) + math.log1p(math.exp(-math.fabs(a - b)))
