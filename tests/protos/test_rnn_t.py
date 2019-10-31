@@ -29,7 +29,7 @@ def rnn_t(
     kwargs: Dict = {}
 
     kwargs["rnn_t_encoder"] = draw(rnn_t_encoder())
-    kwargs["dec_rnn"] = draw(rnns())
+    kwargs["dec_rnn"] = draw(rnns(batch_first=True))
     kwargs["fully_connected"] = draw(fully_connecteds(valid_only=True))
 
     # initialise and return
