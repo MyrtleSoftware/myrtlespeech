@@ -25,11 +25,11 @@ def rnn_t_encoder(
     kwargs = {}
     to_ignore: List[str] = []
     kwargs["rnn1"] = draw(rnns())
-    kwargs["time_reduction_factor"] = draw(st.integers(0, 3))
-    if not kwargs["time_reduction_factor"] in [0, 1]:
-        kwargs["rnn2"] = draw(rnns())
+    if draw(st.booleans()):
+        kwargs["time_reduction_factor"] = draw(st.integers(2, 3))
+        kwargs["rnn2"] = draw(rnns(batch_first=False))
     else:
-        to_ignore = ["rnn2"]
+        to_ignore = ["rnn2", "time_reduction_factor"]
 
     all_fields_set(rnn_t_encoder_pb2.RNNTEncoder, kwargs, to_ignore)
 
