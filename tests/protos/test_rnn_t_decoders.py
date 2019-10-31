@@ -1,11 +1,13 @@
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Tuple
 from typing import Union
 
 import hypothesis.strategies as st
 from google.protobuf.wrappers_pb2 import FloatValue
-from myrtlespeech.protos import rnn_t_encoder_pb2
+from myrtlespeech.protos import rnn_t_beam_decoder_pb2
+from myrtlespeech.protos import rnn_t_greedy_decoder_pb2
 
 from tests.protos.test_rnn import rnns
 from tests.protos.utils import all_fields_set
@@ -16,51 +18,68 @@ from tests.protos.utils import all_fields_set
 
 @st.composite
 def rnn_t_beam_decoder(
-    draw, return_kwargs: bool = False
+    draw,
+    return_kwargs: bool = False,
+    alphabet_len: Optional[int] = None,
+    blank_index: Optional[int] = None,
 ) -> Union[
-    st.SearchStrategy[rnn_t_encoder_pb2.RNNTEncoder],
-    st.SearchStrategy[Tuple[rnn_t_encoder_pb2.RNNTEncoder, Dict]],
+    st.SearchStrategy[rnn_t_beam_decoder_pb2.RNNTBeamDecoder],
+    st.SearchStrategy[Tuple[rnn_t_beam_decoder_pb2.RNNTBeamDecoder, Dict]],
 ]:
     """Returns a SearchStrategy for RNNTBeamDecoder plus maybe the kwargs."""
-    raise NotImplementedError()
-    kwargs = {}
-    to_ignore: List[str] = []
-    kwargs["rnn1"] = draw(rnns())
-    kwargs["time_reduction_factor"] = draw(st.integers(0, 3))
-    if not kwargs["time_reduction_factor"] in [0, 1]:
-        kwargs["rnn2"] = draw(rnns())
+
+    kwargs: Dict = {}
+
+    end = 100
+    if alphabet_len is not None:
+        end = max(0, alphabet_len - 1)
+
+    if blank_index is not None:
+        kwargs["blank_index"] = blank_index
     else:
-        to_ignore = ["forget_gate_bias"]
+        kwargs["blank_index"] = draw(st.integers(0, end))
 
-    all_fields_set(rnn_t_encoder_pb2.RNNTEncoder, kwargs, to_ignore)
+    kwargs["beam_width"] = draw(st.integers(1, 16))
 
-    rnn_t_encoder = rnn_t_encoder_pb2.RNNTEncoder(**kwargs)
+    kwargs["length_norm"] = draw(st.booleans())
+
+    kwargs["max_symbols_per_step"] = draw(st.integers(0, 4))
+
+    # initialise and return
+    all_fields_set(rnn_t_beam_decoder_pb2.RNNTBeamDecoder, kwargs)
+    beam_decoder = rnn_t_beam_decoder_pb2.RNNTBeamDecoder(**kwargs)
     if not return_kwargs:
-        return rnn_t_encoder
-    return rnn_t_encoder, kwargs
+        return beam_decoder
+    return beam_decoder, kwargs
 
 
 @st.composite
 def rnn_t_greedy_decoder(
-    draw, return_kwargs: bool = False
+    draw,
+    return_kwargs: bool = False,
+    alphabet_len: Optional[int] = None,
+    blank_index: Optional[int] = None,
 ) -> Union[
-    st.SearchStrategy[rnn_t_encoder_pb2.RNNTEncoder],
-    st.SearchStrategy[Tuple[rnn_t_encoder_pb2.RNNTEncoder, Dict]],
+    st.SearchStrategy[rnn_t_greedy_decoder_pb2.RNNTGreedyDecoder],
+    st.SearchStrategy[Tuple[rnn_t_greedy_decoder_pb2.RNNTGreedyDecoder, Dict]],
 ]:
     """Returns a SearchStrategy for RNNTGreedyDecoder plus maybe the kwargs."""
-    raise NotImplementedError()
-    kwargs = {}
-    to_ignore: List[str] = []
-    kwargs["rnn1"] = draw(rnns())
-    kwargs["time_reduction_factor"] = draw(st.integers(0, 3))
-    if not kwargs["time_reduction_factor"] in [0, 1]:
-        kwargs["rnn2"] = draw(rnns())
+    kwargs: Dict = {}
+
+    end = 100
+    if alphabet_len is not None:
+        end = max(0, alphabet_len - 1)
+
+    if blank_index is not None:
+        kwargs["blank_index"] = blank_index
     else:
-        to_ignore = ["forget_gate_bias"]
+        kwargs["blank_index"] = end
 
-    all_fields_set(rnn_t_encoder_pb2.RNNTEncoder, kwargs, to_ignore)
+    kwargs["max_symbols_per_step"] = draw(st.integers(0, 4))
 
-    rnn_t_encoder = rnn_t_encoder_pb2.RNNTEncoder(**kwargs)
+    # initialise and return
+    all_fields_set(rnn_t_greedy_decoder_pb2.RNNTGreedyDecoder, kwargs)
+    greedy_decoder = rnn_t_greedy_decoder_pb2.RNNTGreedyDecoder(**kwargs)
     if not return_kwargs:
-        return rnn_t_encoder
-    return rnn_t_encoder, kwargs
+        return greedy_decoder
+    return greedy_decoder, kwargs

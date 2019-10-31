@@ -352,7 +352,7 @@ class RNNTEncoder(torch.nn.Module):
         self,
         rnn1: torch.nn.Module,
         time_reducer: Optional[torch.nn.Module] = None,
-        time_reduction_factor: Optional[int] = 2,
+        time_reduction_factor: Optional[int] = 1,
         rnn2: Optional[torch.nn.Module] = None,
     ):
         assert isinstance(time_reduction_factor, int)
