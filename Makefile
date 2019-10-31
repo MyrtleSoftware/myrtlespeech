@@ -26,5 +26,5 @@ deps/warp-transducer:
 	export CFLAGS="-I$CUDA_HOME/include $CFLAGS" && \
   cd ../pytorch_binding && \
   python3 setup.py install --user && \
-	rm -rf ../tests tests ../tensorflow_binding && \
+	rm -rf ../tests test ../tensorflow_binding && \
 	cd ../../..

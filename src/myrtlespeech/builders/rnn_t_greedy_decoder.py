@@ -1,5 +1,5 @@
 from myrtlespeech.model.rnn_t import RNNT
-from myrtlespeech.post_process.rnn_t_greedy_decoder import RNNTGreedyDecoder
+from myrtlespeech.post_process.rnn_t_decoders import RNNTGreedyDecoder
 from myrtlespeech.protos import rnn_t_greedy_decoder_pb2
 
 
