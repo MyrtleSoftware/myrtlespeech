@@ -126,62 +126,58 @@ class RNNT(torch.nn.Module):
 
         self._certify_inputs_forward(x)
 
-        # Now use 'x_inp' to refer to audio features
-        ((x_inp, y), (x_lens, y_lens)) = x
-        if self.use_cuda:
-            x_inp = x_inp.cuda()
-            x_lens = x_lens.cuda()
-            y = y.cuda()
-            y_lens = y_lens.cuda()
+        audio_data, label_data = self._prepare_inputs_forward(x)
 
-        # TODO - convert to half precision here?
+        f = self.encode(audio_data)  # f[0] = (T, B, H1)
+        g = self.prediction(label_data)  # g[0] = (U, B, H2)
 
-        X_ = (x_inp, x_lens)
-        Y_ = (y, y_lens)
+        joint_inp = self._enc_pred_to_joint(f, g)
 
-        f = self.encode(X_)  # f[0] = (T, B, H1)
-        g = self.prediction(Y_)  # g[0] = (U, B, H2)
-
-        f_inp = f[0]
-        g_inp = g[0]
-        seq_lengths = (f[1], g[1])  # (time_lens, label_lens)
-
-        return self.joint(((f_inp, g_inp), seq_lengths))
+        return self.joint(joint_inp)
 
     def prediction(
-        self, x: Tuple[torch.Tensor, torch.Tensor]
+        self, y: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Returns the result of applying the RNN-T prediction network to the
-        target labels ``x[0][1]``. This function is only appropriate
+        target labels ``y[0][1]``. This function is only appropriate
         during training (when the ground-truth labels are available).
-        TODO - reference where the inference function is found.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
         initialisation.
 
         Args:
-            x: A Tuple where the first element is the target label tensor of
+            y: A Tuple where the first element is the target label tensor of
                 size ``[batch, max_label_length]`` and the second is a
-                :py:class:`torch.Tensor` of size ``[batch]`` that contain the
+                :py:class:`torch.Tensor` of size ``[batch]`` that contains the
                 *input* lengths of these target label sequences.
 
         Returns:
             Output from ``dec_rnn``. See initialisation docstring.
         """
 
-        y_vals, y_lens = x
-        y_vals = self.embedding(y_vals)
-        y_vals = self._append_SOS(y_vals)
-        return self.dec_rnn((y_vals, y_lens))
+        y = self.embedding(y)
+        y = self._append_SOS(y)
+        return self.dec_rnn(y)
 
     def embedding(self, y):
         "Wrapper function on `self._embedding` that casts inputs to int64 if necessary"
+        y_0, y_1 = y
+        if y_0.dtype != torch.long:
+            y_0 = y_0.long()
 
-        if y.dtype != torch.long:
-            y = y.long()
+        return (self._embedding(y_0), y_1)
 
-        return self._embedding(y)
+    def _append_SOS(self, y):
+        """Appends the SOS token (all zeros) to the start of the target tensor"""
+        y_0, y_1 = y
+
+        B, U, H = y_0.shape
+        # preprend blank
+        start = torch.zeros((B, 1, H)).type(y_0.dtype).to(y_0.device)
+        y_0 = torch.cat([start, y_0], dim=1)  # (B, U + 1, H)
+        y_0 = y_0.contiguous()
+        return (y_0, y_1)
 
     def joint(
         self,
@@ -228,16 +224,6 @@ class RNNT(torch.nn.Module):
         out, _ = self.fully_connected((joint_inp, seq_lengths[0]))
         return out, seq_lengths
 
-    def _append_SOS(self, y):
-        """Appends the SOS token (all zeros) to the start of the target tensor"""
-
-        B, U, H = y.shape
-        # preprend blank
-        start = torch.zeros((B, 1, H)).type(y.dtype).to(y.device)
-        y = torch.cat([start, y], dim=1)  # (B, U + 1, H)
-        y = y.contiguous()
-        return y
-
     def _certify_inputs_forward(self, inp):
         try:
             ((x, y), (x_lens, y_lens)) = inp
@@ -254,6 +240,44 @@ class RNNT(torch.nn.Module):
         assert (
             B1 == B2 and B1 == B3 and B1 == B4
         ), "Batch size must be the same for inputs and targets"
+
+        if not (x_lens <= T).all():
+            raise ValueError(
+                "x_lens must be less than or equal to max number of time-steps"
+            )
+        if not (y_lens <= U).all():
+            raise ValueError(
+                "y_lens must be less than or equal to max number of output symbols"
+            )
+
+        return (
+            B1,
+            C,
+            I,
+            T,
+            U,
+        )  # return (batch, channel, audio_feat_input, max_seq_len, max_output_len)
+
+    def _prepare_inputs_forward(self, inp):
+        ((x_inp, y), (x_lens, y_lens)) = inp
+        if self.use_cuda:
+            x_inp = x_inp.cuda()
+            x_lens = x_lens.cuda()
+            y = y.cuda()
+            y_lens = y_lens.cuda()
+
+        # TODO - convert to half precision here?
+
+        audio_data = (x_inp, x_lens)
+        label_data = (y, y_lens)
+        return audio_data, label_data
+
+    def _enc_pred_to_joint(self, f, g):
+        """Converts encoder and prediction network outputs into form usable by joint"""
+        f_inp = f[0]
+        g_inp = g[0]
+        seq_lengths = (f[1], g[1])  # (time_lens, label_lens)
+        return ((f_inp, g_inp), seq_lengths)
 
 
 class RNNTEncoder(torch.nn.Module):
