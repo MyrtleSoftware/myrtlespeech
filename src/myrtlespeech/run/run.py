@@ -47,24 +47,25 @@ class WordSegmentor:
         return new_sentence
 
 
-class ReportCTCDecoder(Callback):
-    """TODO
+class ReportDecoderWERBase(Callback):
+    """Base class for reporting WERs. Do not use this class directly.
+    When overriding the base class, you must define the following:
+        self._process_sentence() method
+        self.decoder_input_key @property - this gives the kwargs key to access
+            the decoder input
 
     Args:
-        ctc_decoder: decodes output to sequence of indices based on CTC
+        decoder: decodes output to sequence of indices
 
         alphabet: converts sequences of indices to sequences of symbols (strs)
-
-        word_segmentor: groups sequences of symbols into sequences of words
     """
 
-    def __init__(self, ctc_decoder, alphabet, word_segmentor):
-        self.ctc_decoder = ctc_decoder
+    def __init__(self, decoder, alphabet):
+        self.decoder = decoder
         self.alphabet = alphabet
-        self.word_segmentor = word_segmentor
 
     def _reset(self, **kwargs):
-        kwargs["reports"][self.ctc_decoder.__class__.__name__] = {
+        kwargs["reports"][self.decoder.__class__.__name__] = {
             "wer": -1.0,
             "transcripts": [],
         }
@@ -77,24 +78,33 @@ class ReportCTCDecoder(Callback):
     def on_epoch_begin(self, **kwargs):
         self._reset(**kwargs)
 
-    def _process(self, sentence: List[int]) -> List[str]:
-        symbols = self.alphabet.get_symbols(sentence)
-        return self.word_segmentor(symbols)
+    def _process_sentence(self, sentence: List[int]) -> List[str]:
+        """Method to convert list of indexes to list of characters.
+        This must be overidden by the inherited class"""
+
+        raise NotImplementedError(
+            "Must implement this method according to the given decoder type"
+        )
+
+    @property
+    def decoder_input_key(self):
+        raise NotImplementedError(
+            "Must define `self.decoder_input_key` @property"
+        )
 
     def on_batch_end(self, **kwargs):
         if self.training:
             return
-        transcripts = kwargs["reports"][self.ctc_decoder.__class__.__name__][
+        transcripts = kwargs["reports"][self.decoder.__class__.__name__][
             "transcripts"
         ]
 
         targets = kwargs["last_target"][0]
         target_lens = kwargs["last_target"][1]
-
-        acts = self.ctc_decoder(*kwargs["last_output"])
+        acts = self.decoder(*kwargs[self.decoder_input_key])
         for act, target, target_len in zip(acts, targets, target_lens):
-            act = self._process(act)
-            exp = self._process([int(e) for e in target[:target_len]])
+            act = self._process_sentence(act)
+            exp = self._process_sentence([int(e) for e in target[:target_len]])
 
             transcripts.append((act, exp))
 
@@ -106,7 +116,53 @@ class ReportCTCDecoder(Callback):
         if self.training:
             return
         wer = float(sum(self.distances)) / sum(self.lengths) * 100
-        kwargs["reports"][self.ctc_decoder.__class__.__name__]["wer"] = wer
+        kwargs["reports"][self.decoder.__class__.__name__]["wer"] = wer
+
+
+class ReportCTCDecoder(ReportDecoderWERBase):
+    """CTC Decoder Callback
+
+    Args:
+        ctc_decoder: decodes output to sequence of indices based on CTC
+
+        alphabet: converts sequences of indices to sequences of symbols (strs)
+
+        word_segmentor: groups sequences of symbols into sequences of words
+    """
+
+    def __init__(self, ctc_decoder, alphabet, word_segmentor):
+        super().__init__(ctc_decoder, alphabet)
+        self.word_segmentor = word_segmentor
+
+    def _process_sentence(self, sentence: List[int]) -> List[str]:
+        symbols = self.alphabet.get_symbols(sentence)
+        return self.word_segmentor(symbols)
+
+    @property
+    def decoder_input_key(self):
+        return "last_output"
+
+
+class ReportRNNTDecoder(ReportDecoderWERBase):
+    """RNNT Decoder Callback.
+
+    Args:
+        rnnt_decoder: decodes output to sequence of indices based on CTC
+
+        alphabet: converts sequences of indices to sequences of symbols (strs)
+
+    """
+
+    def __init__(self, rnnt_decoder, alphabet):
+        super().__init__(rnnt_decoder, alphabet)
+
+    def _process_sentence(self, sentence: List[int]) -> List[str]:
+        return self.alphabet.get_symbols(sentence)
+
+    @property
+    def decoder_input_key(self):
+        return "last_input"  # i.e. we can't use the model output as
+        # this was computed using ground-truth labels
 
 
 class TensorBoardLogger(ModelCallback):
