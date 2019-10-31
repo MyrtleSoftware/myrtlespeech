@@ -304,7 +304,7 @@ def test_mask_conv_output_size_and_seq_lens(
         stride=mask_conv1d.stride[0],
         dilation=mask_conv1d.dilation[0],
         padding=sum(padding),
-    )
+    ).to(out_seq_lens.device)
     assert torch.all(out_seq_lens == exp_out_seq_lens)
 
 
@@ -392,7 +392,7 @@ def test_mask2d_conv_output_size_and_seq_lens(
         stride=mask_conv2d.stride[1],
         dilation=mask_conv2d.dilation[1],
         padding=sum(padding),
-    )
+    ).to(out_seq_lens.device)
     assert torch.all(out_seq_lens == exp_out_seq_lens)
 
 

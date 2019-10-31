@@ -19,7 +19,7 @@ from tests.protos.test_pre_process_step import pre_process_steps
 from tests.protos.test_rnn_t import rnn_t
 from tests.protos.test_rnn_t_decoders import rnn_t_beam_decoder
 from tests.protos.test_rnn_t_decoders import rnn_t_greedy_decoder
-from tests.protos.test_rnn_t_losses import rnn_t_losses
+from tests.protos.test_rnn_t_loss import rnn_t_losses
 from tests.protos.utils import all_fields_set
 
 # Fixtures and Strategies -----------------------------------------------------
