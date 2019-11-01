@@ -11,46 +11,61 @@ Development
 
    .. code-block:: bash
 
-      $ conda env create -f environment.yml
+      conda env create -f environment.yml
+2. Install myrtlespeech:
 
-2. Install `pre-commit <https://pre-commit.com>`_ into git hooks.
+  .. code-block:: bash
+
+    pip install -e .
+
+
+3. Install `pre-commit <https://pre-commit.com>`_ into git hooks.
 
    .. code-block:: bash
 
-      $ pre-commit install
+      pre-commit install
 
    The set of pre-commit git hooks listed in `.pre-commit-config.yaml` will run
    automatically before each commit. They can also be manually triggered:
 
    .. code-block:: bash
 
-      $ pre-commit run --all-files
+      pre-commit run --all-files
 
-3. Compile the `Protocol Buffer
+4. Compile the `Protocol Buffer
    <https://developers.google.com/protocol-buffers/>`_ files into Python
    modules:
 
    .. code-block:: bash
 
-    $ protoc --proto_path src/ --python_out src/ src/myrtlespeech/protos/*.proto --mypy_out src/
+    protoc --proto_path src/ --python_out src/ src/myrtlespeech/protos/*.proto --mypy_out src/
 
    .. note::
 
         This command should be executed each time a ``.proto`` file is
         modified.
 
-4. Install `NVIDIA Apex
+
+5. Install `NVIDIA Apex
    <https://github.com/NVIDIA/apex/tree/880ab925bce9f817a93988b021e12db5f67f7787>`_.
    As of 2019-08-21 it does _not_ have a Conda package and must be installed
    manually:
 
    .. code-block:: bash
 
-    $ git clone https://github.com/NVIDIA/apex
-    $ cd apex
-    $ git checkout 880ab925bce9f817a93988b021e12db5f67f7787
-    $ pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./
+    make deps/apex
 
+
+6. Install `Warp-Transducer Loss <https://github.com/HawkAaron/warp-transducer/commit/c6d12f9e1562833c2b4e7ad84cb22aa4ba31d18c>`_:
+
+  .. code-block:: bash
+
+    export CUDA_HOME=/usr/local/cuda
+    make deps/warp-transducer
+
+  .. note::
+
+       Replace ``/usr/local/cuda`` with cuda location
 
 Continuous Integration
 -----------------------

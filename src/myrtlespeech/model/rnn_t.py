@@ -417,11 +417,35 @@ class RNNTEncoder(torch.nn.Module):
             assert rnn2.rnn.batch_first == False
 
         super().__init__()
+        #######################
+        drop_prob = 0.25
+        relu_clip = 20
+        self.fc1 = torch.nn.Sequential(
+            torch.nn.Linear(rnn1.rnn.input_size, rnn1.rnn.hidden_size),
+            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip),
+            torch.nn.Dropout(p=drop_prob),
+            torch.nn.Linear(rnn1.rnn.hidden_size, rnn1.rnn.input_size),
+            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip),
+            torch.nn.Dropout(p=drop_prob),
+        )
 
+        #####################
         self.rnn1 = rnn1
         self.time_reducer = time_reducer
         self.time_reduction_factor = time_reduction_factor
         self.rnn2 = rnn2
+        #######################
+        drop_prob = 0.25
+        self.fc2 = torch.nn.Sequential(
+            torch.nn.Linear(rnn1.rnn.hidden_size, rnn1.rnn.hidden_size),
+            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip),
+            torch.nn.Dropout(p=drop_prob),
+            torch.nn.Linear(rnn1.rnn.hidden_size, rnn1.rnn.hidden_size),
+            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip),
+            torch.nn.Dropout(p=drop_prob),
+        )
+
+        #####################
 
         self.use_cuda = torch.cuda.is_available()
 
@@ -467,13 +491,18 @@ class RNNTEncoder(torch.nn.Module):
 
         if self.use_cuda:
             h = (x[0].cuda(), x[1].cuda())
-
+        ###############
+        h = self.fc1(h[0]), h[1]
+        ############
         h = self.rnn1(h)
 
         if self.time_reducer:
             h = self.time_reducer(h)
 
             h = self.rnn2(h)
+        ###############
+        h = self.fc2(h[0]), h[1]
+        ############
 
         return (h[0].contiguous(), h[1])
 
