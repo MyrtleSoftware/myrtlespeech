@@ -195,7 +195,7 @@ class RNNT(torch.nn.Module):
 
         y = self.embedding(y)
         y = self._append_SOS(y)
-        return self.predict_net["dec_rnn"](y)
+        return self.dec_rnn(y)
 
     def embedding(self, y):
         "Wrapper function on `self._embedding` that casts inputs to int64 if necessary"
@@ -318,6 +318,10 @@ class RNNT(torch.nn.Module):
         g_inp = g[0]
         seq_lengths = (f[1], g[1])  # (time_lens, label_lens)
         return ((f_inp, g_inp), seq_lengths)
+
+    @property
+    def dec_rnn(self):
+        return self.predict_net["dec_rnn"]
 
 
 class RNNTEncoder(torch.nn.Module):
