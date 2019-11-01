@@ -5,6 +5,7 @@ tested.
 """
 import argparse
 import time
+import warnings
 from pathlib import Path
 from typing import List
 from typing import Union
@@ -115,7 +116,14 @@ class ReportDecoderWERBase(Callback):
     def on_epoch_end(self, **kwargs):
         if self.training:
             return
-        wer = float(sum(self.distances)) / sum(self.lengths) * 100
+        lengths = sum(self.lengths)
+        if lengths != 0:
+            wer = float(sum(self.distances)) / sum(self.lengths) * 100
+        else:
+            warnings.warn(
+                "Total length of input sequences == 0. Cannot calculate WER"
+            )
+            wer = -1  # return infeasible value
         kwargs["reports"][self.decoder.__class__.__name__]["wer"] = wer
 
 

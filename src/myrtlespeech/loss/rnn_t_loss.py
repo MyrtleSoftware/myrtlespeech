@@ -66,11 +66,13 @@ class RNNTLoss(torch.nn.Module):
         """
         logits, (logit_lens, _) = inputs
         y, y_lens = targets
-        if self.use_cuda:
-            logits = logits.cuda()
-            logit_lens = logit_lens.cuda()
-            y = y.cuda()
-            y_lens = y_lens.cuda()
+
+        # cast to required types
+        if logits.dtype != torch.float:
+            logits = logits.float()
+
+        if y.dtype != torch.int32:
+            y = y.int()
 
         if logit_lens.dtype != torch.int32:
             logit_lens = logit_lens.int()
@@ -78,8 +80,18 @@ class RNNTLoss(torch.nn.Module):
         if y_lens.dtype != torch.int32:
             y_lens = y_lens.int()
 
+        # send to gpu
+        if self.use_cuda:
+            logits = logits.cuda()
+            logit_lens = logit_lens.cuda()
+            y = y.cuda()
+            y_lens = y_lens.cuda()
+
         loss = self.rnnt_loss(
             acts=logits, labels=y, act_lens=logit_lens, label_lens=y_lens
         )
+
+        # del new variables that may have been created due to float/int/cuda()
+        del logits, y, logit_lens, y_lens
 
         return loss
