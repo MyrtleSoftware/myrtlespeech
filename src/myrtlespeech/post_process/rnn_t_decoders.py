@@ -228,7 +228,7 @@ class RNNTBeamDecoder(RNNTDecoderBase):
 
             B = B[: self.beam_width]
 
-        if self.norm_length:
+        if self.length_norm:
             B.sort(key=lambda a: -a.logp / max(len(a.labels), 0.1))
 
         return B[0].labels

@@ -84,12 +84,18 @@ class RNNT(torch.nn.Module):
         assert (
             dec_rnn.batch_first == True
         ), "dec_rnn should be a batch_first rnn"
-        self.encode = encoder
-        self._embedding = embedding
-        self.dec_rnn = dec_rnn
-        self.fully_connected = fully_connected
+        self.encoder = encoder
+        self.predict_net = self._predict_net(embedding, dec_rnn)
+
+        self.joint_net = self._joint_net(fully_connected)
 
         self.use_cuda = torch.cuda.is_available()
+
+    def _predict_net(self, embedding, dec_rnn):
+        return torch.nn.ModuleDict({"embed": embedding, "dec_rnn": dec_rnn})
+
+    def _joint_net(self, fully_connected):
+        return torch.nn.ModuleDict({"fully_connected": fully_connected})
 
     def forward(
         self,
@@ -135,6 +141,37 @@ class RNNT(torch.nn.Module):
 
         return self.joint(joint_inp)
 
+    def encode(
+        self, x: Tuple[torch.Tensor, torch.Tensor]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Returns the result of applying the encoder to the input audio features.
+
+        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
+        :py:func:`torch.cuda.is_available` was :py:data:`True` on
+        initialisation.
+
+        See :py:class:`.RNNTEncoder` for detailed information about the input
+        and output of each module.
+
+        Args:
+            x: Tuple where the first element is the encoder
+                input (a :py:`torch.Tensor`) with size ``[batch, channels,
+                features, max_input_seq_len]`` and the second element is a
+                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+                represents the sequence length of the corresponding *input*
+                sequence to the rnn. Currently the number of channels must = 1 and
+                this input is immediately reshaped for input to `rnn1`. The reshaping
+                operation is not dealt with in preprocessing so that a) this
+                model and `myrtlespeech.model.deep_speech_2` can share the same preprocessing
+                and b) because future edits to `myrtlespeech.model.rnn_t.RNNTEncoder`
+                may add convolutions before input to `rnn1`.
+
+        Returns:
+            Output from ``rnn2`` if present, else output from ``rnn1``. See initialisation
+            docstring.
+        """
+        return self.encoder(x)
+
     def prediction(
         self, y: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -158,7 +195,7 @@ class RNNT(torch.nn.Module):
 
         y = self.embedding(y)
         y = self._append_SOS(y)
-        return self.dec_rnn(y)
+        return self.predict_net["dec_rnn"](y)
 
     def embedding(self, y):
         "Wrapper function on `self._embedding` that casts inputs to int64 if necessary"
@@ -166,7 +203,7 @@ class RNNT(torch.nn.Module):
         if y_0.dtype != torch.long:
             y_0 = y_0.long()
 
-        return (self._embedding(y_0), y_1)
+        return (self.predict_net["embed"](y_0), y_1)
 
     def _append_SOS(self, y):
         """Appends the SOS token (all zeros) to the start of the target tensor"""
@@ -177,6 +214,9 @@ class RNNT(torch.nn.Module):
         start = torch.zeros((B, 1, H)).type(y_0.dtype).to(y_0.device)
         y_0 = torch.cat([start, y_0], dim=1)  # (B, U + 1, H)
         y_0 = y_0.contiguous()
+
+        del start
+
         return (y_0, y_1)
 
     def joint(
@@ -221,7 +261,7 @@ class RNNT(torch.nn.Module):
 
         # fully_connected expects a single length (not a tuple of lengths)
         # So pass seq_lengths[0] and ignore output:
-        out, _ = self.fully_connected((joint_inp, seq_lengths[0]))
+        out, _ = self.joint_net["fully_connected"]((joint_inp, seq_lengths[0]))
         return out, seq_lengths
 
     def _certify_inputs_forward(self, inp):
