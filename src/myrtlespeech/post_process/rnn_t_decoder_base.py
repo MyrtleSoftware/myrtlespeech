@@ -176,3 +176,12 @@ class RNNTDecoderBase(torch.nn.Module):
         Returns the final index of a list of labels
         """
         return SOS if labels == [] else labels[-1]
+
+    def __repr__(self):
+        string = self._get_name() + "("
+        string += f"max_symbols_per_step={self.max_symbols_per_step}, "
+        string += f"blank_index={self.blank_index}"
+        if hasattr(self, "beam_width"):
+            string += f", beam_width={self.beam_width}"
+        string += ")"
+        return string

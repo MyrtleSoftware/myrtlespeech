@@ -104,6 +104,9 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# remote sync (atom)
+.remote-sync.json
+
 # mypy
 .mypy_cache/
 
