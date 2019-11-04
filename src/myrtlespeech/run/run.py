@@ -159,13 +159,24 @@ class ReportRNNTDecoder(ReportDecoderWERBase):
 
         alphabet: converts sequences of indices to sequences of symbols (strs)
 
+        skip_first_epoch: bool. Default = True. If True, the first eval epoch
+            is skipped. This is useful as the decoding is *very* slow with an
+            un-trained model (i.e. inference is considerably faster when the
+            model is more confident in its predictions)
+
     """
 
-    def __init__(self, rnnt_decoder, alphabet):
+    def __init__(self, rnnt_decoder, alphabet, skip_first_epoch=True):
         super().__init__(rnnt_decoder, alphabet)
+        self.skip_first_epoch = skip_first_epoch
 
     def _process_sentence(self, sentence: List[int]) -> List[str]:
         return self.alphabet.get_symbols(sentence)
+
+    def on_batch_end(self, **kwargs):
+        if self.skip_first_epoch and kwargs["epoch"] == 0:
+            return
+        return super().on_batch_end(**kwargs)
 
     @property
     def decoder_input_key(self):
