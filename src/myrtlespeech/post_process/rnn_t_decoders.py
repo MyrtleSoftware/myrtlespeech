@@ -70,7 +70,7 @@ class RNNTGreedyDecoder(RNNTDecoderBase):
                     hidden = hidden_prime
                 symbols_added += 1
 
-        del f, g, hidden, hidden_prime, logp, fs
+        del f, g, hidden, hidden_prime, logp, fs, fs_lens
         return label
 
 
