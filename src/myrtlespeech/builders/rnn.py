@@ -64,15 +64,22 @@ def build(
     if rnn_cfg.HasField("forget_gate_bias"):
         forget_gate_bias = rnn_cfg.forget_gate_bias.value
 
-    rnn = RNN(
-        rnn_type=rnn_type,
-        input_size=input_features,
-        hidden_size=rnn_cfg.hidden_size,
-        num_layers=rnn_cfg.num_layers,
-        bias=rnn_cfg.bias,
-        bidirectional=rnn_cfg.bidirectional,
-        forget_gate_bias=forget_gate_bias,
-    )
+    rnn_layers = []
+    for i in range(rnn_cfg.num_layers):
+        # Batch norm is eventually added only after the first layer
+        # (if batch_norm == True)
+        rnn_layers.append(
+            RNN(
+                rnn_type=rnn_type,
+                input_size=rnn_cfg.hidden_size if i > 0 else input_features,
+                hidden_size=rnn_cfg.hidden_size,
+                bias=rnn_cfg.bias,
+                bidirectional=rnn_cfg.bidirectional,
+                forget_gate_bias=forget_gate_bias,
+                batch_norm=rnn_cfg.batch_norm if i > 0 else False,
+            )
+        )
+    rnn = torch.nn.Sequential(*rnn_layers)
 
     out_features = rnn_cfg.hidden_size
     if rnn_cfg.bidirectional:

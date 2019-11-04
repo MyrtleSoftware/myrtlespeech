@@ -31,4 +31,7 @@ message RNN {
   // When using an LSTM and bias is True then, if set, the total forget gate
   // bias will be initialised to this value.
   google.protobuf.FloatValue forget_gate_bias = 6;
+
+  // If true then batch normalization is added to the rnn.
+  bool batch_norm = 7;
 }

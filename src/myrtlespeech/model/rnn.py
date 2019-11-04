@@ -12,15 +12,16 @@ class RNNType(IntEnum):
 
 
 class RNN(torch.nn.Module):
-    """A recurrent neural network.
+    """A layer in a recurrent neural network.
 
     See :py:class:`torch.nn.LSTM`, :py:class:`torch.nn.GRU` and
     :py:class:`torch.nn.RNN` for more information as these are used internally
     (see Attributes).
 
     This wrapper ensures the sequence length information is correctly used by
-    the RNN (i.e. using :py:func:`torch.nn.utils.rnn.pad_packed_sequence` and
-    :py:func:`torch.nn.utils.rnn.pad_packed_sequence`).
+    the RNN layer (i.e. using :py:func:`torch.nn.utils.rnn.pad_packed_sequence`
+    and :py:func:`torch.nn.utils.rnn.pad_packed_sequence`).
+    Moreover it handles batch normalization in the recurrent layer.
 
     Args:
         rnn_type: The type of recurrent neural network cell to use. See
@@ -30,10 +31,11 @@ class RNN(torch.nn.Module):
 
         hidden_size: The number of features in the hidden state.
 
-        num_layers: The number of recurrent layers.
-
         bias: If :py:data:`False`, then the layer does not use the bias weights
             ``b_ih`` and ``b_hh``.
+
+        batch_first: If :py:data:`True`, then the input and output tensors are
+            provided as ``[batch, seq_len, in_features]``.
 
         dropout: If non-zero, introduces a dropout layer on the
             outputs of each LSTM layer except the last layer,
@@ -49,10 +51,10 @@ class RNN(torch.nn.Module):
             See `Jozefowicz et al., 2015
             <http://www.jmlr.org/proceedings/papers/v37/jozefowicz15.pdf>`_.
 
-        batch_first: If :py:data:`True`, then the input and output tensors are
-            provided as ``[batch, seq_len, in_features]``.
+        batch_norm: If :py:data:`True`, then batch normalization is added.
 
     Attributes:
+        batch_norm: A :py:class:`torch.BatchNorm1d` instance.
         rnn: A :py:class:`torch.LSTM`, :py:class:`torch.GRU`, or
             :py:class:`torch.RNN` instance.
     """
@@ -62,12 +64,12 @@ class RNN(torch.nn.Module):
         rnn_type: RNNType,
         input_size: int,
         hidden_size: int,
-        num_layers: int = 1,
         bias: int = True,
+        batch_first: bool = False,
         dropout: float = 0.0,
         bidirectional: bool = False,
         forget_gate_bias: Optional[float] = None,
-        batch_first: bool = False,
+        batch_norm: bool = False,
     ):
         super().__init__()
         if rnn_type == RNNType.LSTM:
@@ -80,11 +82,13 @@ class RNN(torch.nn.Module):
             raise ValueError(f"unknown rnn_type {rnn_type}")
 
         self.batch_first = batch_first
+        self.batch_norm = (
+            torch.nn.BatchNorm1d(input_size) if batch_norm else None
+        )
 
         self.rnn = rnn_cls(
             input_size=input_size,
             hidden_size=hidden_size,
-            num_layers=num_layers,
             bias=bias,
             batch_first=self.batch_first,
             dropout=dropout,
@@ -92,20 +96,20 @@ class RNN(torch.nn.Module):
         )
 
         if rnn_type == RNNType.LSTM and bias and forget_gate_bias is not None:
-            for l in range(num_layers):
-                ih = getattr(self.rnn, f"bias_ih_l{l}")
-                ih.data[hidden_size : 2 * hidden_size] = forget_gate_bias
-                hh = getattr(self.rnn, f"bias_hh_l{l}")
-                hh.data[hidden_size : 2 * hidden_size] = 0.0
+            ih = getattr(self.rnn, f"bias_ih_l0")
+            ih.data[hidden_size : 2 * hidden_size] = forget_gate_bias
+            hh = getattr(self.rnn, f"bias_hh_l0")
+            hh.data[hidden_size : 2 * hidden_size] = 0.0
 
         self.use_cuda = torch.cuda.is_available()
         if self.use_cuda:
+            self.batch_norm = self.batch_norm.cuda() if batch_norm else None
             self.rnn = self.rnn.cuda()
 
     def forward(
         self, x: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        r"""Returns the result of applying the rnn to ``x[0]``.
+        r"""Returns the result of applying the rnn layer to ``x[0]``.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
@@ -122,7 +126,7 @@ class RNN(torch.nn.Module):
 
         Returns:
             The first element of the Tuple return value is the result after
-            applying the RNN to ``x[0]``. It must have size ``[seq_len,
+            applying the RNN layer to ``x[0]``. It must have size ``[seq_len,
             batch, out_features]`` or ``[batch, seq_len, out_features]`` if
             ``batch_first=True``.
 
@@ -134,6 +138,14 @@ class RNN(torch.nn.Module):
         """
         if self.use_cuda:
             x = (x[0].cuda(), x[1].cuda())
+
+        if self.batch_norm is not None:
+            # Collapses input of dim T*N*H to (T*N)*H and gives it to a batch
+            # norm layer.
+            # Allows handling of variable sequence lengths and minibatch sizes.
+            t, n = x[0].size(0), x[0].size(1)
+            x_norm = self.batch_norm(x[0].view(t * n, -1))
+            x = (x_norm.view(t, n, -1), x[1])
 
         # Record sequence length to enable DataParallel
         # https://pytorch.org/docs/stable/notes/faq.html#pack-rnn-unpack-with-data-parallelism
