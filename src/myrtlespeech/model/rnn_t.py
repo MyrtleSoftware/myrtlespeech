@@ -138,8 +138,9 @@ class RNNT(torch.nn.Module):
         g = self.prediction(label_data)  # g[0] = (U, B, H2)
 
         joint_inp = self._enc_pred_to_joint(f, g)
-
-        return self.joint(joint_inp)
+        out = self.joint(joint_inp)
+        del f, g, audio_data, label_data, x, joint_inp
+        return out
 
     def encode(
         self, x: Tuple[torch.Tensor, torch.Tensor]
@@ -195,15 +196,18 @@ class RNNT(torch.nn.Module):
 
         y = self.embedding(y)
         y = self._append_SOS(y)
-        return self.dec_rnn(y)
+        out = self.dec_rnn(y)
+        del y
+        return out
 
     def embedding(self, y):
         "Wrapper function on `self._embedding` that casts inputs to int64 if necessary"
         y_0, y_1 = y
         if y_0.dtype != torch.long:
             y_0 = y_0.long()
-
-        return (self.predict_net["embed"](y_0), y_1)
+        out = (self.predict_net["embed"](y_0), y_1)
+        del y, y_0, y_1
+        return out
 
     def _append_SOS(self, y):
         """Appends the SOS token (all zeros) to the start of the target tensor"""
@@ -215,7 +219,7 @@ class RNNT(torch.nn.Module):
         y_0 = torch.cat([start, y_0], dim=1)  # (B, U + 1, H)
         y_0 = y_0.contiguous()
 
-        del start
+        del start, y
 
         return (y_0, y_1)
 
@@ -243,6 +247,8 @@ class RNNT(torch.nn.Module):
         """
         (f, g), seq_lengths = x
 
+        del x
+
         T, B1, H1 = f.shape
         B2, U_, H2 = g.shape
 
@@ -258,12 +264,13 @@ class RNNT(torch.nn.Module):
         g = g.expand((B1, T, U_, H2)).contiguous()
 
         joint_inp = torch.cat([f, g], dim=3).contiguous()  # (B, T, U_, H1 + H2)
-
         # fully_connected expects a single length (not a tuple of lengths)
         # So pass seq_lengths[0] and ignore output:
+        del g, f
+
         out, _ = self.joint_net["fully_connected"]((joint_inp, seq_lengths[0]))
 
-        del g, f, joint_inp
+        del joint_inp, _
 
         return out, seq_lengths
 
@@ -293,6 +300,7 @@ class RNNT(torch.nn.Module):
                 "y_lens must be less than or equal to max number of output symbols"
             )
 
+        del x, y, x_lens, y_lens, inp
         return (
             B1,
             C,
@@ -314,7 +322,7 @@ class RNNT(torch.nn.Module):
         audio_data = (x_inp, x_lens)
         label_data = (y, y_lens)
 
-        del x_inp, y, x_lens, y_lens
+        del x_inp, y, x_lens, y_lens, inp
 
         return audio_data, label_data
 
@@ -323,6 +331,7 @@ class RNNT(torch.nn.Module):
         f_inp = f[0]
         g_inp = g[0]
         seq_lengths = (f[1], g[1])  # (time_lens, label_lens)
+        del f, g
         return ((f_inp, g_inp), seq_lengths)
 
     @property
@@ -428,10 +437,10 @@ class RNNTEncoder(torch.nn.Module):
         relu_clip = 20
         self.fc1 = torch.nn.Sequential(
             torch.nn.Linear(rnn1.rnn.input_size, rnn1.rnn.hidden_size),
-            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip),
+            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=True),
             torch.nn.Dropout(p=drop_prob),
             torch.nn.Linear(rnn1.rnn.hidden_size, rnn1.rnn.input_size),
-            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip),
+            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=True),
             torch.nn.Dropout(p=drop_prob),
         )
 
@@ -444,10 +453,10 @@ class RNNTEncoder(torch.nn.Module):
         drop_prob = 0.25
         self.fc2 = torch.nn.Sequential(
             torch.nn.Linear(rnn1.rnn.hidden_size, rnn1.rnn.hidden_size),
-            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip),
+            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=True),
             torch.nn.Dropout(p=drop_prob),
             torch.nn.Linear(rnn1.rnn.hidden_size, rnn1.rnn.hidden_size),
-            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip),
+            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=True),
             torch.nn.Dropout(p=drop_prob),
         )
 
@@ -520,6 +529,7 @@ class RNNTEncoder(torch.nn.Module):
         B2, = x_lens.shape
         assert B1 == B2, "Batch size must be the same for inputs and targets"
         assert C == 1, f"There should only be a single channel input but C={C}"
+        del x, x_lens, inp
 
     def _prepare_inputs_encode(self, inp):
         """
@@ -530,4 +540,5 @@ class RNNTEncoder(torch.nn.Module):
 
         x = x.squeeze(1)  # B, I, T
         x = x.permute(2, 0, 1).contiguous()  # T, B, I
+        del inp
         return (x, x_lens)

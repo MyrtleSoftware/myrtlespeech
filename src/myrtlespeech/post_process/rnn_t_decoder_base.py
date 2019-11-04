@@ -109,7 +109,7 @@ class RNNTDecoderBase(torch.nn.Module):
         # restore training state
         self.model.train(training_state)
 
-        del audio_inp, audio_features, audio_data, audio_len
+        del audio_inp, audio_features, audio_data, audio_len, inputs, lengths
         return out
 
     def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
