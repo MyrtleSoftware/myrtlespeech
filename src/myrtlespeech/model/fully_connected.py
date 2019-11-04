@@ -130,8 +130,16 @@ class FullyConnected(torch.nn.Module):
             represents the sequence length of the corresponding *output*
             sequence.
         """
-        if self.use_cuda:
-            x = (x[0].cuda(), x[1].cuda())
+        x_inp, x_len = x
 
-        result = self.fully_connected(x[0])
-        return result, x[1]
+        del x
+
+        if self.use_cuda:
+            x_inp = x_inp.cuda()
+            x_len = x_len.cuda()
+
+        result = self.fully_connected(x_inp)
+
+        del x_inp
+
+        return result, x_len
