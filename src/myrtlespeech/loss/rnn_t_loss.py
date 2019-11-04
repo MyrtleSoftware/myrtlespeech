@@ -69,7 +69,9 @@ class RNNTLoss(torch.nn.Module):
 
         # cast to required types
         if logits.dtype != torch.float:
+            logits_orig = logits
             logits = logits.float()
+            del logits_orig
 
         if y.dtype != torch.int32:
             y = y.int()
@@ -92,6 +94,6 @@ class RNNTLoss(torch.nn.Module):
         )
 
         # del new variables that may have been created due to float/int/cuda()
-        del logits, y, logit_lens, y_lens
+        del logits, y, logit_lens, y_lens, inputs, targets
 
         return loss
