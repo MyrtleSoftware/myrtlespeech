@@ -70,6 +70,7 @@ class RNNTGreedyDecoder(RNNTDecoderBase):
                     hidden = hidden_prime
                 symbols_added += 1
 
+        del f, g, hidden, hidden_prime, logp, fs
         return label
 
 
@@ -231,4 +232,6 @@ class RNNTBeamDecoder(RNNTDecoderBase):
         if self.length_norm:
             B.sort(key=lambda a: -a.logp / max(len(a.labels), 0.1))
 
-        return B[0].labels
+        label = B[0].labels
+        del f, pred, hidden, logp, fs, B, A, curlogp, y_star, yk
+        return label

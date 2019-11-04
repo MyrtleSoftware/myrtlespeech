@@ -26,5 +26,11 @@ class RNNTTraining(Callback):
 
         # re-arrange rnnt inputs - see myrtlespeech.model.rnn_t.RNNT
         # forward() docstring for reasoning:
+
+        del kwargs["last_input"]
+
         kwargs["last_input"] = ((x_0, y_0), (x_1, y_1))
+
+        del x, y
+
         return kwargs
