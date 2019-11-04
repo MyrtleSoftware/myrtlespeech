@@ -82,6 +82,7 @@ def fit(
                     if cb_handler.on_batch_end():
                         break
 
+                    del x, y, out, loss, loss_out, loss_y
             if cb_handler.on_epoch_end():
                 break
 

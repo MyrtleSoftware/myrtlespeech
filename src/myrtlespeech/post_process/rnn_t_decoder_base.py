@@ -109,6 +109,7 @@ class RNNTDecoderBase(torch.nn.Module):
         # restore training state
         self.model.train(training_state)
 
+        del audio_inp, audio_features, audio_data, audio_len
         return out
 
     def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
@@ -150,10 +151,11 @@ class RNNTDecoderBase(torch.nn.Module):
 
             collated = collate_label_list([[label]], device=self.device)
             label_embedding, lengths = self.model.embedding(collated)
+            del collated
 
         input = ((label_embedding, hidden), lengths)
         ((pred, hidden), pred_lens) = self.model.dec_rnn(input)
-
+        del label_embedding, input, lengths
         return (pred, pred_lens), hidden
 
     def _joint_step(self, enc, pred):
@@ -168,7 +170,7 @@ class RNNTDecoderBase(torch.nn.Module):
             len(res.shape) == 1
         ), "this _joint_step result should have just one non-zero dimension"
 
-        del logits
+        del logits, input
         return res
 
     def _get_last_idx(self, labels):

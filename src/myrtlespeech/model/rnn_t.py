@@ -262,6 +262,9 @@ class RNNT(torch.nn.Module):
         # fully_connected expects a single length (not a tuple of lengths)
         # So pass seq_lengths[0] and ignore output:
         out, _ = self.joint_net["fully_connected"]((joint_inp, seq_lengths[0]))
+
+        del g, f, joint_inp
+
         return out, seq_lengths
 
     def _certify_inputs_forward(self, inp):
@@ -310,6 +313,9 @@ class RNNT(torch.nn.Module):
 
         audio_data = (x_inp, x_lens)
         label_data = (y, y_lens)
+
+        del x_inp, y, x_lens, y_lens
+
         return audio_data, label_data
 
     def _enc_pred_to_joint(self, f, g):
@@ -504,6 +510,7 @@ class RNNTEncoder(torch.nn.Module):
         h = self.fc2(h[0]), h[1]
         ############
 
+        del x
         return (h[0].contiguous(), h[1])
 
     def _certify_inputs_encode(self, inp):
