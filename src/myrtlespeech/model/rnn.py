@@ -198,7 +198,7 @@ class RNN(torch.nn.Module):
             batch_first=self.batch_first,
             total_length=total_length,
         )
-
+        del inp
         if return_tuple:
             return (out, hid), lengths
         return out, lengths
