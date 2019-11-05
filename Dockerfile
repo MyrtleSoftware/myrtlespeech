@@ -20,6 +20,7 @@ SHELL ["/bin/bash", "--login", "-c"]
 # install myrtlespeech package
 COPY --chown=user:user . myrtlespeech/
 WORKDIR /home/user/myrtlespeech
+RUN pip install --upgrade pip
 RUN pip install -e .
 RUN protoc --proto_path src/ --python_out src/ src/myrtlespeech/protos/*.proto --mypy_out src/
 RUN git clone https://github.com/NVIDIA/apex && \
