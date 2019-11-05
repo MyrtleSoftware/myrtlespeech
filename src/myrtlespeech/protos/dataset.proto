@@ -62,9 +62,14 @@ message Dataset {
     google.protobuf.FloatValue max_secs = 3;
   }
 
+  message Composite {
+    repeated Dataset dataset = 1;
+  }
+
   oneof supported_datasets {
     FakeSpeechToText fake_speech_to_text = 1;
     LibriSpeech librispeech = 2;
     CommonVoice commonvoice = 3;
+    Composite composite = 4;
   }
 }
