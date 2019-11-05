@@ -9,6 +9,7 @@ from typing import Optional
 from typing import Sequence
 from typing import Tuple
 
+import myrtlespeech.data.dataset._sox  # Init SoX; see _sox.py for details
 import requests
 import torch
 import torchaudio
@@ -111,15 +112,21 @@ class CommonVoice(Dataset):
             target transcription.
         """
         path = self.paths[index]
-        audio, rate = torchaudio.load(path)
-        print(audio.size(1))
 
-        assert rate == 48000, f"{path} sample rate == {rate} != 48000"
-        # Add offset for 48KHz files since torchaudio is inconsistent with lengths:
-        # https://github.com/pytorch/audio/issues/329
-        assert (audio.size(1) + 1152) / rate == self.durations[
-            index
-        ], f"{path} sample duration != expected duration"
+        # Down sample audio to 16KHz for consistency with other data sets
+        E = torchaudio.sox_effects.SoxEffectsChain()
+        E.set_input_file(path)
+        E.append_effect_to_chain("gain", ["-h"])
+        E.append_effect_to_chain("channels", [1])
+        E.append_effect_to_chain("rate", [16000])
+        E.append_effect_to_chain("gain", ["-rh"])
+        E.append_effect_to_chain("dither", ["-s"])
+        audio, rate = E.sox_build_flow_effects()
+
+        assert rate == 16000, f"{path} sample rate == {rate} != 16000"
+        assert (
+            audio.size(1) / rate == self.durations[index]
+        ), f"{path} sample duration != expected duration"
 
         if self._transform is not None:
             audio = self._transform(audio)
