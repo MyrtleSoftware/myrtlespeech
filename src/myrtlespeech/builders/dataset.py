@@ -78,7 +78,7 @@ def build(
         supported_dataset = dset.WhichOneof("supported_datasets")
 
         if supported_dataset == "fake_speech_to_text":
-            cfg = dataset.fake_speech_to_text
+            cfg = dset.fake_speech_to_text
             dataset = FakeDataset(
                 generator=speech_to_text(
                     audio_ms=(cfg.audio_ms.lower, cfg.audio_ms.upper),
@@ -90,7 +90,7 @@ def build(
                 dataset_len=cfg.dataset_len,
             )
         elif supported_dataset == "librispeech":
-            cfg = dataset.librispeech
+            cfg = dset.librispeech
             max_duration = (
                 cfg.max_secs.value if cfg.HasField("max_secs") else None
             )
@@ -108,7 +108,7 @@ def build(
                 max_duration=max_duration,
             )
         elif supported_dataset == "commonvoice":
-            cfg = dataset.librispeech
+            cfg = dset.librispeech
             max_duration = (
                 cfg.max_secs.value if cfg.HasField("max_secs") else None
             )
@@ -126,7 +126,7 @@ def build(
                 max_duration=max_duration,
             )
         elif supported_dataset == "composite":
-            cfg = dataset.composite
+            cfg = dset.composite
             children = [_create_data_set(child) for child in cfg.dataset]
             dataset = Composite(*children)
         else:
