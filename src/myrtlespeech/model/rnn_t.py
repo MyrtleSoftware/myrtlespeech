@@ -437,10 +437,10 @@ class RNNTEncoder(torch.nn.Module):
         relu_clip = 20
         self.fc1 = torch.nn.Sequential(
             torch.nn.Linear(rnn1.rnn.input_size, rnn1.rnn.hidden_size),
-            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=True),
+            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=False),
             torch.nn.Dropout(p=drop_prob),
             torch.nn.Linear(rnn1.rnn.hidden_size, rnn1.rnn.input_size),
-            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=True),
+            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=False),
             torch.nn.Dropout(p=drop_prob),
         )
 
@@ -453,10 +453,10 @@ class RNNTEncoder(torch.nn.Module):
         drop_prob = 0.25
         self.fc2 = torch.nn.Sequential(
             torch.nn.Linear(rnn1.rnn.hidden_size, rnn1.rnn.hidden_size),
-            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=True),
+            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=False),
             torch.nn.Dropout(p=drop_prob),
             torch.nn.Linear(rnn1.rnn.hidden_size, rnn1.rnn.hidden_size),
-            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=True),
+            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=False),
             torch.nn.Dropout(p=drop_prob),
         )
 
