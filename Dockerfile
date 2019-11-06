@@ -3,6 +3,10 @@ FROM continuumio/miniconda3
 # fix https://github.com/conda/conda/issues/7267
 RUN chown -R 1000:1000 /opt/conda/
 
+# Install headers to build regex as part of Black
+# https://github.com/psf/black/issues/1112
+RUN apt update && apt install -y build-essential python3-dev
+
 # create non-root user
 RUN useradd --create-home --shell /bin/bash user
 USER user
@@ -20,7 +24,6 @@ SHELL ["/bin/bash", "--login", "-c"]
 # install myrtlespeech package
 COPY --chown=user:user . myrtlespeech/
 WORKDIR /home/user/myrtlespeech
-RUN pip install --upgrade pip
 RUN pip install -e .
 RUN protoc --proto_path src/ --python_out src/ src/myrtlespeech/protos/*.proto --mypy_out src/
 RUN git clone https://github.com/NVIDIA/apex && \
