@@ -52,7 +52,7 @@ message Dataset {
       VALIDATED = 5;
     }
 
-    // Path to the CommonVoice directory.
+    // Path to directory that contains the CommonVoice directory.
     string root = 1;
 
     // Which LibriSpeech subset(s) to use.

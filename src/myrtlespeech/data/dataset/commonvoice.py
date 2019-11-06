@@ -56,7 +56,7 @@ class CommonVoice(Dataset):
             will be dropped.
     """
 
-    base_dir = "clips"
+    base_dir = "CommonVoice"
     subset_hashes = {
         "other": "ede180d95179e234e6dd0a9c30bcc88f",
         "train": "d5c627cad5d0f9523e5f0a362123a092",
@@ -120,8 +120,8 @@ class CommonVoice(Dataset):
         # thread safe
         audio = pydub.AudioSegment.from_mp3(path)
         rate = audio.frame_rate
-        audio = np.array(audio.get_array_of_samples())
         assert rate % 16000 == 0
+        audio = np.array(audio.get_array_of_samples())
         audio = sp.decimate(audio, int(rate // 16000))
         audio = np.ascontiguousarray(audio)
         audio = torch.tensor(audio, dtype=torch.float32).unsqueeze(0)
@@ -163,14 +163,14 @@ class CommonVoice(Dataset):
         If this file is not found, it prompts the user to download the data set from
         Mozilla's website
         """
-        os.makedirs(self.root, exist_ok=True)
+        os.makedirs(os.path.join(self.root, self.base_dir), exist_ok=True)
 
         alread_downloaded = os.path.exists(
-            os.path.join(self.root, self.base_dir)
+            os.path.join(self.root, self.base_dir, "clips")
         )
         for subset in self.subsets:
             alread_downloaded &= os.path.isfile(
-                os.path.join(self.root, subset + ".tsv")
+                os.path.join(self.root, self.base_dir, subset + ".tsv")
             )
 
         if alread_downloaded:
@@ -192,10 +192,10 @@ class CommonVoice(Dataset):
             raise utils.DownloadError(f"invalid checksum for {path}")
 
         with tarfile.open(path, mode="r|gz") as tar:
-            tar.extractall(self.root)
+            tar.extractall(os.path.join(self.root, self.base_dir))
 
     def _check_subset_integrity(self, subset: str) -> bool:
-        path = os.path.join(self.root, subset + ".tsv")
+        path = os.path.join(self.root, self.base_dir, subset + ".tsv")
         try:
             actual_md5 = utils.checksum_file(path, "md5")
         except (FileNotFoundError, NotADirectoryError, PermissionError):
@@ -209,7 +209,7 @@ class CommonVoice(Dataset):
                 raise ValueError(f"subset {subset} not found or corrupt")
 
         # Checks clips directory
-        path = os.path.join(self.root, self.base_dir)
+        path = os.path.join(self.root, self.base_dir, "clips")
         try:
             actual_md5 = utils.checksum_dir(path, "md5")
         except (FileNotFoundError, NotADirectoryError, PermissionError):
@@ -224,7 +224,9 @@ class CommonVoice(Dataset):
         self.transcriptions: List[str] = []
 
         for subset in self.subsets:
-            self._parse_subset_file(self.root, subset)
+            self._parse_subset_file(
+                os.path.join(self.root, self.base_dir), subset
+            )
 
         self._sort_by_duration()
 
@@ -244,7 +246,7 @@ class CommonVoice(Dataset):
 
     def _process_audio(self, root: str, file: str) -> bool:
         """Returns True if sample was dropped due to being too long."""
-        path = os.path.join(root, self.base_dir, file)
+        path = os.path.join(root, "clips", file)
         si, _ = torchaudio.info(path)
         duration = (si.length / si.channels) / si.rate
         if self.max_duration is not None and duration > self.max_duration:
