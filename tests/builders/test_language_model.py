@@ -31,7 +31,7 @@ def language_model_module_match_cfg(
 
 @given(lm_cfg=language_models())
 def test_build_returns_correct_language_model_with_valid_params(
-    lm_cfg: language_model_pb2.LanguageModel
+    lm_cfg: language_model_pb2.LanguageModel,
 ) -> None:
     """Test that build returns the correct language model with valid params."""
     lm = build(lm_cfg)
@@ -40,7 +40,7 @@ def test_build_returns_correct_language_model_with_valid_params(
 
 @given(lm_cfg=language_models())
 def test_unknown_language_model_raises_value_error(
-    lm_cfg: language_model_pb2.LanguageModel
+    lm_cfg: language_model_pb2.LanguageModel,
 ) -> None:
     """Ensures ValueError is raised when language model not supported.
 

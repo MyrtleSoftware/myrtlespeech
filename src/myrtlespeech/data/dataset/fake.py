@@ -179,9 +179,9 @@ def speech_to_text(
         if audio_dtype.is_floating_point:
             audio.normal_(mean=0, std=1)
         elif audio_dtype == torch.int16:
-            audio.random_(-2 ** 15, 2 ** 15)  # random_ subtracts 1 from upper
+            audio.random_(-(2 ** 15), 2 ** 15)  # random_ subtracts 1 from upper
         else:
-            audio.random_(-2 ** 31, 2 ** 31)  # random_ subtracts 1 from upper
+            audio.random_(-(2 ** 31), 2 ** 31)  # random_ subtracts 1 from upper
 
         if audio_transform is not None:
             audio = audio_transform(audio)

@@ -4,7 +4,7 @@ from myrtlespeech.protos import ctc_beam_decoder_pb2
 
 
 def build(
-    ctc_beam_decoder_cfg: ctc_beam_decoder_pb2.CTCBeamDecoder
+    ctc_beam_decoder_cfg: ctc_beam_decoder_pb2.CTCBeamDecoder,
 ) -> CTCBeamDecoder:
     """Returns a :py:class:`CTCBeamDecoder` based on the config.
 

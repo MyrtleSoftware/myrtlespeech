@@ -47,7 +47,7 @@ def mask_conv1ds(draw) -> st.SearchStrategy[MaskConv1d]:
 
 @st.composite
 def mask_conv1d_valid_inputs(
-    draw
+    draw,
 ) -> st.SearchStrategy[Tuple[MaskConv1d, Tuple[torch.Tensor, torch.Tensor]]]:
     """Returns a SearchStrategy for MaskConv1d and valid input."""
     mask_conv1d = draw(mask_conv1ds())
@@ -105,7 +105,7 @@ def mask_conv2ds(draw) -> st.SearchStrategy[MaskConv2d]:
 
 @st.composite
 def mask_conv2d_valid_inputs(
-    draw
+    draw,
 ) -> st.SearchStrategy[Tuple[MaskConv2d, Tuple[torch.Tensor, torch.Tensor]]]:
     """Returns a SearchStrategy for MaskConv2d and valid input."""
     mask_conv2d = draw(mask_conv2ds())
@@ -167,7 +167,7 @@ def conv1ds(draw) -> st.SearchStrategy[torch.nn.Conv1d]:
 
 @st.composite
 def conv1d_valid_inputs(
-    draw
+    draw,
 ) -> st.SearchStrategy[Tuple[torch.nn.Conv1d, torch.Tensor]]:
     """Returns a SearchStrategy for Conv1d and valid input."""
     conv1d = draw(conv1ds())

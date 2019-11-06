@@ -44,7 +44,7 @@ def pre_process_step_match_cfg(
 
 @given(step_cfg=pre_process_steps())
 def test_build_returns_correct_pre_process_step_with_valid_params(
-    step_cfg: pre_process_step_pb2.PreProcessStep
+    step_cfg: pre_process_step_pb2.PreProcessStep,
 ) -> None:
     """Test that build returns the correct preprocess step with valid params."""
     step = build(step_cfg)
@@ -53,7 +53,7 @@ def test_build_returns_correct_pre_process_step_with_valid_params(
 
 @given(step_cfg=pre_process_steps())
 def test_unknown_pre_process_step_raises_value_error(
-    step_cfg: pre_process_step_pb2.PreProcessStep
+    step_cfg: pre_process_step_pb2.PreProcessStep,
 ) -> None:
     """Ensures ValueError is raised when pre_process_step not supported.
 

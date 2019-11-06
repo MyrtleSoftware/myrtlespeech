@@ -116,7 +116,7 @@ def test_prediction_returned_for_each_element_in_batch() -> None:
 
 @given(dtype=st.sampled_from([torch.half, torch.float, torch.double]))
 def test_ctc_beam_decoder_raises_value_error_for_float_dtypes(
-    dtype: torch.dtype
+    dtype: torch.dtype,
 ) -> None:
     """Ensures ValueError raised when lengths.dtype is float."""
     x = torch.empty((5, 1, 3))
@@ -156,7 +156,7 @@ def test_ctc_beam_decoder_raises_value_error_lengths_values_greater_seq_len() ->
 
 @given(blank_index=st.integers(-1000, -1))
 def test_ctc_beam_decoder_raises_value_error_negative_blank_index(
-    blank_index: int
+    blank_index: int,
 ) -> None:
     """Ensures ValueError raised when blank_index < 0."""
     with pytest.raises(ValueError):
@@ -165,7 +165,7 @@ def test_ctc_beam_decoder_raises_value_error_negative_blank_index(
 
 @given(beam_width=st.integers(-1000, 0))
 def test_ctc_beam_decoder_raises_value_error_non_positive_beam_width(
-    beam_width: int
+    beam_width: int,
 ) -> None:
     """Ensures ValueError raised when beam_width <= 0."""
     with pytest.raises(ValueError):
@@ -179,7 +179,7 @@ def test_ctc_beam_decoder_raises_value_error_non_positive_beam_width(
     )
 )
 def test_ctc_beam_decoder_raises_value_error_prune_threshold_not_0_1(
-    prune_threshold: float
+    prune_threshold: float,
 ) -> None:
     """Ensures ValueError raised when prune_threshold not in [0.0, 1.0]."""
     with pytest.raises(ValueError):
@@ -198,7 +198,7 @@ def test_ctc_beam_decoder_raises_value_error_lm_but_no_lm_weight() -> None:
 
 @given(separator_index=st.integers(-1000, -1))
 def test_ctc_beam_decoder_raises_value_error_negative_separator_index(
-    separator_index: int
+    separator_index: int,
 ) -> None:
     """Ensures ValueError raised when separator_index < 0."""
     with pytest.raises(ValueError):

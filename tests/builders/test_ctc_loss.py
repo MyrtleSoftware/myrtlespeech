@@ -39,7 +39,7 @@ def ctc_loss_module_match_cfg(
 
 @given(ctc_loss_cfg=ctc_losses())
 def test_build_returns_correct_ctc_loss_with_valid_params(
-    ctc_loss_cfg: ctc_loss_pb2.CTCLoss
+    ctc_loss_cfg: ctc_loss_pb2.CTCLoss,
 ) -> None:
     """Test that build returns the correct CTCLoss with valid params."""
     ctc_loss = build(ctc_loss_cfg)

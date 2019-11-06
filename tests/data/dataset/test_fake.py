@@ -98,7 +98,7 @@ def random_speech_to_text_kwargs(draw) -> st.SearchStrategy[Dict]:
 
 @st.composite
 def random_speech_to_text(
-    draw
+    draw,
 ) -> st.SearchStrategy[Tuple[SpeechToTextGen, Dict]]:
     """Generates different speech_to_text functions."""
     kwargs = draw(random_speech_to_text_kwargs())

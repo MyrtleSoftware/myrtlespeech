@@ -149,9 +149,11 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
     alphabet = Alphabet(list(stt_cfg.alphabet))
 
     # preprocessing
-    pre_process_steps, input_features, input_channels = _build_pre_process_steps(
-        stt_cfg.pre_process_step
-    )
+    (
+        pre_process_steps,
+        input_features,
+        input_channels,
+    ) = _build_pre_process_steps(stt_cfg.pre_process_step)
 
     # model
     model_type = stt_cfg.WhichOneof("supported_models")
@@ -236,7 +238,7 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
 
 
 def _build_pre_process_steps(
-    pre_process_step_cfg: List[pre_process_step_pb2.PreProcessStep]
+    pre_process_step_cfg: List[pre_process_step_pb2.PreProcessStep],
 ) -> Tuple[List[Tuple[Callable, Stage]], int, int]:
     """Returns the preprocessing steps, features, and channels."""
     input_features = None

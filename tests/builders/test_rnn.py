@@ -52,7 +52,7 @@ def rnn_match_cfg(rnn: RNN, rnn_cfg: rnn_pb2.RNN, input_features: int) -> None:
 
 @st.composite
 def rnn_cfg_tensors(
-    draw
+    draw,
 ) -> st.SearchStrategy[Tuple[torch.nn.Module, rnn_pb2.RNN, torch.Tensor]]:
     """Returns a search strategy for RNNs built from a config + valid input."""
     rnn_cfg = draw(rnns())

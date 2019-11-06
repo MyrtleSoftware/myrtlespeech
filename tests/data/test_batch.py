@@ -60,7 +60,7 @@ def tensor_sequences(draw) -> st.SearchStrategy[List[torch.Tensor]]:
 
 @given(sequences=tensor_sequences())
 def test_pad_sequences_returns_tensor_with_correct_size(
-    sequences: List[torch.Tensor]
+    sequences: List[torch.Tensor],
 ) -> None:
     """Ensures Tensor returned by pad_sequences has correct size."""
     # find longest tensor

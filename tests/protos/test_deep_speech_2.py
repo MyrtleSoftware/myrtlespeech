@@ -47,7 +47,7 @@ def deep_speech_2s(
 
 @st.composite
 def _conv_blocks(
-    draw
+    draw,
 ) -> st.SearchStrategy[List[deep_speech_2_pb2.DeepSpeech2.ConvBlock]]:
     """Returns a SearchStrategy for ConvBlocks."""
 
@@ -70,7 +70,7 @@ def _conv_blocks(
 
 @st.composite
 def _lookahead_blocks(
-    draw
+    draw,
 ) -> st.SearchStrategy[deep_speech_2_pb2.DeepSpeech2.LookaheadBlock]:
     """Returns a SearchStrategy for a LookaheadBlock."""
     kwargs = {}

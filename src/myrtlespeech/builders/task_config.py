@@ -11,7 +11,7 @@ from myrtlespeech.protos import task_config_pb2
 
 
 def build(
-    task_config: task_config_pb2.TaskConfig
+    task_config: task_config_pb2.TaskConfig,
 ) -> Tuple[
     SeqToSeq, int, torch.utils.data.DataLoader, torch.utils.data.DataLoader
 ]:

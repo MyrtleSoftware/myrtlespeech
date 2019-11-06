@@ -41,7 +41,7 @@ def ctc_beam_decoder_module_match_cfg(
 
 @given(ctc_cfg=ctc_beam_decoders())
 def test_build_returns_correct_ctc_beam_decoder_with_valid_params(
-    ctc_cfg: ctc_beam_decoder_pb2.CTCBeamDecoder
+    ctc_cfg: ctc_beam_decoder_pb2.CTCBeamDecoder,
 ) -> None:
     """Test that build returns the correct CTCBeamDecoder with valid params."""
     ctc = build(ctc_cfg)
