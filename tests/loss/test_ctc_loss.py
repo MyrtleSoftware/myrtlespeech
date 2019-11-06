@@ -4,6 +4,7 @@ import hypothesis.strategies as st
 import numpy as np
 import torch
 from hypothesis import given
+from hypothesis import settings
 from myrtlespeech.loss.ctc_loss import CTCLoss
 
 from tests.utils.utils import arrays
@@ -73,6 +74,7 @@ def ctc_loss_arguments(draw) -> st.SearchStrategy[Dict]:
 
 
 @given(args=ctc_loss_arguments())
+@settings(deadline=3000)
 def test_ctc_loss_matches_torch(args) -> None:
     """Ensures CTCLoss matches torch CTCLoss(LogSoftmax(...), ...)."""
     myrtle_ctc_loss = CTCLoss(

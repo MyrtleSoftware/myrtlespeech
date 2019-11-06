@@ -1,5 +1,6 @@
 from typing import Tuple
 
+import torch
 from myrtlespeech.builders.fully_connected import build as build_fully_connected
 from myrtlespeech.builders.rnn import build as build_rnn
 from myrtlespeech.data.stack import StackTime
@@ -36,8 +37,10 @@ def build(
         input_features=fc_in_dim,
         output_features=vocab_size + 1,
     )
-
-    return RNNT(encoder, embedding, dec_rnn, fully_connected)
+    rnnt = RNNT(encoder, embedding, dec_rnn, fully_connected)
+    if torch.cuda.is_available():
+        rnnt.cuda()
+    return rnnt
 
 
 def build_rnnt_enc(
