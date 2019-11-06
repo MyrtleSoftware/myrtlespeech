@@ -9,8 +9,10 @@ from typing import Optional
 from typing import Sequence
 from typing import Tuple
 
-import myrtlespeech.data.dataset._sox  # Init SoX; see _sox.py for details
+import numpy as np
+import pydub
 import requests
+import scipy.signal as sp
 import torch
 import torchaudio
 from myrtlespeech.data.dataset import utils
@@ -113,19 +115,19 @@ class CommonVoice(Dataset):
         """
         path = self.paths[index]
 
-        # Down sample audio to 16KHz for consistency with other data sets
-        E = torchaudio.sox_effects.SoxEffectsChain()
-        E.set_input_file(path)
-        E.append_effect_to_chain("gain", ["-h"])
-        E.append_effect_to_chain("channels", [1])
-        E.append_effect_to_chain("rate", [16000])
-        E.append_effect_to_chain("gain", ["-rh"])
-        E.append_effect_to_chain("dither", ["-s"])
-        audio, rate = E.sox_build_flow_effects()
+        # Downsample to 16KHz sample rate for consistency with other data sets
+        # Not using torchaudio and SoxEffectChain for this since it is not
+        # thread safe
+        audio = pydub.AudioSegment.from_mp3(path)
+        rate = audio.frame_rate
+        audio = np.array(audio.get_array_of_samples())
+        assert rate % 16000 == 0
+        audio = sp.decimate(audio, int(rate // 16000))
+        audio = np.ascontiguousarray(audio)
+        audio = torch.tensor(audio, dtype=torch.float32).unsqueeze(0)
 
-        assert rate == 16000, f"{path} sample rate == {rate} != 16000"
         assert (
-            audio.size(1) / rate == self.durations[index]
+            audio.size(1) / 16000 == self.durations[index]
         ), f"{path} sample duration != expected duration"
 
         if self._transform is not None:

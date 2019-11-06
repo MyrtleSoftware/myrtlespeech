@@ -108,7 +108,7 @@ def build(
                 max_duration=max_duration,
             )
         elif supported_dataset == "commonvoice":
-            cfg = dset.librispeech
+            cfg = dset.commonvoice
             max_duration = (
                 cfg.max_secs.value if cfg.HasField("max_secs") else None
             )
