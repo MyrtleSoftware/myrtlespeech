@@ -28,9 +28,15 @@ def rnn_t(
     """Returns a SearchStrategy for RNNT plus maybe the kwargs."""
     kwargs: Dict = {}
 
-    kwargs["rnn_t_encoder"] = draw(rnn_t_encoder())
-    kwargs["dec_rnn"] = draw(rnns(batch_first=True))
-    kwargs["fully_connected"] = draw(fully_connecteds(valid_only=True))
+    kwargs["rnn_t_encoder"], enc_kwargs = draw(
+        rnn_t_encoder(return_kwargs=True)
+    )
+    kwargs["dec_rnn"], dec_kwargs = draw(
+        rnns(batch_first=True, return_kwargs=True)
+    )
+    kwargs["fully_connected"], fc_kwargs = draw(
+        fully_connecteds(valid_only=True, return_kwargs=True)
+    )
 
     # initialise and return
     all_fields_set(rnn_t_pb2.RNNT, kwargs)
