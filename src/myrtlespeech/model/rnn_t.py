@@ -84,7 +84,9 @@ class RNNT(torch.nn.Module):
         assert (
             dec_rnn.batch_first == True
         ), "dec_rnn should be a batch_first rnn"
-        self.encoder = encoder
+
+        self.encode = encoder
+
         self.predict_net = self._predict_net(embedding, dec_rnn)
 
         self.joint_net = self._joint_net(fully_connected)
@@ -141,37 +143,6 @@ class RNNT(torch.nn.Module):
         out = self.joint(joint_inp)
         del f, g, audio_data, label_data, x, joint_inp
         return out
-
-    def encode(
-        self, x: Tuple[torch.Tensor, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Returns the result of applying the encoder to the input audio features.
-
-        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
-        :py:func:`torch.cuda.is_available` was :py:data:`True` on
-        initialisation.
-
-        See :py:class:`.RNNTEncoder` for detailed information about the input
-        and output of each module.
-
-        Args:
-            x: Tuple where the first element is the encoder
-                input (a :py:`torch.Tensor`) with size ``[batch, channels,
-                features, max_input_seq_len]`` and the second element is a
-                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-                represents the sequence length of the corresponding *input*
-                sequence to the rnn. Currently the number of channels must = 1 and
-                this input is immediately reshaped for input to `rnn1`. The reshaping
-                operation is not dealt with in preprocessing so that a) this
-                model and `myrtlespeech.model.deep_speech_2` can share the same preprocessing
-                and b) because future edits to `myrtlespeech.model.rnn_t.RNNTEncoder`
-                may add convolutions before input to `rnn1`.
-
-        Returns:
-            Output from ``rnn2`` if present, else output from ``rnn1``. See initialisation
-            docstring.
-        """
-        return self.encoder(x)
 
     def prediction(
         self, y: Tuple[torch.Tensor, torch.Tensor]
@@ -425,42 +396,45 @@ class RNNTEncoder(torch.nn.Module):
         else:
             assert (
                 time_reduction_factor > 1
-            ), f"time_reduction_factor must be > 2 but = {time_reduction_factor}"
+            ), f"time_reduction_factor must be > 1 but = {time_reduction_factor}"
 
         assert rnn1.rnn.batch_first == False
         if rnn2:
             assert rnn2.rnn.batch_first == False
 
         super().__init__()
-        #######################
-        drop_prob = 0.25
-        relu_clip = 20
-        self.fc1 = torch.nn.Sequential(
-            torch.nn.Linear(rnn1.rnn.input_size, rnn1.rnn.hidden_size),
-            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=False),
-            torch.nn.Dropout(p=drop_prob),
-            torch.nn.Linear(rnn1.rnn.hidden_size, rnn1.rnn.input_size),
-            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=False),
-            torch.nn.Dropout(p=drop_prob),
-        )
-
-        #####################
+        # #######################
+        # drop_prob = 0.25
+        # relu_clip = 20
+        # self.fc1 = torch.nn.Sequential(
+        #     torch.nn.Linear(rnn1.rnn.input_size, rnn1.rnn.hidden_size),
+        #     torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=False),
+        #     torch.nn.Dropout(p=drop_prob),
+        #     torch.nn.Linear(rnn1.rnn.hidden_size, rnn1.rnn.input_size),
+        #     torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=False),
+        #     torch.nn.Dropout(p=drop_prob),
+        # )
+        #
+        # #####################
         self.rnn1 = rnn1
         self.time_reducer = time_reducer
         self.time_reduction_factor = time_reduction_factor
         self.rnn2 = rnn2
-        #######################
-        drop_prob = 0.25
-        self.fc2 = torch.nn.Sequential(
-            torch.nn.Linear(rnn1.rnn.hidden_size, rnn1.rnn.hidden_size),
-            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=False),
-            torch.nn.Dropout(p=drop_prob),
-            torch.nn.Linear(rnn1.rnn.hidden_size, rnn1.rnn.hidden_size),
-            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=False),
-            torch.nn.Dropout(p=drop_prob),
-        )
-
-        #####################
+        # #######################
+        # drop_prob = 0.25
+        # print(time_reduction_factor, "time_reduction_factor")
+        # hid_size = rnn1.rnn.hidden_size if rnn2 is None else rnn2.rnn.hidden_size
+        # self.fc2 = torch.nn.Sequential(
+        #     torch.nn.Linear(hid_size,
+        #                     hid_size),
+        #     torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=False),
+        #     torch.nn.Dropout(p=drop_prob),
+        #     torch.nn.Linear(hid_size, hid_size),
+        #     torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=False),
+        #     torch.nn.Dropout(p=drop_prob),
+        # )
+        #
+        # #####################
 
         self.use_cuda = torch.cuda.is_available()
 
@@ -506,18 +480,18 @@ class RNNTEncoder(torch.nn.Module):
 
         if self.use_cuda:
             h = (x[0].cuda(), x[1].cuda())
-        ###############
-        h = self.fc1(h[0]), h[1]
-        ############
+        # ###############
+        # h = self.fc1(h[0]), h[1]
+        # ############
         h = self.rnn1(h)
 
         if self.time_reducer:
             h = self.time_reducer(h)
 
             h = self.rnn2(h)
-        ###############
-        h = self.fc2(h[0]), h[1]
-        ############
+        # ###############
+        # h = self.fc2(h[0]), h[1]
+        # ############
 
         del x
         return (h[0].contiguous(), h[1])
