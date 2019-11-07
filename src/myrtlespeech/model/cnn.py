@@ -15,7 +15,7 @@ class PaddingMode(Enum):
 
 
 def pad_same(
-    length: int, kernel_size: int, stride: int = 1, dilation: int = 1
+        length: int, kernel_size: int, stride: int = 1, dilation: int = 1
 ) -> Tuple[int, int]:
     r"""Returns a tuple of left and right same padding amounts.
 
@@ -164,11 +164,11 @@ def pad_same(
 
 
 def out_lens(
-    seq_lens: torch.Tensor,
-    kernel_size: int,
-    stride: int,
-    dilation: int,
-    padding: int,
+        seq_lens: torch.Tensor,
+        kernel_size: int,
+        stride: int,
+        dilation: int,
+        padding: int,
 ) -> torch.Tensor:
     """Returns a tensor of sequence lengths after applying convolution.
 
@@ -225,15 +225,15 @@ class MaskConv1d(torch.nn.Conv1d):
     """
 
     def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        kernel_size: int,
-        stride: int = 1,
-        padding_mode: PaddingMode = PaddingMode.NONE,
-        dilation: int = 1,
-        groups: int = 1,
-        bias: bool = True,
+            self,
+            in_channels: int,
+            out_channels: int,
+            kernel_size: int,
+            stride: int = 1,
+            padding_mode: PaddingMode = PaddingMode.NONE,
+            dilation: int = 1,
+            groups: int = 1,
+            bias: bool = True,
     ):
         super().__init__(
             in_channels=in_channels,
@@ -250,7 +250,7 @@ class MaskConv1d(torch.nn.Conv1d):
             super().cuda()
 
     def _pad(
-        self, acts: torch.Tensor, seq_lens: torch.Tensor
+            self, acts: torch.Tensor, seq_lens: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Pads the input activations."""
         batch, channels, max_seq_len = acts.size()
@@ -283,8 +283,8 @@ class MaskConv1d(torch.nn.Conv1d):
 
         mask = (
             torch.arange(max_seq_len)
-            .to(seq_lens.device)
-            .expand(len(seq_lens), max_seq_len)
+                .to(seq_lens.device)
+                .expand(len(seq_lens), max_seq_len)
         )
         mask = mask >= seq_lens.unsqueeze(1)
         mask = mask.unsqueeze(1).type(torch.bool).to(device=acts.device)
@@ -293,7 +293,7 @@ class MaskConv1d(torch.nn.Conv1d):
         del mask
 
     def forward(
-        self, x: Tuple[torch.Tensor, torch.Tensor]
+            self, x: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Returns the result of applying the module to ``x[0]``.
 
@@ -364,15 +364,15 @@ class MaskConv2d(torch.nn.Conv2d):
     """
 
     def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        kernel_size: Union[int, List[int]],
-        stride: Union[int, List[int]] = 1,
-        padding_mode: PaddingMode = PaddingMode.NONE,
-        dilation: int = 1,
-        groups: int = 1,
-        bias: bool = True,
+            self,
+            in_channels: int,
+            out_channels: int,
+            kernel_size: Union[int, List[int]],
+            stride: Union[int, List[int]] = 1,
+            padding_mode: PaddingMode = PaddingMode.NONE,
+            dilation: int = 1,
+            groups: int = 1,
+            bias: bool = True,
     ):
         super().__init__(
             in_channels=in_channels,
@@ -389,7 +389,7 @@ class MaskConv2d(torch.nn.Conv2d):
             super().cuda()
 
     def _pad(
-        self, acts: torch.Tensor, seq_lens: torch.Tensor
+            self, acts: torch.Tensor, seq_lens: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Pads the input activations."""
         batch, channels, features, max_seq_len = acts.size()
@@ -428,22 +428,22 @@ class MaskConv2d(torch.nn.Conv2d):
 
         mask = (
             torch.arange(max_seq_len)
-            .to(seq_lens.device)
-            .expand(len(seq_lens), max_seq_len)
+                .to(seq_lens.device)
+                .expand(len(seq_lens), max_seq_len)
         )
         mask = mask >= seq_lens.unsqueeze(1)
         mask = (
             mask.unsqueeze(1)  # add channels and features dims, these will be
-            .unsqueeze(1)  # broadcast so OK to be set to 1
-            .type(torch.bool)
-            .to(device=acts.device)
+                .unsqueeze(1)  # broadcast so OK to be set to 1
+                .type(torch.bool)
+                .to(device=acts.device)
         )
 
         acts.masked_fill_(mask, 0)
         del mask
 
     def forward(
-        self, x: Tuple[torch.Tensor, torch.Tensor]
+            self, x: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Returns the result of applying the module to ``x[0]``.
 
@@ -487,6 +487,79 @@ class MaskConv2d(torch.nn.Conv2d):
 
 
 SeqLenT = TypeVar("SeqLenT", torch.Tensor, Tuple[torch.Tensor, torch.Tensor])
+
+
+class BatchNorm(torch.nn.Module):
+    r"""Applies batch norm to an input signal with a given length.
+
+    All parameters and buffers are moved to the GPU with
+    :py:meth:`torch.nn.Module.cuda` if :py:func:`torch.cuda.is_available`.
+
+    Args:
+        batch_norm_type: the type of batch norm to use. It can be
+        :py:class:`torch.BatchNorm1d`, :py:class:`torch.BatchNorm2d` or
+        :py:class:`torch.BatchNorm3d`.
+
+        num_features: input feature size.
+
+    Attributes:
+        batch_norm: An instance of :py:class:`torch.BatchNorm1d`,
+        :py:class:`torch.BatchNorm2d` or :py:class:`torch.BatchNorm3d`.
+
+    Raises:
+        :py:class:`ValueError`: If the batch_norm_type doesn't correspond to one
+        of :py:class:`torch.BatchNorm1d`, :py:class:`torch.BatchNorm2d` or
+        :py:class:`torch.BatchNorm3d`.
+
+    """
+
+    def __init__(
+            self,
+            batch_norm_type: torch.nn.Module,
+            num_features: int,
+    ):
+        super().__init__()
+
+        if batch_norm_type not in [torch.nn.BatchNorm1d, torch.nn.BatchNorm2d,
+                                   torch.nn.BatchNorm3d]:
+            raise ValueError(f"Invalid batch norm type {batch_norm_type}")
+
+        self.batch_norm = batch_norm_type(num_features)
+        self.use_cuda = torch.cuda.is_available()
+        if self.use_cuda:
+            self.batch_norm = self.batch_norm.cuda()
+
+    def forward(
+        self, x: Tuple[torch.Tensor, torch.Tensor]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        r"""Returns the result of applying the rnn layer to ``x[0]``.
+
+        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
+        :py:func:`torch.cuda.is_available` was :py:data:`True` on
+        initialisation.
+
+        Args
+            x: A tuple where the first element is the network input (a
+                :py:class:`torch.Tensor`) and the second element is
+                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+                represents the sequence length of the corresponding *input*
+                sequence.
+
+        Returns:
+            The first element of the Tuple return value is the result after
+            applying the module to ``x[0]``.
+
+            The second element of the Tuple return value is a
+            :py:class:`torch.Tensor` with size ``[batch]`` where each entry
+            represents the sequence length of the corresponding *output*
+            sequence.
+        """
+        if self.use_cuda:
+            x = (x[0].cuda(), x[1].cuda())
+
+        x_norm = self.batch_norm(x[0])
+
+        return x_norm, x[1]
 
 
 class Conv2dTo1d(torch.nn.Module):
