@@ -1,5 +1,5 @@
 from myrtlespeech.model.rnn_t import RNNT
-from myrtlespeech.post_process.rnn_t_decoders import RNNTBeamDecoder
+from myrtlespeech.post_process.rnn_t_beam_decoder import RNNTBeamDecoder
 from myrtlespeech.protos import rnn_t_beam_decoder_pb2
 
 
