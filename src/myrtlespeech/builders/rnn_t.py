@@ -73,7 +73,7 @@ def build_rnnt_enc(
 
         time_reducer, rnn2 = None, None
         reduction = 1
-        encoder_out_features = rnn1_out_features
+        rnn_out_features = rnn1_out_features
 
     else:
         time_reduction_factor = rnn_t_enc.time_reduction_factor
@@ -88,18 +88,22 @@ def build_rnnt_enc(
 
         rnnt_input_features = rnn1_out_features * reduction
 
-        rnn2, encoder_out_features = build_rnn(
-            rnn_t_enc.rnn2, rnnt_input_features
-        )
+        rnn2, rnn_out_features = build_rnn(rnn_t_enc.rnn2, rnnt_input_features)
 
     # maybe add fc2:
     fc2: Optional[torch.nn.Module] = None
     if rnn_t_enc.HasField("fc2"):
+        # This layer halves feature size if possible
+        out_features = rnn_out_features // 2
+        out_features = out_features if out_features > 0 else 1
+
         fc2 = build_fully_connected(
             rnn_t_enc.fc2,
-            input_features=encoder_out_features,
-            output_features=encoder_out_features,
+            input_features=rnn_out_features,
+            output_features=out_features,
         )
+    else:
+        out_features = rnn_out_features
 
     encoder = RNNTEncoder(
         rnn1=rnn1,
@@ -110,4 +114,4 @@ def build_rnnt_enc(
         fc2=fc2,
     )
 
-    return encoder, encoder_out_features
+    return encoder, out_features
