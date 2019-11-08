@@ -12,13 +12,17 @@ from tests.protos.test_rnn_t import rnn_t
 
 @given(
     rnn_t_cfg=rnn_t(),
-    input_features=st.integers(min_value=1, max_value=32),
+    input_features=st.integers(min_value=2, max_value=32),
+    input_channels=st.integers(min_value=1, max_value=5),
     vocab_size=st.integers(min_value=1, max_value=32),
 )
 @settings(deadline=3000)
 def test_build_rnn_t_does_not_fail(
-    rnn_t_cfg: rnn_t_pb2.RNNT, input_features: int, vocab_size: int
+    rnn_t_cfg: rnn_t_pb2.RNNT,
+    input_features: int,
+    input_channels: int,
+    vocab_size: int,
 ) -> None:
     """Ensures builder does not throw exception."""
 
-    actual = build_rnn_t(rnn_t_cfg, input_features, vocab_size)
+    actual = build_rnn_t(rnn_t_cfg, input_features, input_channels, vocab_size)

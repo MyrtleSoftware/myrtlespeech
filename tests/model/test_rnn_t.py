@@ -4,6 +4,7 @@ import hypothesis.strategies as st
 import pytest
 import torch
 from hypothesis import given
+from hypothesis import reproduce_failure
 from hypothesis import settings
 from myrtlespeech.builders.rnn_t import build as build_rnn_t
 from myrtlespeech.model.rnn_t import RNNT
@@ -18,24 +19,28 @@ from tests.protos.test_rnn_t import rnn_t
 @given(
     data=st.data(),
     rnn_t_cfg=rnn_t(),
-    input_features=st.integers(min_value=1, max_value=32),
+    input_features=st.integers(min_value=2, max_value=32),
+    input_channels=st.integers(min_value=1, max_value=5),
     vocab_size=st.integers(min_value=2, max_value=32),
 )
 @settings(deadline=5000)
 def test_all_gradients_computed_for_all_model_parameters(
-    data, rnn_t_cfg: rnn_t_pb2.RNNT, input_features: int, vocab_size: int
+    data,
+    rnn_t_cfg: rnn_t_pb2.RNNT,
+    input_features: int,
+    input_channels: int,
+    vocab_size: int,
 ) -> None:
 
     # create network
-    rnnt = build_rnn_t(rnn_t_cfg, input_features, vocab_size)
+    rnnt = build_rnn_t(rnn_t_cfg, input_features, input_channels, vocab_size)
 
     # generate random input
     batch = data.draw(st.integers(1, 4))
-    channels = 1
     seq_len = data.draw(st.integers(3, 8))
     label_seq_len = data.draw(st.integers(1, 6))
 
-    x = torch.empty((batch, channels, input_features, seq_len)).normal_()
+    x = torch.empty((batch, input_channels, input_features, seq_len)).normal_()
     seq_lens = torch.randint(
         low=1, high=seq_len + 1, size=(batch,), dtype=torch.long
     )
