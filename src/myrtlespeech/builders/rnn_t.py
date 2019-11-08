@@ -14,13 +14,16 @@ from torch import nn
 
 
 def build(
-    rnn_t_cfg: rnn_t_pb2.RNNT, input_features: int, vocab_size: int
+    rnn_t_cfg: rnn_t_pb2.RNNT,
+    input_features: int,
+    input_channels: int,
+    vocab_size: int,
 ) -> RNNT:
     """
     TODO
     """
     encoder, encoder_out = build_rnnt_enc(
-        rnn_t_cfg.rnn_t_encoder, input_features
+        rnn_t_cfg.rnn_t_encoder, input_features * input_channels
     )
 
     ##decoder/prediction network

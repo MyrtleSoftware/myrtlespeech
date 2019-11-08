@@ -33,7 +33,6 @@ class RNNTGreedyDecoder(RNNTDecoderBase):
         )
 
     def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
-
         """Greedy RNNT decode method. See :py:class:`RNNTDecoderBase` for args"""
 
         fs, fs_lens = self.model.encode(inp)
