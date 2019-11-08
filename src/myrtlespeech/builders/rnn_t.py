@@ -1,3 +1,4 @@
+from typing import Optional
 from typing import Tuple
 
 import torch
@@ -50,13 +51,27 @@ def build_rnnt_enc(
     TODO
 
     """
+
+    # maybe add fc1:
+    fc1: Optional[torch.nn.Module] = None
+    if rnn_t_enc.HasField("fc1"):
+        output_features = rnn_t_enc.rnn1.hidden_size
+        fc1 = build_fully_connected(
+            rnn_t_enc.fc1,
+            input_features=input_features,
+            output_features=output_features,
+        )
+        input_features = output_features
+
     rnn1, rnn1_out_features = build_rnn(rnn_t_enc.rnn1, input_features)
 
     if rnn_t_enc.time_reduction_factor == 0:  # default value (i.e. not set)
         assert rnn_t_enc.HasField("rnn2") is False
-        encoder = RNNTEncoder(rnn1)
 
+        time_reducer, rnn2 = None, None
+        reduction = 1
         encoder_out_features = rnn1_out_features
+
     else:
         time_reduction_factor = rnn_t_enc.time_reduction_factor
 
@@ -73,6 +88,23 @@ def build_rnnt_enc(
         rnn2, encoder_out_features = build_rnn(
             rnn_t_enc.rnn2, rnnt_input_features
         )
-        encoder = RNNTEncoder(rnn1, time_reducer, reduction, rnn2)
+
+    # maybe add fc2:
+    fc2: Optional[torch.nn.Module] = None
+    if rnn_t_enc.HasField("fc2"):
+        fc2 = build_fully_connected(
+            rnn_t_enc.fc2,
+            input_features=encoder_out_features,
+            output_features=encoder_out_features,
+        )
+
+    encoder = RNNTEncoder(
+        rnn1=rnn1,
+        fc1=fc1,
+        time_reducer=time_reducer,
+        time_reduction_factor=reduction,
+        rnn2=rnn2,
+        fc2=fc2,
+    )
 
     return encoder, encoder_out_features

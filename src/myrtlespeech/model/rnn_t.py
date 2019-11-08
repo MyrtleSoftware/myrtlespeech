@@ -6,8 +6,9 @@ import torch
 
 
 class RNNT(torch.nn.Module):
-    r"""`RNN-T <https://arxiv.org/pdf/1211.3711.pdf>`_ Network. Architecture
-    based on `Streaming End-to-end Speech Recognition For Mobile Devices
+    r"""`RNN-T <https://arxiv.org/pdf/1211.3711.pdf>`_ Network.
+
+    Architecture based on `Streaming End-to-end Speech Recognition For Mobile Devices
     <https://arxiv.org/pdf/1811.06621.pdf>`_.
 
     Args:
@@ -105,8 +106,7 @@ class RNNT(torch.nn.Module):
             Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]
         ],
     ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        """Returns the result of applying the RNN-T network to the input audio
-        features ``x[0][0]`` and target labels ``x[0][1]``.
+        """Returns the result of applying the RNN-T network to `x`.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
@@ -147,9 +147,10 @@ class RNNT(torch.nn.Module):
     def prediction(
         self, y: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Returns the result of applying the RNN-T prediction network to the
-        target labels ``y[0][1]``. This function is only appropriate
-        during training (when the ground-truth labels are available).
+        """Returns the result of applying the RNN-T prediction network.
+
+        This function is only appropriate during training (when the ground-truth
+        labels are available).
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
@@ -172,7 +173,10 @@ class RNNT(torch.nn.Module):
         return out
 
     def embedding(self, y):
-        "Wrapper function on `self._embedding` that casts inputs to int64 if necessary"
+        """Wrapper function on `self._embedding`.
+
+        Casts inputs to int64 if necessary before applying embedding."""
+
         y_0, y_1 = y
         if y_0.dtype != torch.long:
             y_0 = y_0.long()
@@ -201,9 +205,7 @@ class RNNT(torch.nn.Module):
         ],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Returns the result of applying the RNN-T joint network to the encoder
-        hidden state audio features ``x[0][0]`` and the prediction network
-        target label hidden state ``x[0][1]``.
+        Returns the result of applying the RNN-T joint network.
 
         Args:
             x: A Tuple ``(x[0], x[1])``. ``x[0][0]`` is the first element of the
@@ -311,9 +313,12 @@ class RNNT(torch.nn.Module):
 
 
 class RNNTEncoder(torch.nn.Module):
-    r"""`RNN-T <https://arxiv.org/pdf/1211.3711.pdf>`_ encoder (Transcription Network). Architecture
-    based on `Streaming End-to-end Speech Recognition For Mobile Devices
-    <https://arxiv.org/pdf/1811.06621.pdf>`_.
+    r"""`RNN-T <https://arxiv.org/pdf/1211.3711.pdf>`_ encoder (Transcription Network).
+
+
+    Architecture based on `Streaming End-to-end Speech Recognition For Mobile Devices
+    <https://arxiv.org/pdf/1811.06621.pdf>`_ with optional additional fully connected
+    layers at the start and end of the encoder.
 
     Args:
 
@@ -334,6 +339,8 @@ class RNNTEncoder(torch.nn.Module):
             ``[batch]`` rnn2where each entry represents the sequence length of the
             corresponding *output* sequence. These may be different than the
             input sequence lengths due to downsampling in the encoder.
+
+        fc1: TODO
 
         time_reducer: An Optional ``Callable`` that reduces the number of timesteps
             into ``rnn2`` by stacking adjacent frames in the frequency dimension as
@@ -369,21 +376,25 @@ class RNNTEncoder(torch.nn.Module):
             corresponding *output* sequence. These may be different than the
             input sequence lengths due to downsampling.
 
+        fc2: TODO
+
     Returns:
-        A Tuple where the first element is the  output of ``rnn2`` if it is not
-        None, else the output of ``rnn1`` and the second element is a
-        :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-        represents the sequence length of the corresponding *output*
-        sequence to the encoder.
+        A Tuple where the first element is the  output of ``fc2`` if it is not
+        None, else the output of ``rnn2`` if it is not None, else the output of
+        `rnn1` and the second element is a :py:class:`torch.Tensor` of size
+        ``[batch]`` where each entry represents the sequence length of the
+        corresponding *output* sequence to the encoder.
 
     """
 
     def __init__(
         self,
         rnn1: torch.nn.Module,
+        fc1: Optional[torch.nn.Module] = None,
         time_reducer: Optional[torch.nn.Module] = None,
         time_reduction_factor: Optional[int] = 1,
         rnn2: Optional[torch.nn.Module] = None,
+        fc2: Optional[torch.nn.Module] = None,
     ):
         assert isinstance(time_reduction_factor, int)
         if time_reducer is None:
@@ -403,45 +414,27 @@ class RNNTEncoder(torch.nn.Module):
             assert rnn2.rnn.batch_first == False
 
         super().__init__()
-        # #######################
-        # drop_prob = 0.25
-        # relu_clip = 20
-        # self.fc1 = torch.nn.Sequential(
-        #     torch.nn.Linear(rnn1.rnn.input_size, rnn1.rnn.hidden_size),
-        #     torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=False),
-        #     torch.nn.Dropout(p=drop_prob),
-        #     torch.nn.Linear(rnn1.rnn.hidden_size, rnn1.rnn.input_size),
-        #     torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=False),
-        #     torch.nn.Dropout(p=drop_prob),
-        # )
-        #
-        # #####################
+
+        if fc1:
+            self.fc1 = fc1
         self.rnn1 = rnn1
         self.time_reducer = time_reducer
         self.time_reduction_factor = time_reduction_factor
-        self.rnn2 = rnn2
-        # #######################
-        # drop_prob = 0.25
-        # print(time_reduction_factor, "time_reduction_factor")
-        # hid_size = rnn1.rnn.hidden_size if rnn2 is None else rnn2.rnn.hidden_size
-        # self.fc2 = torch.nn.Sequential(
-        #     torch.nn.Linear(hid_size,
-        #                     hid_size),
-        #     torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=False),
-        #     torch.nn.Dropout(p=drop_prob),
-        #     torch.nn.Linear(hid_size, hid_size),
-        #     torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip, inplace=False),
-        #     torch.nn.Dropout(p=drop_prob),
-        # )
-        #
-        # #####################
+        if rnn2:
+            self.rnn2 = rnn2
+        if fc2:
+            self.fc2 = fc2
 
         self.use_cuda = torch.cuda.is_available()
 
         if self.use_cuda:
+            if fc1 is not None:
+                self.fc1 = self.fc1.cuda()
             self.rnn1 = self.rnn1.cuda()
-            if self.rnn2 is not None:
+            if rnn2 is not None:
                 self.rnn2 = self.rnn2.cuda()
+            if fc2 is not None:
+                self.fc2 = self.fc2.cuda()
 
     def forward(
         self, x: Tuple[torch.Tensor, torch.Tensor]
@@ -476,24 +469,27 @@ class RNNTEncoder(torch.nn.Module):
 
         # NOTE: possibly add optional convolutions here in the future
 
-        x = self._prepare_inputs_encode(x)
-
         if self.use_cuda:
             h = (x[0].cuda(), x[1].cuda())
-        # ###############
-        # h = self.fc1(h[0]), h[1]
-        # ############
+
+        del x
+
+        if hasattr(self, "fc1"):
+            h = h[0].transpose(2, 3), h[1]
+            h = self.fc1(h)
+            h = h[0].transpose(2, 3), h[1]
+
+        h = self._prepare_inputs_rnn1(h)
+
         h = self.rnn1(h)
 
         if self.time_reducer:
             h = self.time_reducer(h)
-
             h = self.rnn2(h)
-        # ###############
-        # h = self.fc2(h[0]), h[1]
-        # ############
 
-        del x
+        if hasattr(self, "fc2"):
+            h = self.fc2(h)
+
         return (h[0].contiguous(), h[1])
 
     def _certify_inputs_encode(self, inp):
@@ -505,7 +501,7 @@ class RNNTEncoder(torch.nn.Module):
         assert C == 1, f"There should only be a single channel input but C={C}"
         del x, x_lens, inp
 
-    def _prepare_inputs_encode(self, inp):
+    def _prepare_inputs_rnn1(self, inp):
         """
         Reshapes inputs to prepare them for `rnn1`.
         """
