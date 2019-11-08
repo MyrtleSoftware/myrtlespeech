@@ -8,8 +8,8 @@ import torch
 class RNNT(torch.nn.Module):
     r"""`RNN-T <https://arxiv.org/pdf/1211.3711.pdf>`_ Network.
 
-    Architecture based on `Streaming End-to-end Speech Recognition For Mobile Devices
-    <https://arxiv.org/pdf/1811.06621.pdf>`_.
+    Architecture based on `Streaming End-to-end Speech Recognition For Mobile
+    Devices <https://arxiv.org/pdf/1811.06621.pdf>`_.
 
     Args:
 
@@ -39,8 +39,8 @@ class RNNT(torch.nn.Module):
             the RNN-T prediction.
 
             Must accept as input a tuple where the first element is the prediction
-            network input (a :py:`torch.Tensor`) with size ``[batch, max_output_seq_len + 1,
-            in_features]`` and the second element is a
+            network input (a :py:`torch.Tensor`) with size ``[batch,
+            max_output_seq_len + 1, in_features]`` and the second element is a
             :py:class:`torch.Tensor` of size ``[batch]`` where each entry
             represent the sequence length of the corresponding *input*
             sequence to the rnn. *Note: this must be a `batch_first` rnn.*
@@ -74,8 +74,9 @@ class RNNT(torch.nn.Module):
             applying the module to the previous layers output. It must have
             size ``[batch, max_out_seq_len, out_features]``. The second element
             is returned unchanged but in this context should be a Tuple of two
-            :py:class:`torch.Tensor`s both of size ``[batch]`` that contain the *output* lengths of a) the audio features
-            inputs and b) the target sequences.
+            :py:class:`torch.Tensor`s both of size ``[batch]`` that contain the
+            *output* lengths of a) the audio features inputs and b) the target
+            sequences.
 
     """
 
@@ -210,13 +211,18 @@ class RNNT(torch.nn.Module):
         Args:
             x: A Tuple ``(x[0], x[1])``. ``x[0][0]`` is the first element of the
                 encoder network output (i.e. `.encode(...)[0]` - see
-                :py:class:`.RNNTEncoder` docstring). ``x[0][1]`` is the first element of the
-                prediction network output (i.e. `.prediction(...)[0]` - see prediction docstring).
+                :py:class:`.RNNTEncoder` docstring). ``x[0][1]`` is the first
+                element of the prediction network output (i.e.
+                `.prediction(...)[0]` - see prediction docstring).
+
                 ``x[1]`` is a Tuple of two :py:class:`torch.Tensor`s both of
-                size ``[batch]`` that contain the *input* lengths of a) the audio feature
-                inputs ``x[1][0]`` and b) the target sequences ``x[1][1]``.
+                size ``[batch]`` that contain the *input* lengths of a) the
+                audio feature inputs ``x[1][0]`` and b) the target sequences
+                ``x[1][1]``.
+
         Returns:
-            The output of the :py:class:`.RNNT` network. See initialisation docstring.
+            The output of the :py:class:`.RNNT` network. See initialisation
+                docstring.
         """
         (f, g), seq_lengths = x
 
@@ -315,9 +321,13 @@ class RNNT(torch.nn.Module):
 class RNNTEncoder(torch.nn.Module):
     r"""`RNN-T <https://arxiv.org/pdf/1211.3711.pdf>`_ encoder (Transcription Network).
 
+    All of the submodules other than ``rnn1`` are Optional. If present, the
+    modules are applied in the following order:
+
+    .. note:: ``fc1`` -> ``rnn1`` -> ``time_reducer`` -> ``rnn2`` -> ``fc2``
 
     Architecture based on `Streaming End-to-end Speech Recognition For Mobile Devices
-    <https://arxiv.org/pdf/1811.06621.pdf>`_ with optional additional fully connected
+    <https://arxiv.org/pdf/1811.06621.pdf>`_ with addition of Optional fully connected
     layers at the start and end of the encoder.
 
     Args:
@@ -336,11 +346,27 @@ class RNNTEncoder(torch.nn.Module):
             applying the module to the input. It must have size
             ``[max_rnn_seq_len, batch, rnn_features]``. The second element of
             the tuple return value is a :py:class:`torch.Tensor` with size
-            ``[batch]`` rnn2where each entry represents the sequence length of the
-            corresponding *output* sequence. These may be different than the
-            input sequence lengths due to downsampling in the encoder.
+            ``[batch]`` where each entry represents the sequence length of the
+            corresponding *output* sequence.
 
-        fc1: TODO
+        fc1: An Optional :py:class:`torch.nn.Module` containing the first fully
+            connected part of the RNN-T encoder.
+
+            Must accept as input a tuple where the first element is the network
+            input (a :py`torch.Tensor`) with size ``[max_seq_len, batch,
+            in_features]`` and the second element is a
+            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+            represents the sequence length of the corresponding *input*
+            sequence to the fc layer.
+
+            It must return a tuple where the first element is the result after
+            applying this fc layer over the final dimension only. This layer
+            *must not change* the hidden size dimension so this has size
+            ``[max_seq_len, batch, in_features]``. The second element of
+            the tuple return value is a :py:class:`torch.Tensor` with size
+            ``[batch]`` where each entry represents the sequence length of the
+            corresponding *output* sequence (which will be identical to the
+            input lenghts).
 
         time_reducer: An Optional ``Callable`` that reduces the number of timesteps
             into ``rnn2`` by stacking adjacent frames in the frequency dimension as
@@ -353,9 +379,9 @@ class RNNTEncoder(torch.nn.Module):
             The second element of the tuple must be a :py:class:`torch.Tensor` of size ``[batch]``
             that contains the new length of the corresponding sequence.
 
-        time_reduction_factor: An Optional ``int`` with default value 2. If
-            ``time_reducer`` is not None, this is the ratio by which the time dimension
-            is reduced.
+        time_reduction_factor: An Optional ``int`` with default value 1 (i.e. no
+            reduction). If ``time_reducer`` is not None, this is the ratio by
+            which the time dimension is reduced. If ``time_reducer``
 
         rnn2: An Optional :py:class:`torch.nn.Module` containing the second
             recurrent part of the RNN-T encoder. This must be None unless ``time_reducer``
@@ -376,7 +402,24 @@ class RNNTEncoder(torch.nn.Module):
             corresponding *output* sequence. These may be different than the
             input sequence lengths due to downsampling.
 
-        fc2: TODO
+        fc2: An Optional :py:class:`torch.nn.Module` containing the second fully
+            connected part of the RNN-T encoder.
+
+            Must accept as input a tuple where the first element is the network
+            input (a :py`torch.Tensor`) with size ``[max_downsampled_seq_len,
+            batch, rnn_features]`` and the second element is a
+            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+            represents the sequence length of the corresponding *input*
+            sequence to the fc layer.
+
+            It must return a tuple where the first element is the result after
+            applying this fc layer over the final dimension only. This layer
+            *must not change* the hidden size dimension so this has size
+            ``[max_downsampled_seq_len, batch, rnn_features]``. The second
+            element of the tuple return value is a :py:class:`torch.Tensor`
+            with size ``[batch]`` where each entry represents the sequence
+            length of the corresponding *output* sequence.
+
 
     Returns:
         A Tuple where the first element is the  output of ``fc2`` if it is not
@@ -439,7 +482,7 @@ class RNNTEncoder(torch.nn.Module):
     def forward(
         self, x: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Returns the result of applying the RNN-T encoder to the input audio features.
+        """Returns the result of applying the RNN-T encoder to the audio features.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
@@ -454,20 +497,22 @@ class RNNTEncoder(torch.nn.Module):
                 features, max_input_seq_len]`` and the second element is a
                 :py:class:`torch.Tensor` of size ``[batch]`` where each entry
                 represents the sequence length of the corresponding *input*
-                sequence to the rnn. Currently the number of channels must = 1 and
-                this input is immediately reshaped for input to `rnn1`. The reshaping
-                operation is not dealt with in preprocessing so that a) this
-                model and `myrtlespeech.model.deep_speech_2` can share the same preprocessing
-                and b) because future edits to `myrtlespeech.model.rnn_t.RNNTEncoder`
-                may add convolutions before input to `rnn1`.
+                sequence to the rnn. The number of channels must = 1 and
+                this input is immediately reshaped for input to `rnn1`. The
+                reshaping operation is not dealt with in preprocessing so that:
+                a) this model and `myrtlespeech.model.deep_speech_2` can
+                share the same preprocessing and b) because future edits to
+                `myrtlespeech.model.rnn_t.RNNTEncoder` may add convolutions
+                before input to `rnn1` as in `awni-speech<https://github.com/awni/speech>`_
 
         Returns:
-            Output from ``rnn2`` if present, else output from ``rnn1``. See initialisation
-            docstring.
+            Output from ``rnn2`` if present, else output from ``rnn1``. See
+            initialisation docstring.
+
         """
         self._certify_inputs_encode(x)
 
-        # NOTE: possibly add optional convolutions here in the future
+        # Add Optional convolutions here in the future?
 
         if self.use_cuda:
             h = (x[0].cuda(), x[1].cuda())
