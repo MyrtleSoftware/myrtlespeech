@@ -21,7 +21,7 @@ from tests.protos.test_rnn_t import rnn_t
     input_features=st.integers(min_value=1, max_value=32),
     vocab_size=st.integers(min_value=2, max_value=32),
 )
-@settings(deadline=3000)
+@settings(deadline=5000)
 def test_all_gradients_computed_for_all_model_parameters(
     data, rnn_t_cfg: rnn_t_pb2.RNNT, input_features: int, vocab_size: int
 ) -> None:
