@@ -46,12 +46,11 @@ class RNNT(torch.nn.Module):
             sequence to the rnn. *Note: this must be a `batch_first` rnn.*
 
             It must return a tuple where the first element is the result after
-            applying the module to the input. It must have size
-            ``[max_rnn_seq_len, batch, rnn_features]``. The second element of
+            applying the module to the input. It must have size ``[batch,
+            max_output_seq_len + 1, in_features]``. The second element of
             the tuple return value is a :py:class:`torch.Tensor` with size
             ``[batch]`` where each entry represents the sequence length of the
-            corresponding *output* sequence. These may be different than the
-            input sequence lengths due to downsampling in the encoder.
+            corresponding *output* sequence.
 
         fully_connected: A :py:class:`torch.nn.Module` containing the fully
             connected part of the RNNT joint network.
