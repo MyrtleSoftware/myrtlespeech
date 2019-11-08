@@ -118,14 +118,9 @@ class CommonVoice(Dataset):
         # Downsample to 16KHz sample rate for consistency with other data sets
         # Not using torchaudio and SoxEffectChain for this since it is not
         # thread safe
-        audio = pydub.AudioSegment.from_mp3(path)
-        rate = audio.frame_rate
-        assert rate % 16000 == 0
-        audio = np.array(audio.get_array_of_samples())
-        audio = sp.decimate(audio, int(rate // 16000))
-        audio = np.ascontiguousarray(audio)
-        audio = torch.tensor(audio, dtype=torch.float32).unsqueeze(0)
+        audio, rate = torchaudio.load(path)
 
+        assert rate == 16000, f"{path} sample rate == {rate} != 16000"
         assert (
             audio.size(1) / 16000 == self.durations[index]
         ), f"{path} sample duration != expected duration"
@@ -223,6 +218,9 @@ class CommonVoice(Dataset):
         self.durations: List[float] = []
         self.transcriptions: List[str] = []
 
+        os.makedirs(
+            os.path.join(self.root, self.base_dir, "clips_down"), exist_ok=True
+        )
         for subset in self.subsets:
             self._parse_subset_file(
                 os.path.join(self.root, self.base_dir), subset
@@ -251,7 +249,17 @@ class CommonVoice(Dataset):
         duration = (si.length / si.channels) / si.rate
         if self.max_duration is not None and duration > self.max_duration:
             return True
-        self.paths.append(path)
+
+        down_file = file[:-3] + "wav"
+        down_path = os.path.join(root, "clips_down", down_file)
+        if not os.path.isfile(down_path):
+            # Downsample file to 16KHz
+            audio = pydub.AudioSegment.from_mp3(path)
+            audio = audio.set_frame_rate(16000)
+
+            # Save sample as file
+            audio.export(down_path, format="wav")
+        self.paths.append(down_path)
         self.durations.append(duration)
         return False
 
