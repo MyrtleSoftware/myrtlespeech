@@ -55,15 +55,16 @@ class RNNTLoss(torch.nn.Module):
             targets: A tuple where the first element is a
                 :py:class:`torch.Tensor` such that each entry in the target
                 sequence is a class index. Target indices cannot be the blank
-                index. It must have size ``[batch, max_seq_len]``. In the former form each target
-                sequence is padded to the length of the longest sequence and
-                stacked.
+                index. It must have size ``[batch, max_seq_len]``. In the former
+                form each target sequence is padded to the length of the longest
+                sequence and stacked.
 
                 The second element is a :py:class:`torch.Tensor` that gives
                 the lengths of the targets. Lengths are specified for each
                 sequence to achieve masking under the assumption that sequences
                 are padded to equal lengths.
         """
+
         logits, (logit_lens, _) = inputs
         y, y_lens = targets
 
