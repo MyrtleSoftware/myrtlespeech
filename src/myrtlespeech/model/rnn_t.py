@@ -508,8 +508,8 @@ class RNNTEncoder(torch.nn.Module):
                 before input to `fc1`/`rnn1` as in `awni-speech<https://github.com/awni/speech>`_
 
         Returns:
-            Output from ``rnn2`` if present, else output from ``rnn1``. See
-            initialisation docstring.
+            Output from `fc2`` if present else output from `rnn2`` if present,
+            else output from ``rnn1``. See initialisation docstring.
 
         """
         self._certify_inputs_encode(x)
