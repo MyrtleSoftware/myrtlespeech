@@ -12,106 +12,6 @@ from myrtlespeech.model.rnn_t import RNNT
 from myrtlespeech.post_process.rnn_t_decoder_base import RNNTDecoderBase
 
 
-class RNNTGreedyDecoder(RNNTDecoderBase):
-    """Decodes RNNT output using a greedy strategy.
-
-    Args:
-        See :py:class:`RNNTDecoderBase` for args.
-    """
-
-    def __init__(
-        self,
-        blank_index: int,
-        model: RNNT,
-        max_symbols_per_step: Optional[Union[int, None]] = None,
-    ):
-
-        super().__init__(
-            blank_index=blank_index,
-            model=model,
-            max_symbols_per_step=max_symbols_per_step,
-        )
-
-    def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
-        """Greedy RNNT decode method. See :py:class:`RNNTDecoderBase` for args"""
-
-        fs, fs_lens = self.model.encode(inp)
-        fs = fs[: fs_lens[0], :, :]  # size: seq_len, batch = 1, rnn_features
-        assert fs_lens[0] == fs.shape[0], "Time dimension comparison failed"
-
-        hidden = None
-        label: List[int] = []
-
-        for t in range(fs.shape[0]):
-
-            f = fs[t, :, :].unsqueeze(0)
-
-            # add length
-            f = (f, torch.IntTensor([1]))
-
-            not_blank = True
-            symbols_added = 0
-            while not_blank and symbols_added < self.max_symbols_per_step:
-
-                g, hidden_prime = self._pred_step(
-                    self._get_last_idx(label), hidden
-                )
-                logp = self._joint_step(f, g)
-
-                # get index k, of max prob
-                max_val, idx = logp.max(0)
-                idx = idx.item()
-
-                if idx == self.blank_index:
-                    not_blank = False
-                else:
-                    label.append(idx)
-                    hidden = hidden_prime
-                symbols_added += 1
-
-        del f, g, hidden, hidden_prime, logp, fs, fs_lens
-        return label
-
-
-def log_aplusb(a, b):
-    return max(a, b) + math.log1p(math.exp(-math.fabs(a - b)))
-
-
-def is_prefix(a, b):
-    if a == b or len(a) >= len(b):
-        return False
-    for i in range(len(a)):
-        if a[i] != b[i]:
-            return False
-    return True
-
-
-class Sequence:
-    def __init__(self, seq=None, hidden=None, max_symbols=None):
-        if seq is None:
-            self.g = []  # predictions of phoneme language model
-            self.labels = []  # prediction phoneme label
-            self.times = (
-                []
-            )  # list of timesteps at which predictions are emmitted
-            self.h = hidden
-            self.logp = 0  # probability of this sequence, in log scale
-            self.remaining_symbols = max_symbols
-        else:
-            self.g = seq.g[:]  # save for prefixsum
-            self.labels = seq.labels[:]
-            self.times = seq.times[:]
-            self.h = seq.h
-            self.logp = seq.logp
-            self.remaining_symbols = seq.remaining_symbols
-
-    def __eq__(self, other):
-        return self.labels == other.labels
-
-    def __str__(self):
-        return f"{self.labels, self.logp}"
-
-
 class RNNTBeamDecoder(RNNTDecoderBase):
     """Decodes RNNT output using a beam search strategy. This is a reference
     implementation and its performance is *not* guaranteed to be useful for a
@@ -155,7 +55,6 @@ class RNNTBeamDecoder(RNNTDecoderBase):
         self.length_norm = length_norm
 
     def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
-
         """Beam RNNT decode method. See :py:class:`RNNTDecoderBase` for args"""
 
         fs, fs_lens = self.model.encode(inp)
@@ -234,3 +133,42 @@ class RNNTBeamDecoder(RNNTDecoderBase):
         label = B[0].labels
         del f, pred, hidden, logp, fs, B, A, curlogp, y_star, yk
         return label
+
+
+def log_aplusb(a, b):
+    return max(a, b) + math.log1p(math.exp(-math.fabs(a - b)))
+
+
+def is_prefix(a, b):
+    if a == b or len(a) >= len(b):
+        return False
+    for i in range(len(a)):
+        if a[i] != b[i]:
+            return False
+    return True
+
+
+class Sequence:
+    def __init__(self, seq=None, hidden=None, max_symbols=None):
+        if seq is None:
+            self.g = []  # predictions of phoneme language model
+            self.labels = []  # prediction phoneme label
+            self.times = (
+                []
+            )  # list of timesteps at which predictions are emmitted
+            self.h = hidden
+            self.logp = 0  # probability of this sequence, in log scale
+            self.remaining_symbols = max_symbols
+        else:
+            self.g = seq.g[:]  # save for prefixsum
+            self.labels = seq.labels[:]
+            self.times = seq.times[:]
+            self.h = seq.h
+            self.logp = seq.logp
+            self.remaining_symbols = seq.remaining_symbols
+
+    def __eq__(self, other):
+        return self.labels == other.labels
+
+    def __str__(self):
+        return f"{self.labels, self.logp}"
