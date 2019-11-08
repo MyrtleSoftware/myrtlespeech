@@ -117,11 +117,14 @@ class RNNT(torch.nn.Module):
             x: A Tuple ``(x[0], x[1])``. ``x[0]`` is input to the network and is
                 a Tuple ``x[0] = (x[0][0], x[0][1])`` where both elements are
                 :py:class:`torch.Tensor`s. ``x[0][0]`` is the audio feature input
-                with  size ``[batch, channels, features, max_input_seq_len]`` while ``x[0][1]`` is
-                the target label tensor of size ``[batch, max_label_length]``.
+                with  size ``[batch, channels, features, max_input_seq_len]``
+                while ``x[0][1]`` is the target label tensor of size ``[batch,
+                max_label_length]``.
+
                 ``x[1]`` is a Tuple of two :py:class:`torch.Tensor`s both of
                 size ``[batch]`` that contain the *input* lengths of a) the audio feature
                 inputs ``x[1][0]`` and b) the target sequences ``x[1][1]``.
+
         Returns:
             A Tuple where the first element is the output of the RNNT network: a
                 :py:class:`torch.Tensor` with size ``[batch, max_seq_len,
@@ -497,13 +500,13 @@ class RNNTEncoder(torch.nn.Module):
                 features, max_input_seq_len]`` and the second element is a
                 :py:class:`torch.Tensor` of size ``[batch]`` where each entry
                 represents the sequence length of the corresponding *input*
-                sequence to the rnn. The number of channels must = 1 and
-                this input is immediately reshaped for input to `rnn1`. The
+                sequence to the rnn. The channel dimension contains context frames
+                and is immediately flattened into the `features` dimension. This
                 reshaping operation is not dealt with in preprocessing so that:
                 a) this model and `myrtlespeech.model.deep_speech_2` can
                 share the same preprocessing and b) because future edits to
                 `myrtlespeech.model.rnn_t.RNNTEncoder` may add convolutions
-                before input to `rnn1` as in `awni-speech<https://github.com/awni/speech>`_
+                before input to `fc1`/`rnn1` as in `awni-speech<https://github.com/awni/speech>`_
 
         Returns:
             Output from ``rnn2`` if present, else output from ``rnn1``. See
@@ -512,13 +515,11 @@ class RNNTEncoder(torch.nn.Module):
         """
         self._certify_inputs_encode(x)
 
-        # Add Optional convolutions here in the future?
-
         if self.use_cuda:
             h = (x[0].cuda(), x[1].cuda())
 
-        del x
-
+        # Add Optional convolutions here in the future?
+        h = self._prepare_inputs_fc1(h)
         if hasattr(self, "fc1"):
             h = h[0].transpose(2, 3), h[1]
             h = self.fc1(h)
@@ -535,6 +536,8 @@ class RNNTEncoder(torch.nn.Module):
         if hasattr(self, "fc2"):
             h = self.fc2(h)
 
+        del x
+
         return (h[0].contiguous(), h[1])
 
     def _certify_inputs_encode(self, inp):
@@ -543,7 +546,6 @@ class RNNTEncoder(torch.nn.Module):
         B1, C, I, T = x.shape
         B2, = x_lens.shape
         assert B1 == B2, "Batch size must be the same for inputs and targets"
-        assert C == 1, f"There should only be a single channel input but C={C}"
         del x, x_lens, inp
 
     def _prepare_inputs_rnn1(self, inp):
@@ -553,7 +555,26 @@ class RNNTEncoder(torch.nn.Module):
         (x, x_lens) = inp
         B, C, I, T = x.shape
 
+        assert C == 1, f"There should only be a single channel input but C={C}"
+
         x = x.squeeze(1)  # B, I, T
         x = x.permute(2, 0, 1).contiguous()  # T, B, I
+        del inp
+        return (x, x_lens)
+
+    def _prepare_inputs_fc1(self, inp):
+        """
+        Reshapes inputs to prepare them for `fc1`.
+
+        This involves flattening n_context in channel dimension in the hidden
+        dimension.
+        """
+
+        (x, x_lens) = inp
+        B, C, I, T = x.shape
+
+        if not C == 1:
+            x = x.view(B, 1, C * I, T).contiguous()
+
         del inp
         return (x, x_lens)

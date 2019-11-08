@@ -189,6 +189,7 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
         model = build_rnn_t(
             rnn_t_cfg=stt_cfg.rnn_t,
             input_features=input_features,
+            input_channels=input_channels,
             vocab_size=len(alphabet) - 1,  # i.e. excluding the blank symbol
         )
     else:
