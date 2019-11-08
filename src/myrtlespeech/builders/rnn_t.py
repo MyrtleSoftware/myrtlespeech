@@ -19,9 +19,118 @@ def build(
     input_channels: int,
     vocab_size: int,
 ) -> RNNT:
+    """Returns a :py:class:`.RNNT` based on the config.
+
+    Args:
+        rnn_t_cfg: An ``RNNT`` protobuf object containing
+            the config for the desired :py:class:`torch.nn.Module`.
+
+        input_features: The number of features for the input.
+
+        input_channels: The number of channels in the input.
+
+        output_features: The number of output features.
+
+    Returns:
+        A :py:class:`.RNNT` based on the config.
+
+    Example:
+        >>> from google.protobuf import text_format
+        >>> cfg_text = '''
+        ... rnn_t_encoder {
+        ...    fc1 {
+        ...       num_hidden_layers: 1;
+        ...       hidden_size: 1152;
+        ...       activation {
+        ...         hardtanh {
+        ...           min_val: 0.0;
+        ...           max_val: 20.0;
+        ...           }
+        ...         }
+        ...       }
+        ...     rnn1 {
+        ...         rnn_type: LSTM;
+        ...         hidden_size: 1152;
+        ...         num_layers: 2;
+        ...         bias: true;
+        ...         bidirectional: false;
+        ...             }
+        ...
+        ...      fc2 {
+        ...        num_hidden_layers: 1;
+        ...         hidden_size: 1152;
+        ...         activation {
+        ...           hardtanh {
+        ...             min_val: 0.0;
+        ...             max_val: 20.0;
+        ...             }
+        ...           }
+        ...         }
+        ...     }
+        ... dec_rnn {
+        ...     rnn_type: LSTM;
+        ...     hidden_size: 256;
+        ...     num_layers: 2;
+        ...     bias: true;
+        ...     bidirectional: false;
+        ...     batch_first: true;
+        ...    }
+        ...
+        ... fully_connected {
+        ...     num_hidden_layers: 1;
+        ...     hidden_size: 512;
+        ...     activation {
+        ...       hardtanh {
+        ...         min_val: 0.0;
+        ...         max_val: 20.0;
+        ...         }
+        ...       }
+        ...     }
+        ... '''
+        >>> cfg = text_format.Merge(
+        ...             cfg_text,
+        ...             rnn_t_pb2.RNNT()
+        ... )
+        >>> build(cfg, input_features=80, input_channels=5, vocab_size=28)
+        RNNT(
+          (encode): RNNTEncoder(
+            (fc1): FullyConnected(
+              (fully_connected): Sequential(
+                (0): Linear(in_features=400, out_features=1152, bias=True)
+                (1): Hardtanh(min_val=0.0, max_val=20.0)
+                (2): Linear(in_features=1152, out_features=1152, bias=True)
+              )
+            )
+            (rnn1): RNN(
+              (rnn): LSTM(1152, 1152, num_layers=2)
+            )
+            (fc2): FullyConnected(
+              (fully_connected): Sequential(
+                (0): Linear(in_features=1152, out_features=1152, bias=True)
+                (1): Hardtanh(min_val=0.0, max_val=20.0)
+                (2): Linear(in_features=1152, out_features=576, bias=True)
+              )
+            )
+          )
+          (predict_net): ModuleDict(
+            (dec_rnn): RNN(
+              (rnn): LSTM(256, 256, num_layers=2, batch_first=True)
+            )
+            (embed): Embedding(28, 256)
+          )
+          (joint_net): ModuleDict(
+            (fully_connected): FullyConnected(
+              (fully_connected): Sequential(
+                (0): Linear(in_features=832, out_features=512, bias=True)
+                (1): Hardtanh(min_val=0.0, max_val=20.0)
+                (2): Linear(in_features=512, out_features=29, bias=True)
+              )
+            )
+          )
+        )
+
     """
-    TODO
-    """
+
     encoder, encoder_out = build_rnnt_enc(
         rnn_t_cfg.rnn_t_encoder, input_features * input_channels
     )
@@ -50,13 +159,83 @@ def build(
 def build_rnnt_enc(
     rnn_t_enc: rnn_t_encoder_pb2.RNNTEncoder, input_features: int
 ) -> Tuple[RNNTEncoder, int]:
-    """
-    TODO
+    """Returns a :py:class:`.RNNTEncoder` based on the config.
 
+    Args:
+        rnn_t_cfg: An ``RNNT`` protobuf object containing
+            the config for the desired :py:class:`torch.nn.Module`.
+
+        input_features: The number of features for the input.
+
+    Returns:
+        A Tuple where the first element is an :py:class:`.RNNTEncoder` based
+            on the config and the second element is the encoder output feature
+            size. See :py:class:`.RNNTEncoder` docstrings for more information.
+
+    Example:
+        >>> from google.protobuf import text_format
+        >>> cfg_text = '''
+        ... fc1 {
+        ... num_hidden_layers: 1;
+        ... hidden_size: 1152;
+        ... activation {
+        ...   hardtanh {
+        ...     min_val: 0.0;
+        ...     max_val: 20.0;
+        ...     }
+        ...   }
+        ... }
+        ... rnn1 {
+        ...   rnn_type: LSTM;
+        ...   hidden_size: 1152;
+        ...   num_layers: 2;
+        ...   bias: true;
+        ...   bidirectional: false;
+        ...       }
+        ...
+        ... fc2 {
+        ... num_hidden_layers: 1;
+        ... hidden_size: 1152;
+        ... activation {
+        ...   hardtanh {
+        ...     min_val: 0.0;
+        ...     max_val: 20.0;
+        ...     }
+        ...   }
+        ... }
+        ... '''
+        >>> cfg = text_format.Merge(
+        ...             cfg_text,
+        ...             rnn_t_encoder_pb2.RNNTEncoder()
+        ... )
+        >>> encoder, out_features = build_rnnt_enc(cfg, input_features=400)
+        >>> encoder
+        RNNTEncoder(
+          (fc1): FullyConnected(
+            (fully_connected): Sequential(
+              (0): Linear(in_features=400, out_features=1152, bias=True)
+              (1): Hardtanh(min_val=0.0, max_val=20.0)
+              (2): Linear(in_features=1152, out_features=1152, bias=True)
+            )
+          )
+          (rnn1): RNN(
+            (rnn): LSTM(1152, 1152, num_layers=2)
+          )
+          (fc2): FullyConnected(
+            (fully_connected): Sequential(
+              (0): Linear(in_features=1152, out_features=1152, bias=True)
+              (1): Hardtanh(min_val=0.0, max_val=20.0)
+              (2): Linear(in_features=1152, out_features=576, bias=True)
+            )
+          )
+        )
+        >>> out_features
+        576
     """
 
     # maybe add fc1:
     fc1: Optional[torch.nn.Module] = None
+
     if rnn_t_enc.HasField("fc1"):
         output_features = rnn_t_enc.rnn1.hidden_size
         fc1 = build_fully_connected(
