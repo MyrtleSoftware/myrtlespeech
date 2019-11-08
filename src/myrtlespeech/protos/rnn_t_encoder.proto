@@ -3,14 +3,19 @@ syntax = "proto3";
 package myrtlespeech.protos;
 
 import "myrtlespeech/protos/rnn.proto";
+import "myrtlespeech/protos/fully_connected.proto";
 
 // RNN-T Encoder configuration
 message RNNTEncoder {
+
+  FullyConnected fc1 = 2;
+
   RNN rnn1 = 1;
 
   uint32 time_reduction_factor = 3;
 
   RNN rnn2 = 4;
 
+  FullyConnected fc2 = 5;
 
 }
