@@ -132,14 +132,12 @@ class FullyConnected(torch.nn.Module):
         """
         x_inp, x_len = x
 
-        del x
-
         if self.use_cuda:
             x_inp = x_inp.cuda()
             x_len = x_len.cuda()
 
         result = self.fully_connected(x_inp)
 
-        del x_inp
+        del x_inp, x
 
         return result, x_len
