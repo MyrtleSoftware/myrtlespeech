@@ -66,7 +66,7 @@ def seq_to_seq_collate_fn(
                 A :py:class:`torch.Tensor` of input for a model. The sequence
                 length dimension must be last.
 
-            tensor_len:collate_label_list
+            tensor_len:
                 A scalar, integer :py:class:`torch.Tensor` giving the length of
                 ``tensor``.
 
