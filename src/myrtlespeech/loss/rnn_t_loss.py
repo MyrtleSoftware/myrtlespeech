@@ -28,7 +28,7 @@ class RNNTLoss(torch.nn.Module):
         rnnt_loss: A :py:class:`warprnnt_pytorch.RNNTLoss` instance.
     """
 
-    def __init__(self, blank: int = 0, reduction: str = "mean"):
+    def __init__(self, blank: int, reduction: str = "mean"):
         super().__init__()
         self.rnnt_loss = WarpRNNTLoss(blank=blank)
         self.use_cuda = torch.cuda.is_available()
@@ -72,7 +72,7 @@ class RNNTLoss(torch.nn.Module):
         if logits.dtype != torch.float:
             logits_orig = logits
             logits = logits.float()
-            del logits_orig
+            del logits_orig  # save memory *before* computing the loss
 
         if y.dtype != torch.int32:
             y = y.int()
