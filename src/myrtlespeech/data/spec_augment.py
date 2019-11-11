@@ -49,24 +49,27 @@ def spec_augment(
     """
     v = mel_spectrogram.shape[1]
     tau = mel_spectrogram.shape[2]
+    # Ensure we don't choose to mask part of the spectrum that doesn't exist
+    freq_mask = min(v, frequency_masking_para)
+    time_mask = min(tau, time_warping_para)
 
     # Step 1 : Time warping
     if time_warping_para == 0:
         # Noop if no time warping for efficency
         warped_mel_spectrogram = mel_spectrogram
     else:
-        warped_mel_spectrogram = time_warp(mel_spectrogram, W=time_warping_para)
+        warped_mel_spectrogram = time_warp(mel_spectrogram, time_warping_para)
 
     # Step 2 : Frequency masking
     for _ in range(frequency_mask_num):
-        f = np.random.uniform(low=0.0, high=frequency_masking_para)
+        f = np.random.uniform(low=0.0, high=freq_mask)
         f = int(f)
         f0 = random.randint(0, v - f)
         warped_mel_spectrogram[:, f0 : f0 + f, :] = 0
 
     # Step 3 : Time masking
     for _ in range(time_mask_num):
-        t = np.random.uniform(low=0.0, high=time_masking_para)
+        t = np.random.uniform(low=0.0, high=time_mask)
         t = int(t)
         t0 = random.randint(0, tau - t)
         warped_mel_spectrogram[:, :, t0 : t0 + t] = 0
@@ -75,13 +78,16 @@ def spec_augment(
 
 
 def time_warp(spec, W=5):
-    spec = spec.view(1, spec.shape[0], spec.shape[1])
     num_rows = spec.shape[1]
     spec_len = spec.shape[2]
 
     y = num_rows // 2
     horizontal_line_at_ctr = spec[0][y]
     assert len(horizontal_line_at_ctr) == spec_len
+
+    if spec_len <= 2 * W:
+        # If spectogram is too short, there is no valid range to time warp
+        return spec
 
     point_to_warp = horizontal_line_at_ctr[random.randrange(W, spec_len - W)]
     assert isinstance(point_to_warp, torch.Tensor)
@@ -93,6 +99,7 @@ def time_warp(spec, W=5):
         torch.tensor([[[y, point_to_warp + dist_to_warp]]]),
     )
     warped_spectro, _ = sparse_image_warp(spec, src_pts, dest_pts)
+    print(f"Successfully warped: {spec_len}")
     return warped_spectro.squeeze(3)
 
 
@@ -397,7 +404,7 @@ def interpolate_bilinear(
 
         # alpha has the same type as the grid, as we will directly use alpha
         # when taking linear combinations of pixel values from the image.
-        alpha = torch.tensor(queries - floor, dtype=grid_type)
+        alpha = queries - floor
         min_alpha = torch.tensor(0.0, dtype=grid_type)
         max_alpha = torch.tensor(1.0, dtype=grid_type)
         alpha = torch.min(torch.max(min_alpha, alpha), max_alpha)
