@@ -5,37 +5,22 @@ import torch
 
 class StackTime:
     """
-    Downsamples batched sequence in the time dimension by stacking inputs in the
-    feature dimension. For use within the main body of a :py:func:`torch.nn.Module`,
-    usually before an rnn in order to reduce the computational cost.
+    Downsamples sequences in time by stacking in the hidden dimension.
+
+    For example, this Callable may be used before the input to an RNN in order
+    to reduce the computational cost.
 
     Args:
-        time_reduction_factor: An `int` > 0 which represents the multiplicative
-            increase in input feature size and the (approximate) divisive reduction
-            in length of time sequence. For example, if time_reduction_factor = 2,
-            the input feature size will double and the sequence length will be approximately
-            halved (approximately as padding may be required)
-        padding_value: The padding value that will be added if required (i.e. if
-            input_seq_len % time_reduction_factor != 0)
+        time_reduction_factor: An `int` > 0 which gives the factor by which the
+            input feature size increases. It is also approximately equal to the
+            factor by which the time-sequence length is decreased. For example,
+            if `time_reduction_factor` = 2, the input feature size is doubled
+            and the sequence length will be approximately halved
+            ('approximately' as padding will be required if `input_seq_len %
+            time_reduction_factor != 0`.
 
-    `__call__` Accepts:
-        x: A tuple where the first element is the network
-            input (a :py:`torch.Tensor`) with size ``[max_seq_len, batch,
-            in_features]`` and the second element is a
-            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-            represents the sequence length of the corresponding *input*
-            sequence.
-
-    `__call__` Returns:
-        A tuple where the first element is the result after
-        applying the module to the output. It will have size
-        ``[max_downsampled_seq_len, batch, in_features * time_reduction_factor]``.
-        ``max_downsampled_seq_len`` = ceil(input_seq_len / time_reduction_factor)
-        The second element of the tuple return value is a :py:class:`torch.Tensor` with size
-        ``[batch]`` where each entry represents the sequence length of the
-        corresponding *output* sequence.
-
-
+        padding_value: Optional integer, default = 0. The padding value that is
+        added if `input_seq_len % time_reduction_factor != 0`.
     """
 
     def __init__(self, time_reduction_factor, padding_value=0):
@@ -48,6 +33,27 @@ class StackTime:
     def __call__(
         self, x: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Downsamples sequences in time by stacking in the hidden dimension.
+
+        Args:
+            x: A tuple where the first element is a :py:`torch.Tensor` with
+                size ``[max_seq_len, batch, in_features]`` and the second
+                element is a :py:class:`torch.Tensor` of size ``[batch]`` where
+                each entry represents the sequence length of the corresponding
+                *input* sequence.
+
+        Returns:
+            A tuple where the first element is the result after
+            applying the Callable to the output. It will have size
+            ``[max_downsampled_seq_len, batch, in_features *
+            time_reduction_factor]`` where ``max_downsampled_seq_len`` =
+            ``ceil(input_seq_len / time_reduction_factor)``. The second element
+            of the tuple is a :py:class:`torch.Tensor` with size
+            ``[batch]`` where each entry represents the sequence length of the
+            corresponding *output* sequence.
+        """
+
         inp, lens = x
 
         T, B, P = inp.shape
