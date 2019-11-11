@@ -7,7 +7,7 @@ __pycache__/
 *.so
 
 #dependencies
-/deps
+deps/
 
 # Distribution / packaging
 .Python
@@ -104,9 +104,6 @@ venv.bak/
 # mkdocs documentation
 /site
 
-# remote sync (atom)
-.remote-sync.json
-
 # mypy
 .mypy_cache/
 
@@ -120,5 +117,3 @@ charts/
 # protobuf
 *_pb2.py
 *_pb2.pyi
-
-/notebooks/api_development2.ipynb
