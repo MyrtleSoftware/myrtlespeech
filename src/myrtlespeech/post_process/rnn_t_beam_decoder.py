@@ -131,7 +131,7 @@ class RNNTBeamDecoder(RNNTDecoderBase):
             B.sort(key=lambda a: -a.logp / max(len(a.labels), 0.1))
 
         label = B[0].labels
-        del f, pred, hidden, logp, fs, B, A, curlogp, y_star, yk
+        del f, pred, hidden, logp, fs, B, A, y_star, yk
         return label
 
 
