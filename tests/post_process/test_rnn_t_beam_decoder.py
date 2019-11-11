@@ -18,40 +18,45 @@ class DecRNN:
         self.rnn = RNN(hidden_size)
 
     def __call__(self, x):
-        """ ``[B, U + 1, H]``"""
-        print("dec_rnn", x)
+        """TODO: The way this works is by using the hidden state to decide which
+        chars to upweight at a given timestep.
+         ``[B, U + 1, H]``"""
+
         if isinstance(x[0], torch.Tensor):
-            y = x[0]
+            embedded = x[0]
             state = None
             return_tuple = False
         elif isinstance(x[0], tuple) and len(x[0]) == 2:
-            y, state = x[0]
+            embedded, state = x[0]
             return_tuple = True
         else:
             raise ValueError(
                 "`x[0]` must be of form (input, hidden) or (input)."
             )
 
-        B, U_, H = y.shape
+        B, U_, H = embedded.shape
 
         assert B == U_ and B == 1, "Currently only supports batch=seq len == 1"
 
         lengths = x[1]
 
         if state is None:
+            # `state` is the index of char to upweight.
+            # In first instance upweight char at index 1
             state = 1
-        if y.squeeze().int()[0] == 0:
+        if embedded.squeeze().int()[0] == 0:
+            # i.e. if this is the SOS,
+            # assign probability of 0.2 to all three chars:
             res = torch.ones(3, dtype=torch.float32) * 0.2
         else:
             res = torch.ones(3, dtype=torch.float32) * 0.1
-            res[y.squeeze().int()[1]] += 0.3
+            state_to_upweight = embedded.squeeze().int()[1]
+            res[state_to_upweight] += 0.3
 
         res[state] += 0.4
-
-        # TODO - deal with hidden state - is this doing anything?
-
         out, hid = torch.log(res), (state + 1) % 3
 
+        # blow up to full dimension
         out = out.unsqueeze(0).unsqueeze(0)
 
         if return_tuple:
@@ -85,7 +90,10 @@ class DummyModel(torch.nn.Module):
         return h, x[1]
 
     def embedding(self, x):
-        return torch.tensor([1, x[0].item() + 1]), x[1]
+        res = torch.tensor([1, x[0].item() + 1]).unsqueeze(0).unsqueeze(0)
+        x = res, x[1]
+
+        return x
 
     # def prediction(self, y, state=None, add_sos=False):
     #     assert add_sos == False, "This test assumes add_sos=False"
@@ -125,14 +133,17 @@ class RNNTBeamDecoderDummy(RNNTBeamDecoder):
         f = f.unsqueeze(dim=2)  # (B, T, 1, H)
 
         g = g.unsqueeze(dim=1)  # (B, 1, U_, H)
-
+        print("f", f)
+        print("g", g)
+        print("joint", (f + g).squeeze())
+        print()
         return (f + g).squeeze()
 
 
 @pytest.fixture
 def decoder():
-    alphabet = ["a", "b", "_"]
-    blank_index = 2
+    alphabet = ["_", "a", "b"]
+    blank_index = 0
     model = DummyModel()
     length_norm = False
     max_symbols_per_step = 100
