@@ -49,21 +49,26 @@ class WordSegmentor:
 
 
 class ReportDecoderWERBase(Callback):
-    """Base class for reporting WERs. Do not use this class directly.
-    When overriding the base class, you must define the following:
-        self._process_sentence() method
-        self.decoder_input_key @property - this gives the kwargs key to access
-            the decoder input
+    """Base class for reporting WERs.
+
+    *Do not use this class directly.* When overriding the base class, you must
+    define the following:
+        `self._process_sentence()` method
+        `self.decoder_input_key` @property - this gives the kwargs key required
+            to access the decoder input.
 
     Args:
-        decoder: decodes output to sequence of indices
+        decoder: decodes output to sequence of indices.
 
-        alphabet: converts sequences of indices to sequences of symbols (strs)
+        alphabet: converts sequences of indices to sequences of symbols (strs).
+
+        eval_every: WER is cacluated every `eval_every`th epoch. Default is 1.
     """
 
-    def __init__(self, decoder, alphabet):
+    def __init__(self, decoder, alphabet, eval_every=1):
         self.decoder = decoder
         self.alphabet = alphabet
+        self.eval_every = eval_every
 
     def _reset(self, **kwargs):
         kwargs["reports"][self.decoder.__class__.__name__] = {
@@ -94,7 +99,7 @@ class ReportDecoderWERBase(Callback):
         )
 
     def on_batch_end(self, **kwargs):
-        if self.training:
+        if self.training or kwargs["epoch"] % self.eval_every != 0:
             return
         transcripts = kwargs["reports"][self.decoder.__class__.__name__][
             "transcripts"
@@ -136,10 +141,12 @@ class ReportCTCDecoder(ReportDecoderWERBase):
         alphabet: converts sequences of indices to sequences of symbols (strs)
 
         word_segmentor: groups sequences of symbols into sequences of words
+
+        eval_every: WER is cacluated every `eval_every`th epoch. Default is 1.
     """
 
-    def __init__(self, ctc_decoder, alphabet, word_segmentor):
-        super().__init__(ctc_decoder, alphabet)
+    def __init__(self, ctc_decoder, alphabet, word_segmentor, eval_every=1):
+        super().__init__(ctc_decoder, alphabet, eval_every)
         self.word_segmentor = word_segmentor
 
     def _process_sentence(self, sentence: List[int]) -> List[str]:
@@ -159,6 +166,8 @@ class ReportRNNTDecoder(ReportDecoderWERBase):
 
         alphabet: converts sequences of indices to sequences of symbols (strs)
 
+        eval_every: WER is cacluated every `eval_every`th epoch. Default is 1.
+
         skip_first_epoch: bool. Default = True. If True, the first eval epoch
             is skipped. This is useful as the decoding is *very* slow with an
             un-trained model (i.e. inference is considerably faster when the
@@ -166,8 +175,10 @@ class ReportRNNTDecoder(ReportDecoderWERBase):
 
     """
 
-    def __init__(self, rnnt_decoder, alphabet, skip_first_epoch=True):
-        super().__init__(rnnt_decoder, alphabet)
+    def __init__(
+        self, rnnt_decoder, alphabet, eval_every, skip_first_epoch=True
+    ):
+        super().__init__(rnnt_decoder, alphabet, eval_every)
         self.skip_first_epoch = skip_first_epoch
 
     def _process_sentence(self, sentence: List[int]) -> List[str]:

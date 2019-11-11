@@ -182,8 +182,7 @@ class RNNTDecoderBase(torch.nn.Module):
         del logits, input
         return res
 
-    @staticmethod
-    def _get_last_idx(labels):
+    def _get_last_idx(self, labels):
         b"""Returns the final index of a list of labels."""
         return SOS if labels == [] else labels[-1]
 
