@@ -35,7 +35,6 @@ def build(activation_cfg: activation_pb2.Activation) -> torch.nn.Module:
         return torch.nn.Hardtanh(
             min_val=activation_cfg.hardtanh.min_val,
             max_val=activation_cfg.hardtanh.max_val,
-            inplace=False,
         )
     elif act_str == "relu":
         return torch.nn.ReLU()
