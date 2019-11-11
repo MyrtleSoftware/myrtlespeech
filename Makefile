@@ -1,8 +1,6 @@
 
 deps: deps/apex deps/warp-transducer
 
-
-
 deps/apex:
 	git clone https://github.com/NVIDIA/apex deps/apex && \
   cd deps/apex && \
