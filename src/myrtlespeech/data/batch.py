@@ -65,7 +65,7 @@ def seq_to_seq_collate_fn(
                 A :py:class:`torch.Tensor` of input for a model. The sequence
                 length dimension must be last.
 
-            tensor_len:
+            tensor_len:collate_label_list
                 A scalar, integer :py:class:`torch.Tensor` giving the length of
                 ``tensor``.
 
@@ -106,9 +106,10 @@ def seq_to_seq_collate_fn(
 def collate_label_list(
     labels: List[List[int]], device: str
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Collates a list of label inputs from a list of label
-    indexes to a single fully padded torch.tensor. Created for use in rnnt
-    decoders.
+    """Collates a list of label inputs from a list of label indexes.
+
+    Returns a single fully padded `torch.tensor` and a `torch.tensor` of
+    lenghts. Created for use in rnnt decoders.
 
     Args:
         labels: List of length ``[batch]`` where each element is a List of
