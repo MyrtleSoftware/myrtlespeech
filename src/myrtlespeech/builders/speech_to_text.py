@@ -215,7 +215,6 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
                 in stt_cfg.alphabet in order to use the same graphene/characters \
                 indexes in the prediction and joint rnnt networks"
             )
-
     else:
         raise ValueError(f"loss={loss_type} not supported")
 
@@ -248,7 +247,6 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
                 f"{post_process_type}.blank_index={blank_index_pp} must be in "
                 f"[0, {max(0, len(alphabet) - 1)}]"
             )
-
     elif post_process_type in ["rnn_t_greedy_decoder", "rnn_t_beam_decoder"]:
         if post_process_type == "rnn_t_greedy_decoder":
             blank_index_pp = stt_cfg.rnn_t_greedy_decoder.blank_index
@@ -273,18 +271,15 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
                 in stt_cfg.alphabet in order to use the same graphene/characters \
                 indexes in the prediction and joint rnnt networks."
             )
-
     else:
         raise ValueError(f"post_process={post_process_type} not supported")
-
-        # check
 
         blank_indices.append(blank_index_pp)
 
     # check all "blank_index"s are equal
     if blank_indices and not len(set(blank_indices)) == 1:
         raise ValueError(
-            "all blank_index values of CTC/RNNT components must match"
+            "all blank_index values of CTC/RNN-T components must match"
         )
 
     stt = SpeechToText(
