@@ -13,6 +13,7 @@ message PreProcessStep {
     MFCC mfcc = 2;
     Standardize standardize = 3;
     ContextFrames context_frames = 4;
+    SpecAugment spec_augment = 5;
   }
 }
 
@@ -26,6 +27,25 @@ message MFCC {
 
   // Step between successive windows in number of frames.
   uint32 hop_length = 3;
+}
+
+
+// Applies SpecAugment transformation (https://arxiv.org/pdf/1904.08779.pdf)
+message SpecAugment {
+  // Time warping parameter
+  uint32 W = 1;
+
+  // Frequency mask parameter
+  uint32 F = 2;
+
+  // Time mask parameter
+  uint32 T = 3;
+
+  // Number of frequency masking lines
+  uint32 mF = 4;
+
+  // Number of time masking lines
+  uint32 mT = 5;
 }
 
 

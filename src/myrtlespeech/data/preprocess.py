@@ -4,6 +4,7 @@ Utilities for preprocessing audio data.
 from typing import Tuple
 
 import torch
+from myrtlespeech.data.spec_augment import spec_augment
 
 
 class AddSequenceLength:
@@ -138,3 +139,46 @@ class AddContextFrames:
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + f"(n_context={self.n_context})"
+
+
+class SpecAugment:
+    """Applies SpecAugment (https://arxiv.org/pdf/1904.08779.pdf) transforms
+    to the data
+
+    The parameters for various policies given in the original paper are:
+    -----------------------------------------
+    Policy | W  | F  | m_F |  T  |  p  | m_T
+    -----------------------------------------
+    None   |  0 |  0 |  -  |  0  |  -  |  -
+    -----------------------------------------
+    LB     | 80 | 27 |  1  | 100 | 1.0 | 1
+    -----------------------------------------
+    LD     | 80 | 27 |  2  | 100 | 1.0 | 2
+    -----------------------------------------
+    SM     | 40 | 15 |  2  |  70 | 0.2 | 2
+    -----------------------------------------
+    SS     | 40 | 27 |  2  |  70 | 0.2 | 2
+    -----------------------------------------
+    LB : LibriSpeech basic
+    LD : LibriSpeech double
+    SM : Switchboard mild
+    SS : Switchboard strong
+    """
+
+    def __init__(
+        self, W: int = 80, F: int = 27, T: int = 100, mF: int = 1, mT: int = 1
+    ):
+        self.W = W
+        self.F = F
+        self.T = T
+        self.mF = mF
+        self.mT = mT
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        return spec_augment(x, self.W, self.F, self.T, self.mF, self.mT)
+
+    def __repr__(self) -> str:
+        return (
+            self.__class__.__name__
+            + f"(W={self.W}, F={self.F}, T={self.T}, mF={self.mF}, mT={self.mT})"
+        )
