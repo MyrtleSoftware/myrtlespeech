@@ -11,6 +11,7 @@ from myrtlespeech.builders.deep_speech_2 import build as build_deep_speech_2
 from myrtlespeech.builders.pre_process_step import (
     build as build_pre_process_step,
 )
+from myrtlespeech.builders.pre_process_step import LogMelFB
 from myrtlespeech.builders.rnn_t import build as build_rnn_t
 from myrtlespeech.builders.rnn_t_beam_decoder import (
     build as build_rnn_t_beam_decoder,
@@ -30,8 +31,6 @@ from myrtlespeech.protos import pre_process_step_pb2
 from myrtlespeech.protos import speech_to_text_pb2
 from myrtlespeech.run.stage import Stage
 from torchaudio.transforms import MFCC
-
-# from myrtlespeech.builders.rnn_t import build as build_rnn_t
 
 
 def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
@@ -303,6 +302,8 @@ def _build_pre_process_steps(
         step = build_pre_process_step(step_cfg)
         if isinstance(step[0], MFCC):
             input_features = step[0].n_mfcc
+        elif isinstance(step[0], LogMelFB):
+            input_features = step[0].mel_spectogram.n_mels
         elif isinstance(step[0], Standardize):
             pass
         elif isinstance(step[0], AddContextFrames):
