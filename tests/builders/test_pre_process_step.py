@@ -4,6 +4,7 @@ from typing import Union
 import pytest
 from hypothesis import given
 from myrtlespeech.builders.pre_process_step import build
+from myrtlespeech.builders.pre_process_step import LogMelFB
 from myrtlespeech.data.preprocess import AddContextFrames
 from myrtlespeech.data.preprocess import SpecAugment
 from myrtlespeech.data.preprocess import Standardize
@@ -31,6 +32,11 @@ def pre_process_step_match_cfg(
         assert step[0].n_mfcc == step_cfg.mfcc.n_mfcc
         assert step[0].MelSpectrogram.win_length == step_cfg.mfcc.win_length
         assert step[0].MelSpectrogram.hop_length == step_cfg.mfcc.hop_length
+    elif step_str == "lmfb":
+        assert isinstance(step[0], LogMelFB)
+        assert step[0].MelSpectrogram.n_mels == step_cfg.lmfb.n_mels
+        assert step[0].MelSpectrogram.win_length == step_cfg.lmfb.win_length
+        assert step[0].MelSpectrogram.hop_length == step_cfg.lmfb.hop_length
     elif step_str == "spec_augment":
         assert isinstance(step[0], SpecAugment)
     elif step_str == "standardize":
