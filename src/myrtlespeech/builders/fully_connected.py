@@ -54,10 +54,15 @@ def build(
     if fully_connected_cfg.hidden_size > 0:
         hidden_size = fully_connected_cfg.hidden_size
 
+    dropout = 0
+    if fully_connected_cfg.dropout > 1e-8:
+        dropout = fully_connected_cfg.dropout
+
     return FullyConnected(
         in_features=input_features,
         out_features=output_features,
         num_hidden_layers=fully_connected_cfg.num_hidden_layers,
         hidden_size=hidden_size,
         hidden_activation_fn=activation,
+        dropout=dropout,
     )

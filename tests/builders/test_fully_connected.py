@@ -38,17 +38,20 @@ def fully_connected_module_match_cfg(
     # configuration of each layer in Sequential depends on whether activation
     # is present
     act_fn_is_none = fully_connected_cfg.activation.HasField("identity")
-
+    dropout_is_used = fully_connected_cfg.dropout > 1e-8
     if act_fn_is_none:
-        assert len(fully_connected) == fully_connected_cfg.num_hidden_layers + 1
+        expected_len = fully_connected_cfg.num_hidden_layers + 1
+
     else:
-        assert (
-            len(fully_connected)
-            == 2 * fully_connected_cfg.num_hidden_layers + 1
-        )
+        expected_len = 2 * fully_connected_cfg.num_hidden_layers + 1
+
+    if dropout_is_used:
+        expected_len += fully_connected_cfg.num_hidden_layers
+
+    assert len(fully_connected) == expected_len
 
     for idx, module in enumerate(fully_connected):
-        # should be alternating linear/activation_fn layers if !act_fn_is_none
+        # should be linear/activation_fn layers if !act_fn_is_none
         if act_fn_is_none or ((not act_fn_is_none) and idx % 2 == 0):
             assert isinstance(module, torch.nn.Linear)
             assert module.in_features == input_features
