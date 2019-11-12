@@ -50,18 +50,52 @@ def fully_connected_module_match_cfg(
 
     assert len(fully_connected) == expected_len
 
-    for idx, module in enumerate(fully_connected):
-        # should be linear/activation_fn layers if !act_fn_is_none
-        if act_fn_is_none or ((not act_fn_is_none) and idx % 2 == 0):
+    # Now check that the linear/activation_fn/dropout layers appear in the
+    # expected order. If the following condition is met, we check for the correct
+    # module type :
+    # if module_idx % total_types == <module_type>_idx:
+    #     assert isinstance(module, <module_type>)
+
+    if act_fn_is_none and not dropout_is_used:
+        total_types = 1
+        linear_idx = 0
+        activation_idx = -1  # infeasible value
+        dropout_idx = -1
+    elif not act_fn_is_none and not dropout_is_used:
+        total_types = 2
+        linear_idx = 0
+        activation_idx = 1
+        dropout_idx = -1  # infeasible value
+    elif act_fn_is_none and dropout_is_used:
+        total_types = 2
+        linear_idx = 0
+        activation_idx = -1
+        dropout_idx = 1
+    elif not act_fn_is_none and dropout_is_used:
+        total_types = 3
+        linear_idx = 0
+        activation_idx = 1
+        dropout_idx = 2
+    for module_idx, module in enumerate(fully_connected):
+
+        if module_idx % total_types == linear_idx:
             assert isinstance(module, torch.nn.Linear)
             assert module.in_features == input_features
-            if idx == len(fully_connected) - 1:
+            if module_idx == len(fully_connected) - 1:
                 assert module.out_features == output_features
             else:
                 assert module.out_features == fully_connected_cfg.hidden_size
             input_features = fully_connected_cfg.hidden_size
-        elif not act_fn_is_none:
+        elif module_idx % total_types == activation_idx:
             activation_match_cfg(module, fully_connected_cfg.activation)
+        elif module_idx % total_types == dropout_idx:
+            assert isinstance(module, torch.nn.Dropout)
+            assert abs(module.p - fully_connected_cfg.dropout) < 1e-8
+        else:
+            raise NotImplementedError(
+                "Issue with implementation. This branch \
+                should not be hit!"
+            )
 
 
 # Tests -----------------------------------------------------------------------

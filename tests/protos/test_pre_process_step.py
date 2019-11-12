@@ -34,6 +34,8 @@ def pre_process_steps(
 
     if step_type_str == "mfcc":
         kwargs["mfcc"] = draw(_mfccs())
+    elif step_type_str == "lmfb":
+        kwargs["lmfb"] = draw(_lmfbs())
     elif step_type_str == "standardize":
         kwargs["standardize"] = draw(_standardizes())
     elif step_type_str == "context_frames":
@@ -69,6 +71,28 @@ def _mfccs(
     if not return_kwargs:
         return mfcc
     return mfcc, kwargs
+
+
+@st.composite
+def _lmfbs(
+    draw, return_kwargs: bool = False
+) -> Union[
+    st.SearchStrategy[pre_process_step_pb2.LogMelFB],
+    st.SearchStrategy[Tuple[pre_process_step_pb2.LogMelFB, Dict]],
+]:
+    r"""Returns a SearchStrategy for LogMelFBs plus maybe the kwargs."""
+    kwargs: Dict = {}
+
+    kwargs["n_mels"] = draw(st.integers(1, 128))
+    kwargs["win_length"] = draw(st.integers(100, 400))
+    kwargs["hop_length"] = draw(st.integers(50, kwargs["win_length"]))
+
+    # initialise and return
+    all_fields_set(pre_process_step_pb2.LogMelFB, kwargs)
+    lmfb = pre_process_step_pb2.LogMelFB(**kwargs)  # type: ignore
+    if not return_kwargs:
+        return lmfb
+    return lmfb, kwargs
 
 
 @st.composite

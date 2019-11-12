@@ -21,11 +21,11 @@ class LogMelFB:
     """
 
     def __init__(self, **kwargs):
-        self.mel_spectogram = MelSpectrogram(**kwargs)
+        self.MelSpectrogram = MelSpectrogram(**kwargs)
 
     def __call__(self, waveform):
         r"""See initization docstring."""
-        feat = self.mel_spectogram(waveform)
+        feat = self.MelSpectrogram(waveform)
 
         # Numerical stability:
         feat = torch.where(
