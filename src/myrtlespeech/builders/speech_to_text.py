@@ -305,7 +305,7 @@ def _build_pre_process_steps(
         if isinstance(step[0], MFCC):
             input_features = step[0].n_mfcc
         elif isinstance(step[0], LogMelFB):
-            input_features = step[0].mel_spectogram.n_mels
+            input_features = step[0].MelSpectrogram.n_mels
         elif isinstance(step[0], SpecAugment):
             pass
         elif isinstance(step[0], Standardize):
