@@ -23,8 +23,8 @@ import torch
 def spec_augment(
     mel_spectrogram,
     time_warping_para=80,
-    frequency_masking_para=27,
-    time_masking_para=100,
+    frequency_masking_para=100,
+    time_masking_para=27,
     frequency_mask_num=1,
     time_mask_num=1,
 ):
@@ -77,7 +77,7 @@ def spec_augment(
     return warped_mel_spectrogram
 
 
-def time_warp(spec, W=5):
+def time_warp(spec, W=80):
     num_rows = spec.shape[1]
     spec_len = spec.shape[2]
 
@@ -190,7 +190,8 @@ def solve_interpolation(
     )  # [b, n, n]
 
     # Append ones to the feature values for the bias term in the linear model.
-    ones = torch.ones(1, dtype=train_points.dtype).view([-1, 1, 1])
+    # ones = torch.ones(1, dtype=train_points.dtype).view([-1, 1, 1])
+    ones = torch.ones(b, n, 1, dtype=train_points.dtype)
     matrix_b = torch.cat((c, ones), 2).float()  # [b, n, d + 1]
 
     # [b, n + d + 1, n]
@@ -404,7 +405,7 @@ def interpolate_bilinear(
 
         # alpha has the same type as the grid, as we will directly use alpha
         # when taking linear combinations of pixel values from the image.
-        alpha = queries - floor
+        alpha = (queries - floor).to(grid_type)
         min_alpha = torch.tensor(0.0, dtype=grid_type)
         max_alpha = torch.tensor(1.0, dtype=grid_type)
         alpha = torch.min(torch.max(min_alpha, alpha), max_alpha)
