@@ -257,7 +257,7 @@ class Saver(ModelCallback):
     """TODO"""
 
     def __init__(self, log_dir: Union[str, Path], *args, **kwargs):
-        self.log_dir = log_dir
+        self.log_dir = Path(log_dir)
         super().__init__(*args, **kwargs)
 
     def on_epoch_end(self, **kwargs):
