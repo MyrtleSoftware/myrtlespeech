@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
-
-
 message RNNTBeamDecoder {
   // Index in Alphabet of the blank label.
   uint32 blank_index = 1;
