@@ -99,7 +99,6 @@ def time_warp(spec, W=80):
         torch.tensor([[[y, point_to_warp + dist_to_warp]]]),
     )
     warped_spectro, _ = sparse_image_warp(spec, src_pts, dest_pts)
-    print(f"Successfully warped: {spec_len}")
     return warped_spectro.squeeze(3)
 
 
