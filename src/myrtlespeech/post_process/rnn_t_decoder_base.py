@@ -105,7 +105,13 @@ class RNNTDecoderBase(torch.nn.Module):
             (inputs, lengths)
         )
 
-        audio_data, _ = self.model._prepare_inputs_forward((inputs, lengths))
+        audio_data, label_data = self.model._prepare_inputs_forward(
+            (inputs, lengths), self.model.use_cuda
+        )
+
+        # since label_data *should not* be used in decoding, delete it
+        # explicitly here:
+        del label_data
 
         preds = []
         for b in range(batches):
