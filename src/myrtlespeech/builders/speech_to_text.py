@@ -11,7 +11,6 @@ from myrtlespeech.builders.deep_speech_2 import build as build_deep_speech_2
 from myrtlespeech.builders.pre_process_step import (
     build as build_pre_process_step,
 )
-from myrtlespeech.builders.pre_process_step import LogMelFB
 from myrtlespeech.builders.rnn_t import build as build_rnn_t
 from myrtlespeech.builders.rnn_t_beam_decoder import (
     build as build_rnn_t_beam_decoder,
@@ -23,6 +22,7 @@ from myrtlespeech.builders.rnn_t_loss import build as build_rnn_t_loss
 from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.data.preprocess import AddContextFrames
 from myrtlespeech.data.preprocess import SpecAugment
+from myrtlespeech.data.preprocess import LogMelFB
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.model.cnn import Conv1dTo2d
 from myrtlespeech.model.deep_speech_1 import DeepSpeech1
