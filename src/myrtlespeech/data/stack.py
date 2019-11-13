@@ -4,8 +4,7 @@ import torch
 
 
 class StackTime:
-    """
-    Downsamples sequences in time by stacking in the hidden dimension.
+    r"""Downsamples sequences in time by stacking in the hidden dimension.
 
     For example, this Callable may be used before the input to an RNN in order
     to reduce the computational cost.
@@ -20,7 +19,7 @@ class StackTime:
             time_reduction_factor != 0`.
 
         padding_value: Optional integer, default = 0. The padding value that is
-        added if `input_seq_len % time_reduction_factor != 0`.
+            added if `input_seq_len % time_reduction_factor != 0`.
     """
 
     def __init__(self, time_reduction_factor, padding_value=0):
@@ -33,8 +32,7 @@ class StackTime:
     def __call__(
         self, x: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Downsamples sequences in time by stacking in the hidden dimension.
+        r"""Downsamples sequences in time by stacking in the hidden dimension.
 
         Args:
             x: A tuple where the first element is a :py:`torch.Tensor` with
@@ -45,13 +43,13 @@ class StackTime:
 
         Returns:
             A tuple where the first element is the result after
-            applying the Callable to the output. It will have size
-            ``[max_downsampled_seq_len, batch, in_features *
-            time_reduction_factor]`` where ``max_downsampled_seq_len`` =
-            ``ceil(input_seq_len / time_reduction_factor)``. The second element
-            of the tuple is a :py:class:`torch.Tensor` with size
-            ``[batch]`` where each entry represents the sequence length of the
-            corresponding *output* sequence.
+                applying the Callable to the output. It will have size
+                ``[max_downsampled_seq_len, batch, in_features *
+                time_reduction_factor]`` where ``max_downsampled_seq_len`` =
+                ``ceil(input_seq_len / time_reduction_factor)``. The second
+                element of the tuple is a :py:class:`torch.Tensor` with size
+                ``[batch]`` where each entry represents the sequence length of
+                the corresponding *output* sequence.
         """
 
         inp, lens = x
