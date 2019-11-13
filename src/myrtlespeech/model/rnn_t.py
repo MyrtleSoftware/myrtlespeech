@@ -133,7 +133,7 @@ class RNNT(torch.nn.Module):
 
         self._certify_inputs_forward(x)
 
-        audio_data, label_data = self._prepare_inputs_forward(x)
+        audio_data, label_data = self._prepare_inputs_forward(x, self.use_cuda)
 
         f = self.encode(audio_data)  # f[0] = (T, B, H1)
         g = self.prediction(label_data)  # g[0] = (U, B, H2)
@@ -276,7 +276,8 @@ class RNNT(torch.nn.Module):
 
         return out, seq_lengths
 
-    def _certify_inputs_forward(self, inp):
+    @staticmethod
+    def _certify_inputs_forward(inp):
         try:
             ((x, y), (x_lens, y_lens)) = inp
         except ValueError:
@@ -311,9 +312,10 @@ class RNNT(torch.nn.Module):
             U,
         )  # return (batch, channel, audio_feat_input, max_seq_len, max_output_len)
 
-    def _prepare_inputs_forward(self, inp):
+    @staticmethod
+    def _prepare_inputs_forward(inp, use_cuda):
         ((x_inp, y), (x_lens, y_lens)) = inp
-        if self.use_cuda:
+        if use_cuda:
             x_inp = x_inp.cuda()
             x_lens = x_lens.cuda()
             y = y.cuda()
