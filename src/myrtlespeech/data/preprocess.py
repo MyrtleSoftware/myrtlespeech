@@ -5,6 +5,31 @@ import random
 from typing import Tuple
 
 import torch
+from torchaudio.transforms import MelSpectrogram
+
+
+class LogMelFB:
+    r"""Wrapper on `torchaudio.transforms.MelSpectrogram` that applies log.
+
+    Args:
+        See `torchaudio.transforms.MelSpectrogram`
+
+    Returns:
+        See `torchaudio.transforms.MelSpectrogram`
+    """
+
+    def __init__(self, **kwargs):
+        self.MelSpectrogram = MelSpectrogram(**kwargs)
+
+    def __call__(self, waveform):
+        r"""See initization docstring."""
+        feat = self.MelSpectrogram(waveform)
+
+        # Numerical stability:
+        feat = torch.where(
+            feat == 0, torch.tensor(torch.finfo(waveform.dtype).eps), feat
+        )
+        return feat.log()
 
 
 class AddSequenceLength:
