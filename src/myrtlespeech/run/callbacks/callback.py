@@ -430,12 +430,17 @@ class CallbackHandler:
         if self.training:
             self.state_dict["total_train_batches"] += 1
 
-        # Explicitly delete Tensors from state-dict to avoid overflow
-        del self.state_dict["last_input"]
-        del self.state_dict["last_target"]
-        del self.state_dict["last_output"]
-        del self.state_dict["loss"]
-        del self.state_dict["last_loss"]
+        # Explicitly delete Tensors from state-dict to save memory
+        to_delete = [
+            "last_input",
+            "last_target",
+            "last_output",
+            "loss",
+            "last_loss",
+        ]
+        for key in to_delete:
+            if self.state_dict.get(key) is not None:
+                del self.state_dict[key]
 
         return self.state_dict["stop_epoch"]
 
