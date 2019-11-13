@@ -3,36 +3,11 @@ from typing import Union
 
 import torch
 from myrtlespeech.data.preprocess import AddContextFrames
+from myrtlespeech.data.preprocess import LogMelFB
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.protos import pre_process_step_pb2
 from myrtlespeech.run.stage import Stage
-from torchaudio.transforms import MelSpectrogram
 from torchaudio.transforms import MFCC
-
-
-class LogMelFB:
-    r"""Wrapper on `torchaudio.transforms.MelSpectrogram` that applies log.
-
-    Args:
-        See `torchaudio.transforms.MelSpectrogram`
-
-    Returns:
-        See `torchaudio.transforms.MelSpectrogram`
-    """
-
-    def __init__(self, **kwargs):
-        self.MelSpectrogram = MelSpectrogram(**kwargs)
-
-    def __call__(self, waveform):
-        r"""See initization docstring."""
-        feat = self.MelSpectrogram(waveform)
-
-        # Numerical stability:
-        feat = torch.where(
-            feat == 0, torch.tensor(torch.finfo(waveform.dtype).eps), feat
-        )
-
-        return feat.log()
 
 
 def build(
