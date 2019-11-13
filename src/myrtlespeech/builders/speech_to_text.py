@@ -274,7 +274,6 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
         raise ValueError(f"post_process={post_process_type} not supported")
 
         blank_indices.append(blank_index_pp)
-
     # check all "blank_index"s are equal
     if blank_indices and not len(set(blank_indices)) == 1:
         raise ValueError(
