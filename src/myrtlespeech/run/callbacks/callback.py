@@ -425,6 +425,14 @@ class CallbackHandler:
         self.state_dict["epoch_batches"] += 1
         if self.training:
             self.state_dict["total_train_batches"] += 1
+
+        # Explicitly delete Tensors from state-dict to avoid overflow
+        del self.state_dict["last_input"]
+        del self.state_dict["last_target"]
+        del self.state_dict["last_output"]
+        del self.state_dict["loss"]
+        del self.state_dict["last_loss"]
+
         return self.state_dict["stop_epoch"]
 
     def on_epoch_end(self) -> bool:
