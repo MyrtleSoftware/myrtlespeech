@@ -13,23 +13,28 @@ from myrtlespeech.post_process.rnn_t_decoder_base import RNNTDecoderBase
 
 
 class RNNTBeamDecoder(RNNTDecoderBase):
-    """Decodes RNNT output using a beam search strategy. This is a reference
-    implementation and its performance is *not* guaranteed to be useful for a
-    production system. Based on the technique described in `Graves 2012
-    <https://arxiv.org/abs/1211.3711>`_.
+    """Decodes RNNT output using a beam search strategy.
+
+    This is a reference implementation and its performance is *not* guaranteed
+    to be useful for a production system. Based on the technique described in
+    `Graves 2012 <https://arxiv.org/abs/1211.3711>`_.
 
     Args:
+        blank_index: See :py:class:`RNNTDecoderBase`.
+
+        model: See :py:class:`RNNTDecoderBase`.
 
         beam_width: An int, default=4. The beam width for the decoding. Must be
             a positive integer.
 
-        length_norm: bool, default=False. If True, normalise log probabilities by length before the
-            returning the "most probable" sequence. This avoids favouring short
-            predictions and was used in the first Graves RNNT paper (2012): https://arxiv.org/pdf/1211.3711.pdf
+        length_norm: bool, default=False. If True, normalise log probabilities
+            by length before the returning the "most probable" sequence. This
+            avoids favouring short predictions and was used in the first Graves
+            RNN-T paper (2012): https://arxiv.org/pdf/1211.3711.pdf.
             Default is False since the practice was discontinued by Graves in
-            his later RNNT paper (2013): https://arxiv.org/pdf/1303.5778.pdf
+            his subsequent paper (2013): https://arxiv.org/pdf/1303.5778.pdf
 
-        See :py:class:`RNNTDecoderBase` for other args.
+        max_symbols_per_step: See :py:class:`RNNTDecoderBase`.
 
     """
 
@@ -55,7 +60,7 @@ class RNNTBeamDecoder(RNNTDecoderBase):
         self.length_norm = length_norm
 
     def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
-        """Beam RNNT decode method. See :py:class:`RNNTDecoderBase` for args"""
+        r"""Beam RNNT decode method. See :py:class:`RNNTDecoderBase` for args"""
 
         fs, fs_lens = self.model.encode(inp)
         fs = fs[: fs_lens[0], :, :]  # size: seq_len, batch = 1, rnn_features

@@ -11,8 +11,7 @@ SOS = -1  # Start of sequence
 
 
 class RNNTDecoderBase(torch.nn.Module):
-    """
-    Base RNNT decoder class.
+    r"""Base RNNT decoder class.
 
     *This should not be instantiated directly.* Instead use specific
     decoders (e.g. :py:class:`RNNTGreedyDecoder` or
