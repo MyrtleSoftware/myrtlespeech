@@ -1,14 +1,9 @@
 from typing import Tuple
 from typing import Union
 
-import torch
 from myrtlespeech.data.preprocess import AddContextFrames
-<<<<<<< HEAD
+from myrtlespeech.data.preprocess import LogMelFB
 from myrtlespeech.data.preprocess import SpecAugment
-from myrtlespeech.data.preprocess import LogMelFB
-=======
-from myrtlespeech.data.preprocess import LogMelFB
->>>>>>> Refactored new pre-processing
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.protos import pre_process_step_pb2
 from myrtlespeech.run.stage import Stage
