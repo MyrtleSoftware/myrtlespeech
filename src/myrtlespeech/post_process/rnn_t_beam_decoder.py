@@ -59,11 +59,13 @@ class RNNTBeamDecoder(RNNTDecoderBase):
 
         fs, fs_lens = self.model.encode(inp)
         fs = fs[: fs_lens[0], :, :]  # size: seq_len, batch = 1, rnn_features
-        assert fs_lens[0] == fs.shape[0], "Time dimension comparison failed"
+        assert (
+            fs_lens[0] == fs.shape[0]
+        ), f"Time dimension comparison failed. {fs_lens[0]} != {fs.shape[0]}"
 
         B = [Sequence(max_symbols=self.max_symbols_per_step)]
         for t in range(fs.shape[0]):
-
+            print(f"t={t}")
             f = fs[t, :, :].unsqueeze(0)
             # add length
             f = (f, torch.IntTensor([1]))
@@ -124,7 +126,8 @@ class RNNTBeamDecoder(RNNTDecoderBase):
                         A.append(yk)
                 A.sort(key=lambda a: (-a.logp, len(a.labels)))
                 B.sort(key=lambda a: (-a.logp, len(a.labels)))
-
+                print("B", [(x.logp, x.labels) for x in B], k)
+                print("A", [(x.logp, x.labels) for x in A], k)
             B = B[: self.beam_width]
 
         if self.length_norm:
