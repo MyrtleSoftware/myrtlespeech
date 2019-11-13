@@ -65,7 +65,7 @@ Development
 
   .. note::
 
-       Replace ``/usr/local/cuda`` with cuda location
+       Replace ``/usr/local/cuda`` with your cuda location.
 
 Continuous Integration
 -----------------------
