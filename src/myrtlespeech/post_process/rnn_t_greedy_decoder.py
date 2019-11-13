@@ -16,7 +16,7 @@ class RNNTGreedyDecoder(RNNTDecoderBase):
     """Decodes RNNT output using a greedy strategy.
 
     Args:
-        See :py:class:`RNNTDecoderBase` for args.
+        See :py:class:`RNNTDecoderBase`.
     """
 
     def __init__(
