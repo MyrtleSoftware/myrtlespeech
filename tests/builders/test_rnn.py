@@ -16,7 +16,8 @@ from tests.utils.utils import tensors
 # Utilities -------------------------------------------------------------------
 
 
-def rnn_match_cfg(rnn: RNN, rnn_cfg: rnn_pb2.RNN, input_features: int) -> None:
+def rnn_match_cfg(rnn: RNN, rnn_cfg: rnn_pb2.RNN, input_features: int,
+                  layer_idx: int) -> None:
     """Ensures RNN matches protobuf configuration."""
     if rnn_cfg.rnn_type == rnn_pb2.RNN.LSTM:
         assert isinstance(rnn.rnn, torch.nn.LSTM)
@@ -29,34 +30,38 @@ def rnn_match_cfg(rnn: RNN, rnn_cfg: rnn_pb2.RNN, input_features: int) -> None:
 
     assert input_features == rnn.rnn.input_size
     assert rnn_cfg.hidden_size == rnn.rnn.hidden_size
-    assert rnn_cfg.num_layers == rnn.rnn.num_layers
     assert rnn_cfg.bias == rnn.rnn.bias
     assert not rnn.rnn.batch_first
     assert rnn.rnn.dropout == 0.0
     assert rnn_cfg.bidirectional == rnn.rnn.bidirectional
 
+    if rnn_cfg.batch_norm and layer_idx > 0:
+        assert isinstance(rnn.batch_norm, torch.nn.BatchNorm1d)
+
     if not (
-        rnn_cfg.rnn_type == rnn_pb2.RNN.LSTM
-        and rnn_cfg.bias
-        and rnn_cfg.HasField("forget_gate_bias")
+            rnn_cfg.rnn_type == rnn_pb2.RNN.LSTM
+            and rnn_cfg.bias
+            and rnn_cfg.HasField("forget_gate_bias")
     ):
         return
 
     hidden_size = rnn_cfg.hidden_size
     forget_gate_bias = rnn_cfg.forget_gate_bias.value
-    for l in range(rnn_cfg.num_layers):
-        bias = getattr(rnn.rnn, f"bias_ih_l{l}")[hidden_size : 2 * hidden_size]
-        bias += getattr(rnn.rnn, f"bias_hh_l{l}")[hidden_size : 2 * hidden_size]
-        assert torch.allclose(bias, torch.tensor(forget_gate_bias))
+    bias = getattr(rnn.rnn, f"bias_ih_l0")[hidden_size: 2 * hidden_size]
+    bias += getattr(rnn.rnn, f"bias_hh_l0")[hidden_size: 2 * hidden_size]
+    assert torch.allclose(bias, torch.tensor(forget_gate_bias))
 
 
 @st.composite
 def rnn_cfg_tensors(
-    draw
+        draw
 ) -> st.SearchStrategy[Tuple[torch.nn.Module, rnn_pb2.RNN, torch.Tensor]]:
     """Returns a search strategy for RNNs built from a config + valid input."""
     rnn_cfg = draw(rnns())
     tensor = draw(tensors(min_n_dims=3, max_n_dims=3))
+    if tensor.size(1) == 1:
+        # if batch_size == 1 don't add batch norm to the rnn
+        rnn_cfg.batch_norm = False
     rnn, _ = build(rnn_cfg, input_features=tensor.size(2))
     return rnn, rnn_cfg, tensor
 
@@ -66,16 +71,20 @@ def rnn_cfg_tensors(
 
 @given(rnn_cfg=rnns(), input_features=st.integers(1, 128))
 def test_build_rnn_returns_correct_rnn_with_valid_params(
-    rnn_cfg: rnn_pb2.RNN, input_features: int
+        rnn_cfg: rnn_pb2.RNN, input_features: int
 ) -> None:
     """Test that build_rnn returns the correct RNN with valid params."""
     rnn, rnn_output_size = build(rnn_cfg, input_features)
-    rnn_match_cfg(rnn, rnn_cfg, input_features)
+
+    for i in range(rnn_cfg.num_layers):
+        num_directions = 2 if rnn_cfg.bidirectional else 1
+        rnn_match_cfg(rnn[i], rnn_cfg, rnn_cfg.hidden_size * num_directions
+                      if i > 0 else input_features, i)
 
 
 @given(rnn_cfg_tensor=rnn_cfg_tensors())
 def test_build_rnn_rnn_forward_output_correct_size(
-    rnn_cfg_tensor: Tuple[torch.nn.Module, rnn_pb2.RNN, torch.Tensor]
+        rnn_cfg_tensor: Tuple[torch.nn.Module, rnn_pb2.RNN, torch.Tensor]
 ) -> None:
     """Ensures returned RNN forward produces output with correct size."""
     rnn, rnn_cfg, tensor = rnn_cfg_tensor
@@ -102,7 +111,7 @@ def test_build_rnn_rnn_forward_output_correct_size(
     invalid_rnn_type=st.integers(0, 128),
 )
 def test_unknown_rnn_type_raises_value_error(
-    rnn_cfg: rnn_pb2.RNN, input_features: int, invalid_rnn_type: int
+        rnn_cfg: rnn_pb2.RNN, input_features: int, invalid_rnn_type: int
 ) -> None:
     """Ensures ValueError is raised when rnn_type not supported.
 

@@ -61,6 +61,7 @@ def _conv_blocks(
         else:
             kwargs["conv2d"] = convnd
 
+        kwargs["batch_norm"] = draw(st.booleans())
         kwargs["activation"] = draw(activations())
 
         return deep_speech_2_pb2.DeepSpeech2.ConvBlock(**kwargs)
