@@ -4,8 +4,8 @@ from typing import Union
 import pytest
 from hypothesis import given
 from myrtlespeech.builders.pre_process_step import build
-from myrtlespeech.builders.pre_process_step import LogMelFB
 from myrtlespeech.data.preprocess import AddContextFrames
+from myrtlespeech.data.preprocess import LogMelFB
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.protos import pre_process_step_pb2
 from myrtlespeech.run.stage import Stage
