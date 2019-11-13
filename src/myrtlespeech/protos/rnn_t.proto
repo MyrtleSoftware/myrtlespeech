@@ -11,6 +11,5 @@ import "myrtlespeech/protos/rnn.proto";
 message RNNT {
   RNNTEncoder rnn_t_encoder = 1;
   RNN dec_rnn = 2;
-  //Embedding = 3; //Not created yet
   FullyConnected fully_connected = 4;
 }
