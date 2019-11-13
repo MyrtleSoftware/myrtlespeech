@@ -46,13 +46,17 @@ def build(
         ...     fully_connected_pb2.FullyConnected()
         ... )
         >>> build(cfg, input_features=32, output_features=16)
-        FullyConnected(
-          (fully_connected): Sequential(
-            (0): Linear(in_features=32, out_features=64, bias=True)
-            (1): ReLU()
-            (2): Linear(in_features=64, out_features=64, bias=True)
-            (3): ReLU()
-            (4): Linear(in_features=64, out_features=16, bias=True)
+        Sequential(
+          (0): FullyConnected(
+            (fully_connected): Linear(in_features=32, out_features=64, bias=True)
+            (activation): ReLU()
+          )
+          (1): FullyConnected(
+            (fully_connected): Linear(in_features=64, out_features=64, bias=True)
+            (activation): ReLU()
+          )
+          (2): FullyConnected(
+            (fully_connected): Linear(in_features=64, out_features=16, bias=True)
           )
         )
     """
@@ -90,7 +94,8 @@ def build(
             batch_norm=fully_connected_cfg.batch_norm if i < num_hidden_layers
             else False,
         ))
-        assert hidden_size is not None
+        if i < num_hidden_layers:
+            assert hidden_size is not None
         input_features = hidden_size
 
     module = torch.nn.Sequential(*hidden_layers)

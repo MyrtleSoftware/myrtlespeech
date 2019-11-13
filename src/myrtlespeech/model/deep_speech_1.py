@@ -86,7 +86,6 @@ class DeepSpeech1(torch.nn.Module):
             rnn_type=RNNType.LSTM,
             input_size=2 * n_hidden,
             hidden_size=n_hidden,
-            num_layers=1,
             bias=True,
             bidirectional=True,
             forget_gate_bias=forget_gate_bias,

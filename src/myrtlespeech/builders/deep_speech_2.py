@@ -92,11 +92,15 @@ def build(
             )
             (3): Conv1dTo2d(seq_len_support=True)
           )
-          (rnn): RNN(
-            (rnn): LSTM(8, 32, bidirectional=True)
+          (rnn): Sequential(
+            (0): RNN(
+              (rnn): LSTM(8, 32, bidirectional=True)
+            )
           )
-          (fully_connected): FullyConnected(
-            (fully_connected): Linear(in_features=64, out_features=4, bias=True)
+          (fully_connected): Sequential(
+            (0): FullyConnected(
+              (fully_connected): Linear(in_features=64, out_features=4, bias=True)
+            )
           )
         )
     """
