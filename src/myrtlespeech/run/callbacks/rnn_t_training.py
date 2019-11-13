@@ -31,6 +31,6 @@ class RNNTTraining(Callback):
 
         kwargs["last_input"] = ((x_0, y_0), (x_1, y_1))
 
-        del x, y
+        del x, y, x_0, y_0, x_1, y_1
 
         return kwargs
