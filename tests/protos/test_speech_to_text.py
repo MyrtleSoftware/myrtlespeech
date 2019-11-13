@@ -67,9 +67,6 @@ def speech_to_texts(
         assume(input_features > 200)
     elif model_str == "rnn_t":
         kwargs[model_str] = draw(rnn_t())
-        warnings.warn(
-            "TODO: fix hack that assumes input_features > 200 for deep_speech_2"
-        )
     else:
         raise ValueError(f"unknown model type {model_str}")
 
