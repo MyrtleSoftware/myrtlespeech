@@ -7,7 +7,7 @@ import "myrtlespeech/protos/fully_connected.proto";
 import "myrtlespeech/protos/rnn.proto";
 
 // Configuration for RNN-T model:
-//     http://proceedings.mlr.press/v48/amodei16.pdf
+// https://arxiv.org/pdf/1211.3711.pdf
 message RNNT {
   RNNTEncoder rnn_t_encoder = 1;
   RNN dec_rnn = 2;
