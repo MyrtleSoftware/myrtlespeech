@@ -111,24 +111,25 @@ class RNNT(torch.nn.Module):
         Args:
             x: A Tuple ``(x[0], x[1])``. ``x[0]`` is input to the network and is
                 a Tuple ``x[0] = (x[0][0], x[0][1])`` where both elements are
-                :py:class:`torch.Tensor`s. ``x[0][0]`` is the audio feature input
-                with  size ``[batch, channels, features, max_input_seq_len]``
-                while ``x[0][1]`` is the target label tensor of size ``[batch,
-                max_label_length]``.
+                :py:class:`torch.Tensor`s. ``x[0][0]`` is the audio feature
+                input with  size ``[batch, channels, features,
+                max_input_seq_len]`` while ``x[0][1]`` is the target label
+                tensor of size ``[batch, max_label_length]``.
 
                 ``x[1]`` is a Tuple of two :py:class:`torch.Tensor`s both of
-                size ``[batch]`` that contain the *input* lengths of a) the audio feature
-                inputs ``x[1][0]`` and b) the target sequences ``x[1][1]``.
+                size ``[batch]`` that contain the *input* lengths of a) the
+                audio feature inputs ``x[1][0]`` and b) the target sequences
+                ``x[1][1]``.
 
         Returns:
             A Tuple where the first element is the output of the RNNT network: a
                 :py:class:`torch.Tensor` with size ``[batch, max_seq_len,
                 max_label_length + 1, vocab_size + 1]``, and the second element
                 is a Tuple of two :py:class:`torch.Tensor`s both of
-                size ``[batch]`` that contain the *output* lengths of a) the audio features
-                inputs and b) the target sequences. These may be of different
-                lengths than the inputs as a result of downsampling.
-
+                size ``[batch]`` that contain the *output* lengths of a) the
+                audio features inputs and b) the target sequences. These may be
+                of different lengths than the inputs as a result of
+                downsampling.
             """
 
         self._certify_inputs_forward(x)
