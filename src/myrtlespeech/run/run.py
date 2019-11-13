@@ -191,8 +191,9 @@ class ReportRNNTDecoder(ReportDecoderWERBase):
 
     @property
     def decoder_input_key(self):
-        return "last_input"  # i.e. we can't use the model output as
-        # this was computed using ground-truth labels
+        return "last_input"  # i.e. we can't use the rnnt output during
+        # decoding as this was computed using
+        # ground-truth labels!
 
 
 class TensorBoardLogger(ModelCallback):
