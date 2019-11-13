@@ -130,10 +130,7 @@ class RNNTBeamDecoderDummy(RNNTBeamDecoder):
         f = f.unsqueeze(dim=2)  # (B, T, 1, H)
 
         g = g.unsqueeze(dim=1)  # (B, 1, U_, H)
-        print("f", f)
-        print("g", g)
-        print("joint", (f + g).squeeze())
-        print()
+
         return (f + g).squeeze()
 
 
