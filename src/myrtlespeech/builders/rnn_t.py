@@ -132,7 +132,9 @@ def build(
     """
 
     encoder, encoder_out = build_rnnt_enc(
-        rnn_t_cfg.rnn_t_encoder, input_features * input_channels
+        rnn_t_cfg.rnn_t_encoder,
+        input_features * input_channels,
+        output_features=rnn_t_cfg.fully_connected.hidden_size,
     )
 
     ##decoder/prediction network
@@ -157,7 +159,9 @@ def build(
 
 
 def build_rnnt_enc(
-    rnn_t_enc: rnn_t_encoder_pb2.RNNTEncoder, input_features: int
+    rnn_t_enc: rnn_t_encoder_pb2.RNNTEncoder,
+    input_features: int,
+    output_features: Optional[int],
 ) -> Tuple[RNNTEncoder, int]:
     """Returns a :py:class:`.RNNTEncoder` based on the config.
 
@@ -166,6 +170,10 @@ def build_rnnt_enc(
             the config for the desired :py:class:`torch.nn.Module`.
 
         input_features: The number of features for the input.
+
+        output_features: The number of output features of the encoder if
+            rnn_t_enc.HasField("fc2"). Otherwise the outpus size will be
+            equal to the hidden size of `rnn2` if present else `rnn1`.
 
     Returns:
         A Tuple where the first element is an :py:class:`.RNNTEncoder` based
@@ -232,18 +240,20 @@ def build_rnnt_enc(
         >>> out_features
         576
     """
+    if not rnn_t_enc.HasField("fc2"):
+        assert output_features is None
 
     # maybe add fc1:
     fc1: Optional[torch.nn.Module] = None
 
     if rnn_t_enc.HasField("fc1"):
-        output_features = rnn_t_enc.rnn1.hidden_size
+        out_fc1 = rnn_t_enc.rnn1.hidden_size
         fc1 = build_fully_connected(
             rnn_t_enc.fc1,
             input_features=input_features,
-            output_features=output_features,
+            output_features=out_fc1,
         )
-        input_features = output_features
+        input_features = out_fc1
 
     rnn1, rnn1_out_features = build_rnn(rnn_t_enc.rnn1, input_features)
 
@@ -272,17 +282,18 @@ def build_rnnt_enc(
     # maybe add fc2:
     fc2: Optional[torch.nn.Module] = None
     if rnn_t_enc.HasField("fc2"):
-        # This layer halves feature size if possible
-        out_features = rnn_out_features // 2
-        out_features = out_features if out_features > 0 else 1
+        if output_features is None:
+            # Halves feature size if possible:
+            output_features = rnn_out_features // 2
+            output_features = output_features if output_features > 0 else 1
 
         fc2 = build_fully_connected(
             rnn_t_enc.fc2,
             input_features=rnn_out_features,
-            output_features=out_features,
+            output_features=output_features,
         )
     else:
-        out_features = rnn_out_features
+        output_features = rnn_out_features
 
     encoder = RNNTEncoder(
         rnn1=rnn1,
@@ -293,4 +304,4 @@ def build_rnnt_enc(
         fc2=fc2,
     )
 
-    return encoder, out_features
+    return encoder, output_features
