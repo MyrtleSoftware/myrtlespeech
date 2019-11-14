@@ -168,7 +168,7 @@ class ReportRNNTDecoder(ReportDecoderWERBase):
 
         eval_every: WER is cacluated every `eval_every`th epoch. Default is 1.
 
-        skip_first_epoch: bool. Default = True. If True, the first eval epoch
+        skip_first_epoch: bool. Default = False. If True, the first eval epoch
             is skipped. This is useful as the decoding is *very* slow with an
             un-trained model (i.e. inference is considerably faster when the
             model is more confident in its predictions)
@@ -176,7 +176,7 @@ class ReportRNNTDecoder(ReportDecoderWERBase):
     """
 
     def __init__(
-        self, rnnt_decoder, alphabet, eval_every, skip_first_epoch=True
+        self, rnnt_decoder, alphabet, eval_every=1, skip_first_epoch=False
     ):
         super().__init__(rnnt_decoder, alphabet, eval_every)
         self.skip_first_epoch = skip_first_epoch
