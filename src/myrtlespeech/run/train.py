@@ -47,40 +47,38 @@ def fit(
 
         for stage in stages:
             is_training = stage == Stage.TRAIN
-            seq_to_seq.train(mode=is_training)
-            cb_handler.train(mode=is_training)
+            loader = train_loader if is_training else eval_loader
+            if run_stage(seq_to_seq, cb_handler, loader, is_training):
+                break
 
-            cb_handler.on_epoch_begin()
+    cb_handler.on_train_end()
+    # sphinx-doc-end-before
 
-            with ExitStack() as stack:
-                if not is_training:
-                    stack.enter_context(torch.no_grad())
 
-                loader = train_loader if is_training else eval_loader
-                for x, y in loader:
-                    # model
-                    x, y = cb_handler.on_batch_begin(x, y)
-                    out = seq_to_seq.model(x)
+def run_stage(seq_to_seq, cb_handler, loader, is_training):
+    seq_to_seq.train(mode=is_training)
+    cb_handler.train(mode=is_training)
 
-                    # loss
-                    loss_out, loss_y = cb_handler.on_loss_begin(out, y)
-                    loss = seq_to_seq.loss(loss_out, loss_y)
-                    loss, skip_bwd = cb_handler.on_backward_begin(loss)
+    cb_handler.on_epoch_begin()
 
-                    # optim
-                    if is_training:
-                        if not skip_bwd:
-                            loss.backward()
+    with ExitStack() as stack:
+        if not is_training:
+            stack.enter_context(torch.no_grad())
 
-                        if seq_to_seq.optim is not None:
-                            if not cb_handler.on_backward_end():
-                                seq_to_seq.optim.step()
+        for x, y in loader:
 
-                            if not cb_handler.on_step_end():
-                                seq_to_seq.optim.zero_grad()
+            x, y = cb_handler.on_batch_begin(x, y)
+            out = seq_to_seq.model(x)
 
-                    if cb_handler.on_batch_end():
-                        break
+            # loss
+            loss_out, loss_y = cb_handler.on_loss_begin(out, y)
+            loss = seq_to_seq.loss(loss_out, loss_y)
+            loss, skip_bwd = cb_handler.on_backward_begin(loss)
+
+            # optim
+            if is_training:
+                if not skip_bwd:
+                    loss.backward()
 
                 if is_training and seq_to_seq.lr_scheduler is not None:
                     seq_to_seq.lr_scheduler.step()
@@ -88,5 +86,6 @@ def fit(
             if cb_handler.on_epoch_end():
                 break
 
-    cb_handler.on_train_end()
-    # sphinx-doc-end-before
+            del x, y, out, loss, loss_out, loss_y
+
+    return cb_handler.on_epoch_end()
