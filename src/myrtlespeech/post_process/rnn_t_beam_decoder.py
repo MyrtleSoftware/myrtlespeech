@@ -36,6 +36,10 @@ class RNNTBeamDecoder(RNNTDecoderBase):
 
         max_symbols_per_step: See :py:class:`RNNTDecoderBase`.
 
+        prune_threshold: Affects the list of symbols to consider when extending
+            a prefix at each step. A prefix is not extended with a given symbol
+            and added to the beam if the symbol has probability less than this
+            threshold.
     """
 
     def __init__(
@@ -45,6 +49,7 @@ class RNNTBeamDecoder(RNNTDecoderBase):
         beam_width: Optional[int] = 4,
         length_norm: Optional[bool] = False,
         max_symbols_per_step: Optional[int] = None,
+        prune_threshold: float = 0.001,
     ):
         assert (
             isinstance(beam_width, int) and beam_width > 0
@@ -58,6 +63,7 @@ class RNNTBeamDecoder(RNNTDecoderBase):
 
         self.beam_width = beam_width
         self.length_norm = length_norm
+        self.log_prune_threshold = math.log(prune_threshold)
 
     def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
         r"""Beam RNNT decode method. See :py:class:`RNNTDecoderBase` for args"""
@@ -70,7 +76,6 @@ class RNNTBeamDecoder(RNNTDecoderBase):
 
         B = [Sequence(max_symbols=self.max_symbols_per_step)]
         for t in range(fs.shape[0]):
-            print(f"t={t}")
             f = fs[t, :, :].unsqueeze(0)
             # add length
             f = (f, torch.IntTensor([1]))
@@ -111,6 +116,8 @@ class RNNTBeamDecoder(RNNTDecoderBase):
                 logp = self._joint_step(f, pred)
 
                 for k in range(logp.shape[0]):
+                    if logp[k] <= self.log_prune_threshold:
+                        continue
                     yk = Sequence(y_star)
                     yk.logp += float(logp[k])
                     if k == self.blank_index:
@@ -131,8 +138,6 @@ class RNNTBeamDecoder(RNNTDecoderBase):
                         A.append(yk)
                 A.sort(key=lambda a: (-a.logp, len(a.labels)))
                 B.sort(key=lambda a: (-a.logp, len(a.labels)))
-                print("B", [(x.logp, x.labels) for x in B], k)
-                print("A", [(x.logp, x.labels) for x in A], k)
             B = B[: self.beam_width]
 
         if self.length_norm:
