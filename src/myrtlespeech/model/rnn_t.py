@@ -546,6 +546,8 @@ class RNNTEncoder(torch.nn.Module):
 
         if self.use_cuda:
             h = (x[0].cuda(), x[1].cuda())
+        else:
+            h = x
 
         # Add Optional convolutions here in the future?
         h = self._prepare_inputs_fc1(h)
