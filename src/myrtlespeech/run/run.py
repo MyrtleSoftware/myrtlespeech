@@ -215,14 +215,19 @@ class TensorBoardLogger(ModelCallback):
     def on_step_end(self, **kwargs):
         if not self.training or not self.histograms:
             return
-        for name, param in self.model.named_parameters():
-            if param.grad is None:
-                continue
-            self.writer.add_histogram(
-                name.replace(".", "/") + "/grad",
-                param.grad,
-                global_step=kwargs["total_train_batches"],
-            )
+        # when using MixedPrecision, if loss is rescaled, there will be no
+        # gradients. Therefore put the histogram logging in a try/except:
+        try:
+            for name, param in self.model.named_parameters():
+                if param.grad is None:
+                    continue
+                self.writer.add_histogram(
+                    name.replace(".", "/") + "/grad",
+                    param.grad,
+                    global_step=kwargs["total_train_batches"],
+                )
+        except ValueError:
+            return
 
     def on_batch_end(self, **kwargs):
         if not self.training or not self.histograms:
