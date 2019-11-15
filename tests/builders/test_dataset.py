@@ -48,7 +48,7 @@ def dataset_match_cfg(
 
 @given(add_seq_len_to_transforms=st.booleans())
 def test_build_passes_transform_to_fake_speech_to_text(
-    add_seq_len_to_transforms: bool
+    add_seq_len_to_transforms: bool,
 ) -> None:
     """Unit test that ensures build passes transforms to fake_speech_to_text."""
     dataset_cfg = text_format.Merge(
@@ -98,7 +98,7 @@ def test_build_dataset_returns_correct_dataset(
 
 @given(dataset_cfg=datasets())
 def test_unknown_dataset_raises_value_error(
-    dataset_cfg: dataset_pb2.Dataset
+    dataset_cfg: dataset_pb2.Dataset,
 ) -> None:
     """Ensures ValueError is raised when dataset is not supported.
 

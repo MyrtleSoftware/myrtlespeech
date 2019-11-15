@@ -14,7 +14,7 @@ from tests.protos.test_speech_to_text import speech_to_texts
 
 @given(stt_cfg=speech_to_texts())
 def test_build_returns_speech_to_text(
-    stt_cfg: speech_to_text_pb2.SpeechToText
+    stt_cfg: speech_to_text_pb2.SpeechToText,
 ) -> None:
     """Test that build returns a SpeechToText instance."""
     stt = build(stt_cfg)

@@ -6,7 +6,7 @@ from myrtlespeech.protos import language_model_pb2
 
 
 def build(
-    lm_cfg: language_model_pb2.LanguageModel
+    lm_cfg: language_model_pb2.LanguageModel,
 ) -> Optional[Callable[[Tuple[int, ...]], float]]:
     """Returns a language model based on the config.
 

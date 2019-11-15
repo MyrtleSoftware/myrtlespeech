@@ -54,13 +54,13 @@ def elements_of_type(
     elif dtype is np.uint64:
         elems = st.integers(min_value=0, max_value=2 ** 64 - 1)
     elif dtype in (np.int8, torch.int8):
-        elems = st.integers(min_value=-2 ** 7, max_value=2 ** 7 - 1)
+        elems = st.integers(min_value=-(2 ** 7), max_value=2 ** 7 - 1)
     elif dtype in (np.int16, torch.int16):
-        elems = st.integers(min_value=-2 ** 15, max_value=2 ** 15 - 1)
+        elems = st.integers(min_value=-(2 ** 15), max_value=2 ** 15 - 1)
     elif dtype in (np.int32, torch.int32):
-        elems = st.integers(min_value=-2 ** 31, max_value=2 ** 31 - 1)
+        elems = st.integers(min_value=-(2 ** 31), max_value=2 ** 31 - 1)
     elif dtype in (np.int64, torch.int64):
-        elems = st.integers(min_value=-2 ** 63, max_value=2 ** 63 - 1)
+        elems = st.integers(min_value=-(2 ** 63), max_value=2 ** 63 - 1)
     elif dtype in (np.bool, torch.bool):
         elems = st.booleans()
     else:
