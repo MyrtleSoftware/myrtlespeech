@@ -143,7 +143,7 @@ def test_ctc_beam_decoder_raises_value_error_when_batch_x_lengths_differ(
         ctc_decoder(x, lengths)
 
 
-def test_ctc_beam_decoder_raises_value_error_lengths_values_greater_seq_len() -> None:
+def test_ctc_beam_decoder_raises_value_error_lengths_greater_seq_len() -> None:
     """Ensures ValueError when lengths entry is greater than seq len of x."""
     ctc_decoder = CTCBeamDecoder(blank_index=0, beam_width=20)
 

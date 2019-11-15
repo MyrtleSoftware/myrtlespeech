@@ -2,7 +2,9 @@ import math
 
 import torch
 from myrtlespeech.builders.activation import build as build_activation
-from myrtlespeech.builders.fully_connected import build as build_fully_connected
+from myrtlespeech.builders.fully_connected import (
+    build as build_fully_connected,
+)
 from myrtlespeech.builders.lookahead import build as build_lookahead
 from myrtlespeech.builders.rnn import build as build_rnn
 from myrtlespeech.model.cnn import Conv1dTo2d
@@ -84,7 +86,8 @@ def build(
         DeepSpeech2(
           (cnn): Sequential(
             (0): Conv2dTo1d(seq_len_support=True)
-            (1): MaskConv1d(3, 8, kernel_size=(5,), stride=(1,), padding_mode=PaddingMode.NONE)
+            (1): MaskConv1d(3, 8, kernel_size=(5,), stride=(1,), \
+padding_mode=PaddingMode.NONE)
             (2): SeqLenWrapper(
               (module): ReLU()
               (seq_lens_fn): Identity()
@@ -95,7 +98,8 @@ def build(
             (rnn): LSTM(8, 32, bidirectional=True)
           )
           (fully_connected): FullyConnected(
-            (fully_connected): Linear(in_features=64, out_features=4, bias=True)
+            (fully_connected): Linear(in_features=64, out_features=4, \
+bias=True)
           )
         )
     """
@@ -192,7 +196,10 @@ def _build_cnn(conv_blocks, input_features: int, input_channels: int):
                 MaskConv2d(
                     in_channels=input_channels,
                     out_channels=conv_cfg.output_channels,
-                    kernel_size=[conv_cfg.kernel_feature, conv_cfg.kernel_time],
+                    kernel_size=[
+                        conv_cfg.kernel_feature,
+                        conv_cfg.kernel_time,
+                    ],
                     stride=[conv_cfg.stride_feature, conv_cfg.stride_time],
                     padding_mode=padding_mode,
                     bias=conv_cfg.bias,

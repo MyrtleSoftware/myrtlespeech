@@ -74,12 +74,16 @@ def test_correct_rnn_type_and_size_returned(
         assert math.isclose(rnn.rnn.dropout, dropout)
     assert rnn.rnn.bidirectional == bidirectional
 
-    if not (rnn_type == RNNType.LSTM and bias and forget_gate_bias is not None):
+    if not (
+        rnn_type == RNNType.LSTM and bias and forget_gate_bias is not None
+    ):
         return
 
     for l in range(num_layers):
         bias = getattr(rnn.rnn, f"bias_ih_l{l}")[hidden_size : 2 * hidden_size]
-        bias += getattr(rnn.rnn, f"bias_hh_l{l}")[hidden_size : 2 * hidden_size]
+        bias += getattr(rnn.rnn, f"bias_hh_l{l}")[
+            hidden_size : 2 * hidden_size
+        ]
         assert torch.allclose(bias, torch.tensor(forget_gate_bias))
 
 

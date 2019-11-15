@@ -49,9 +49,9 @@ def speech_to_text(
 
         label_len: The label will have length between this range inclusive.
 
-            Requires ``label_len[0] <= label_len[1]`` and ``label_len[0] >= 0``.
-            i.e. Lower bound must be less than or equal to upper bound and
-            non-negative.
+            Requires ``label_len[0] <= label_len[1]`` and ``label_len[0] >=
+            0``.  i.e. Lower bound must be less than or equal to upper bound
+            and non-negative.
 
         audio_channels: Number of audio channels to simulate. Must be ``>= 1``.
 
@@ -179,9 +179,13 @@ def speech_to_text(
         if audio_dtype.is_floating_point:
             audio.normal_(mean=0, std=1)
         elif audio_dtype == torch.int16:
-            audio.random_(-(2 ** 15), 2 ** 15)  # random_ subtracts 1 from upper
+            audio.random_(
+                -(2 ** 15), 2 ** 15
+            )  # random_ subtracts 1 from upper
         else:
-            audio.random_(-(2 ** 31), 2 ** 31)  # random_ subtracts 1 from upper
+            audio.random_(
+                -(2 ** 31), 2 ** 31
+            )  # random_ subtracts 1 from upper
 
         if audio_transform is not None:
             audio = audio_transform(audio)

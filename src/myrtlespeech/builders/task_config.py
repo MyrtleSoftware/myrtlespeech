@@ -22,7 +22,8 @@ def build(
             containing the config for the desired task.
 
     Returns:
-        A tuple of ``(seq_to_seq, epochs, optim, train_loader, eval_loader)`` where:
+        A tuple of ``(seq_to_seq, epochs, optim, train_loader, eval_loader)``
+        where:
 
             seq_to_seq:
                 A :py:class:`.SeqToSeq` model.
@@ -31,7 +32,8 @@ def build(
                 The number of epochs to train for.
 
             train_loader:
-                A :py:class:`torch.utils.data.DataLoader` for the training data.
+                A :py:class:`torch.utils.data.DataLoader` for the training
+                data.
 
             eval_loader:
                 A :py:class:`torch.utils.data.DataLoader` for the eval data.
@@ -107,12 +109,13 @@ def build(
         add_seq_len_to_transforms=True,
     )
 
+    shuffle = task_config.train_config.shuffle_batches_before_every_epoch
     train_loader = torch.utils.data.DataLoader(
         dataset=train_dataset,
         batch_sampler=RandomBatchSampler(
             indices=range(len(train_dataset)),
             batch_size=task_config.train_config.batch_size,
-            shuffle=task_config.train_config.shuffle_batches_before_every_epoch,
+            shuffle=shuffle,
             drop_last=False,
         ),
         num_workers=num_workers,

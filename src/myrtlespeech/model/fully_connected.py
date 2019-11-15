@@ -27,9 +27,8 @@ class FullyConnected(torch.nn.Module):
             layer, if any.
 
     Attributes:
-        fully_connected (Union[:py:class:`torch.nn.Linear`, :py:class:`torch.nn.Sequential`]):
-            A :py:class:`torch.nn.Module` that implements the network specified
-            by the class arguments. It is be an instance of
+        fully_connected: A :py:class:`torch.nn.Module` that implements the
+            network specified by the class arguments. It is be an instance of
             :py:class:`torch.nn.Linear` if ``num_hidden_layers == 0`` otherwise
             it is an instance of :py:class:`torch.nn.Sequential`.
 
@@ -40,9 +39,11 @@ class FullyConnected(torch.nn.Module):
     Raises:
         :py:class:`ValueError`: If ``num_hidden_layers < 0``.
 
-        :py:class:`ValueError`: If ``num_hidden_layers == 0 and hidden_size is not None``.
+        :py:class:`ValueError`: If ``num_hidden_layers == 0 and hidden_size is
+            not None``.
 
-        :py:class:`ValueError`: If ``num_hidden_layers == 0 and hidden_activation_fn is not None``.
+        :py:class:`ValueError`: If ``num_hidden_layers == 0 and
+        hidden_activation_fn is not None``.
     """
 
     def __init__(

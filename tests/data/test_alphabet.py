@@ -63,7 +63,7 @@ def test_repr_does_not_raise_error(alphabet: Alphabet) -> None:
 
 @given(symbols=duplicate_symbols())
 def test_duplicate_symbol_raise_value_error(symbols: List[str]) -> None:
-    """Ensures ``ValueError`` raised when ``Alphabet`` init has dup. symbols."""
+    """Ensures ``ValueError`` raised when ``Alphabet`` init has dup symbols."""
     with pytest.raises(ValueError):
         Alphabet(symbols)
 
