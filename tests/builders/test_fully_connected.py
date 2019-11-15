@@ -1,8 +1,9 @@
-import hypothesis.strategies as st
-import torch
-import pytest
 from typing import Dict
 from typing import Tuple
+
+import hypothesis.strategies as st
+import pytest
+import torch
 from hypothesis import assume
 from hypothesis import given
 from myrtlespeech.builders.fully_connected import build
@@ -18,10 +19,10 @@ from tests.utils.utils import tensors
 
 
 def fully_connected_module_match_cfg(
-        fully_connected: FullyConnected,
-        fully_connected_cfg: fully_connected_pb2.FullyConnected,
-        input_features: int,
-        output_features: int,
+    fully_connected: FullyConnected,
+    fully_connected_cfg: fully_connected_pb2.FullyConnected,
+    input_features: int,
+    output_features: int,
 ) -> None:
     """Ensures ``FullyConnected`` module matches protobuf configuration."""
     # otherwise it will be a Sequential of layers
@@ -49,8 +50,9 @@ def fully_connected_module_match_cfg(
         if batch_norm and idx < fully_connected_cfg.num_hidden_layers:
             assert isinstance(module.batch_norm, torch.nn.BatchNorm1d)
         if not act_fn_is_none and idx < fully_connected_cfg.num_hidden_layers:
-            activation_match_cfg(module.activation,
-                                 fully_connected_cfg.activation)
+            activation_match_cfg(
+                module.activation, fully_connected_cfg.activation
+            )
 
 
 # Tests -----------------------------------------------------------------------
@@ -62,9 +64,9 @@ def fully_connected_module_match_cfg(
     output_features=st.integers(min_value=1, max_value=32),
 )
 def test_build_fully_connected_returns_correct_module_structure(
-        fully_connected_cfg: fully_connected_pb2.FullyConnected,
-        input_features: int,
-        output_features: int,
+    fully_connected_cfg: fully_connected_pb2.FullyConnected,
+    input_features: int,
+    output_features: int,
 ) -> None:
     """Ensures Module returned has correct structure."""
     if fully_connected_cfg.num_hidden_layers == 0:
@@ -85,17 +87,20 @@ def test_build_fully_connected_returns_correct_module_structure(
     num_hidden_layers=st.integers(-1000, -1),
 )
 def test_fully_connected_raises_value_error_negative_num_hidden_layers(
-        fully_connected_kwargs: Tuple[FullyConnected, Dict],
-        input_features: int,
-        output_features: int,
-        num_hidden_layers: int
+    fully_connected_kwargs: Tuple[FullyConnected, Dict],
+    input_features: int,
+    output_features: int,
+    num_hidden_layers: int,
 ) -> None:
     """Ensures ValueError raised when num_hidden_layers < 0."""
     _, kwargs = fully_connected_kwargs
     kwargs["num_hidden_layers"] = num_hidden_layers
     with pytest.raises(ValueError):
-        build(fully_connected_pb2.FullyConnected(**kwargs),
-              input_features, output_features)
+        build(
+            fully_connected_pb2.FullyConnected(**kwargs),
+            input_features,
+            output_features,
+        )
 
 
 @given(
@@ -105,53 +110,60 @@ def test_fully_connected_raises_value_error_negative_num_hidden_layers(
     hidden_size=st.integers(1, 1000),
 )
 def test_fully_connected_raises_value_error_hidden_size_not_none(
-        fully_connected_kwargs: Tuple[FullyConnected, Dict],
-        input_features: int,
-        output_features: int,
-        hidden_size: int
+    fully_connected_kwargs: Tuple[FullyConnected, Dict],
+    input_features: int,
+    output_features: int,
+    hidden_size: int,
 ) -> None:
     """Ensures ValueError raised when no hidden layers and not hidden_size."""
     _, kwargs = fully_connected_kwargs
     kwargs["num_hidden_layers"] = 0
     kwargs["hidden_size"] = hidden_size
     with pytest.raises(ValueError):
-        build(fully_connected_pb2.FullyConnected(**kwargs),
-              input_features, output_features)
+        build(
+            fully_connected_pb2.FullyConnected(**kwargs),
+            input_features,
+            output_features,
+        )
 
 
 @given(
     fully_connected_kwargs=fully_connecteds(return_kwargs=True),
     input_features=st.integers(min_value=1, max_value=32),
     output_features=st.integers(min_value=1, max_value=32),
-    hidden_activation_fn=st.sampled_from([torch.nn.ReLU(),
-                                          torch.nn.Hardtanh(min_val=0.0,
-                                                            max_val=20.0)]),
+    hidden_activation_fn=st.sampled_from(
+        [torch.nn.ReLU(), torch.nn.Hardtanh(min_val=0.0, max_val=20.0)]
+    ),
 )
 def test_fully_connected_raises_value_error_hidden_activation_fn_not_none(
-        fully_connected_kwargs: Tuple[FullyConnected, Dict],
-        input_features: int,
-        output_features: int,
-        hidden_activation_fn: torch.nn.Module,
+    fully_connected_kwargs: Tuple[FullyConnected, Dict],
+    input_features: int,
+    output_features: int,
+    hidden_activation_fn: torch.nn.Module,
 ) -> None:
     """Ensures ValueError raised when no hidden layers and no act fn."""
     _, kwargs = fully_connected_kwargs
     kwargs["num_hidden_layers"] = 0
     kwargs["hidden_activation_fn"] = hidden_activation_fn
     with pytest.raises(ValueError):
-        build(fully_connected_pb2.FullyConnected(**kwargs),
-              input_features, output_features)
+        build(
+            fully_connected_pb2.FullyConnected(**kwargs),
+            input_features,
+            output_features,
+        )
 
 
 @given(
-    fully_connected_kwargs=fully_connecteds(return_kwargs=True,
-                                            valid_only=True),
+    fully_connected_kwargs=fully_connecteds(
+        return_kwargs=True, valid_only=True
+    ),
     output_features=st.integers(min_value=1, max_value=32),
     tensor=tensors(min_n_dims=3, max_n_dims=3),
 )
 def test_fully_connected_forward_returns_correct_size(
-        fully_connected_kwargs: Tuple[FullyConnected, Dict],
-        output_features: int,
-        tensor: torch.Tensor
+    fully_connected_kwargs: Tuple[FullyConnected, Dict],
+    output_features: int,
+    tensor: torch.Tensor,
 ) -> None:
     # create new FullyConnected that accepts in_features sized input
     _, kwargs = fully_connected_kwargs
@@ -159,8 +171,11 @@ def test_fully_connected_forward_returns_correct_size(
     if tensor.size(1) == 1:
         kwargs["batch_norm"] = False
 
-    fully_connected = build(fully_connected_pb2.FullyConnected(**kwargs),
-                            tensor.size()[-1], output_features)
+    fully_connected = build(
+        fully_connected_pb2.FullyConnected(**kwargs),
+        tensor.size()[-1],
+        output_features,
+    )
 
     max_seq_len, batch_size, *_ = tensor.size()
     in_seq_lens = torch.randint(
@@ -181,17 +196,20 @@ def test_fully_connected_forward_returns_correct_size(
 
 
 @given(
-    fully_connected_kwargs=fully_connecteds(return_kwargs=True,
-                                            valid_only=True),
+    fully_connected_kwargs=fully_connecteds(
+        return_kwargs=True, valid_only=True
+    ),
     in_features=st.integers(min_value=1, max_value=32),
     out_features=st.integers(min_value=1, max_value=32),
     batch_size=st.integers(min_value=1, max_value=16),
     max_seq_len=st.integers(min_value=1, max_value=64),
 )
 def test_fully_connected_module_returns_correct_seq_lens(
-        fully_connected_kwargs: Tuple[FullyConnected, Dict],
-        in_features: int, out_features: int,
-        batch_size: int, max_seq_len: int
+    fully_connected_kwargs: Tuple[FullyConnected, Dict],
+    in_features: int,
+    out_features: int,
+    batch_size: int,
+    max_seq_len: int,
 ):
     """Ensures FullyConnected returns correct seq_lens when support enabled."""
     # create new FullyConnected that accepts in_features sized input
@@ -199,8 +217,9 @@ def test_fully_connected_module_returns_correct_seq_lens(
     # if batch_size == 1 don't add batch norm to the fully connected network
     kwargs["batch_norm"] = batch_size > 1
 
-    fully_connected = build(fully_connected_pb2.FullyConnected(**kwargs),
-                            in_features, out_features)
+    fully_connected = build(
+        fully_connected_pb2.FullyConnected(**kwargs), in_features, out_features
+    )
 
     tensor = torch.empty(
         [max_seq_len, batch_size, fully_connected[0].in_features],

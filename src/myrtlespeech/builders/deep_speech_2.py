@@ -5,11 +5,11 @@ from myrtlespeech.builders.activation import build as build_activation
 from myrtlespeech.builders.fully_connected import build as build_fully_connected
 from myrtlespeech.builders.lookahead import build as build_lookahead
 from myrtlespeech.builders.rnn import build as build_rnn
+from myrtlespeech.model.cnn import BatchNorm
 from myrtlespeech.model.cnn import Conv1dTo2d
 from myrtlespeech.model.cnn import Conv2dTo1d
 from myrtlespeech.model.cnn import MaskConv1d
 from myrtlespeech.model.cnn import MaskConv2d
-from myrtlespeech.model.cnn import BatchNorm
 from myrtlespeech.model.cnn import out_lens
 from myrtlespeech.model.cnn import PaddingMode
 from myrtlespeech.model.deep_speech_2 import DeepSpeech2

@@ -1,15 +1,11 @@
 from typing import Optional
 from typing import Tuple
-from typing import Union
 
 import torch
 
 
 class FullyConnected(torch.nn.Module):
     r"""A fully connected neural network.
-
-    All parameters and buffers are moved to the GPU with
-    :py:meth:`torch.nn.Module.cuda` if :py:func:`torch.cuda.is_available`.
 
     Args:
         in_features: Size of each input sample.
@@ -49,16 +45,12 @@ class FullyConnected(torch.nn.Module):
         self.out_features = out_features
 
         self.fully_connected = torch.nn.Linear(in_features, out_features)
-        self.batch_norm = torch.nn.BatchNorm1d(out_features) if batch_norm \
-            else None
+        self.batch_norm = (
+            torch.nn.BatchNorm1d(out_features) if batch_norm else None
+        )
         self.activation = hidden_activation_fn
 
         self.use_cuda = torch.cuda.is_available()
-        if self.use_cuda:
-            self.fully_connected = self.fully_connected.cuda()
-            self.batch_norm = self.batch_norm.cuda() if batch_norm else None
-            self.activation = self.activation.cuda() if hidden_activation_fn \
-                else None
 
     def forward(
         self, x: Tuple[torch.Tensor, torch.Tensor]

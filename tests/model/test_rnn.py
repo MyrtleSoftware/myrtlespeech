@@ -30,13 +30,13 @@ def rnn_types(draw) -> st.SearchStrategy[RNNType]:
     batch_norm=st.booleans(),
 )
 def test_correct_rnn_type_and_size_returned(
-        rnn_type: RNNType,
-        input_size: int,
-        hidden_size: int,
-        bias: int,
-        bidirectional: bool,
-        forget_gate_bias: float,
-        batch_norm: bool,
+    rnn_type: RNNType,
+    input_size: int,
+    hidden_size: int,
+    bias: int,
+    bidirectional: bool,
+    forget_gate_bias: float,
+    batch_norm: bool,
 ) -> None:
     """Ensures correct ``rnn`` type and initialisation."""
     rnn = RNN(
@@ -73,8 +73,8 @@ def test_correct_rnn_type_and_size_returned(
     if not (rnn_type == RNNType.LSTM and bias and forget_gate_bias is not None):
         return
 
-    bias = getattr(rnn.rnn, f"bias_ih_l0")[hidden_size: 2 * hidden_size]
-    bias += getattr(rnn.rnn, f"bias_hh_l0")[hidden_size: 2 * hidden_size]
+    bias = getattr(rnn.rnn, f"bias_ih_l0")[hidden_size : 2 * hidden_size]
+    bias += getattr(rnn.rnn, f"bias_hh_l0")[hidden_size : 2 * hidden_size]
     assert torch.allclose(bias, torch.tensor(forget_gate_bias))
 
 

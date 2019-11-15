@@ -13,7 +13,7 @@ from myrtlespeech.model.fully_connected import FullyConnected
 
 @st.composite
 def fully_connecteds(
-        draw, return_kwargs: bool = False
+    draw, return_kwargs: bool = False
 ) -> Union[
     st.SearchStrategy[FullyConnected],
     st.SearchStrategy[Tuple[FullyConnected, Dict]],
@@ -30,8 +30,9 @@ def fully_connecteds(
         kwargs["hidden_size"] = draw(st.integers(1, 32))
         kwargs["batch_norm"] = draw(st.booleans())
         kwargs["hidden_activation_fn"] = draw(
-            st.sampled_from([torch.nn.ReLU(),
-                             torch.nn.Hardtanh(min_val=0.0, max_val=20.0)])
+            st.sampled_from(
+                [torch.nn.ReLU(), torch.nn.Hardtanh(min_val=0.0, max_val=20.0)]
+            )
         )
 
     num_hidden_layers = kwargs["num_hidden_layers"]
@@ -40,15 +41,20 @@ def fully_connecteds(
     for i in range(num_hidden_layers + 1):
         # Hidden activation is eventually added only to the hidden layers before
         # the last FullyConnected layer. The same is for the batch norm layers.
-        hidden_layers.append(FullyConnected(
-            in_features=input_features,
-            out_features=kwargs["hidden_size"] if i < num_hidden_layers
-            else kwargs["out_features"],
-            hidden_activation_fn=kwargs["hidden_activation_fn"]
-            if i < num_hidden_layers else None,
-            batch_norm=kwargs["batch_norm"] if i < num_hidden_layers
-            else False,
-        ))
+        hidden_layers.append(
+            FullyConnected(
+                in_features=input_features,
+                out_features=kwargs["hidden_size"]
+                if i < num_hidden_layers
+                else kwargs["out_features"],
+                hidden_activation_fn=kwargs["hidden_activation_fn"]
+                if i < num_hidden_layers
+                else None,
+                batch_norm=kwargs["batch_norm"]
+                if i < num_hidden_layers
+                else False,
+            )
+        )
         input_features = kwargs["hidden_size"]
 
     fully_connected_module = torch.nn.Sequential(*hidden_layers)
@@ -63,7 +69,7 @@ def fully_connecteds(
 
 @given(fully_connected_kwargs=fully_connecteds(return_kwargs=True))
 def test_fully_connected_module_structure_correct_for_valid_kwargs(
-        fully_connected_kwargs: Tuple[FullyConnected, Dict]
+    fully_connected_kwargs: Tuple[FullyConnected, Dict]
 ):
     """Ensures FullyConnected.fully_connected structure is correct."""
     fully_connected, kwargs = fully_connected_kwargs
@@ -72,10 +78,14 @@ def test_fully_connected_module_structure_correct_for_valid_kwargs(
 
     if kwargs["num_hidden_layers"] == 0:
         assert isinstance(fully_connected[0].fully_connected, torch.nn.Linear)
-        assert fully_connected[0].fully_connected.in_features == \
-               kwargs["in_features"]
-        assert fully_connected[0].fully_connected.out_features == \
-               kwargs["out_features"]
+        assert (
+            fully_connected[0].fully_connected.in_features
+            == kwargs["in_features"]
+        )
+        assert (
+            fully_connected[0].fully_connected.out_features
+            == kwargs["out_features"]
+        )
         return
 
     assert len(fully_connected) == kwargs["num_hidden_layers"] + 1
@@ -94,5 +104,6 @@ def test_fully_connected_module_structure_correct_for_valid_kwargs(
         if kwargs["batch_norm"] and idx < kwargs["num_hidden_layers"]:
             assert isinstance(module.batch_norm, torch.nn.BatchNorm1d)
         if idx < kwargs["num_hidden_layers"]:
-            assert isinstance(module.activation,
-                              type(kwargs["hidden_activation_fn"]))
+            assert isinstance(
+                module.activation, type(kwargs["hidden_activation_fn"])
+            )

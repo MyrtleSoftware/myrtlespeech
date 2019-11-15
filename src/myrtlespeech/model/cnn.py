@@ -15,7 +15,7 @@ class PaddingMode(Enum):
 
 
 def pad_same(
-        length: int, kernel_size: int, stride: int = 1, dilation: int = 1
+    length: int, kernel_size: int, stride: int = 1, dilation: int = 1
 ) -> Tuple[int, int]:
     r"""Returns a tuple of left and right same padding amounts.
 
@@ -164,11 +164,11 @@ def pad_same(
 
 
 def out_lens(
-        seq_lens: torch.Tensor,
-        kernel_size: int,
-        stride: int,
-        dilation: int,
-        padding: int,
+    seq_lens: torch.Tensor,
+    kernel_size: int,
+    stride: int,
+    dilation: int,
+    padding: int,
 ) -> torch.Tensor:
     """Returns a tensor of sequence lengths after applying convolution.
 
@@ -225,15 +225,15 @@ class MaskConv1d(torch.nn.Conv1d):
     """
 
     def __init__(
-            self,
-            in_channels: int,
-            out_channels: int,
-            kernel_size: int,
-            stride: int = 1,
-            padding_mode: PaddingMode = PaddingMode.NONE,
-            dilation: int = 1,
-            groups: int = 1,
-            bias: bool = True,
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        stride: int = 1,
+        padding_mode: PaddingMode = PaddingMode.NONE,
+        dilation: int = 1,
+        groups: int = 1,
+        bias: bool = True,
     ):
         super().__init__(
             in_channels=in_channels,
@@ -250,7 +250,7 @@ class MaskConv1d(torch.nn.Conv1d):
             super().cuda()
 
     def _pad(
-            self, acts: torch.Tensor, seq_lens: torch.Tensor
+        self, acts: torch.Tensor, seq_lens: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Pads the input activations."""
         batch, channels, max_seq_len = acts.size()
@@ -283,8 +283,8 @@ class MaskConv1d(torch.nn.Conv1d):
 
         mask = (
             torch.arange(max_seq_len)
-                .to(seq_lens.device)
-                .expand(len(seq_lens), max_seq_len)
+            .to(seq_lens.device)
+            .expand(len(seq_lens), max_seq_len)
         )
         mask = mask >= seq_lens.unsqueeze(1)
         mask = mask.unsqueeze(1).type(torch.bool).to(device=acts.device)
@@ -293,7 +293,7 @@ class MaskConv1d(torch.nn.Conv1d):
         del mask
 
     def forward(
-            self, x: Tuple[torch.Tensor, torch.Tensor]
+        self, x: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Returns the result of applying the module to ``x[0]``.
 
@@ -364,15 +364,15 @@ class MaskConv2d(torch.nn.Conv2d):
     """
 
     def __init__(
-            self,
-            in_channels: int,
-            out_channels: int,
-            kernel_size: Union[int, List[int]],
-            stride: Union[int, List[int]] = 1,
-            padding_mode: PaddingMode = PaddingMode.NONE,
-            dilation: int = 1,
-            groups: int = 1,
-            bias: bool = True,
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: Union[int, List[int]],
+        stride: Union[int, List[int]] = 1,
+        padding_mode: PaddingMode = PaddingMode.NONE,
+        dilation: int = 1,
+        groups: int = 1,
+        bias: bool = True,
     ):
         super().__init__(
             in_channels=in_channels,
@@ -389,7 +389,7 @@ class MaskConv2d(torch.nn.Conv2d):
             super().cuda()
 
     def _pad(
-            self, acts: torch.Tensor, seq_lens: torch.Tensor
+        self, acts: torch.Tensor, seq_lens: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Pads the input activations."""
         batch, channels, features, max_seq_len = acts.size()
@@ -428,22 +428,22 @@ class MaskConv2d(torch.nn.Conv2d):
 
         mask = (
             torch.arange(max_seq_len)
-                .to(seq_lens.device)
-                .expand(len(seq_lens), max_seq_len)
+            .to(seq_lens.device)
+            .expand(len(seq_lens), max_seq_len)
         )
         mask = mask >= seq_lens.unsqueeze(1)
         mask = (
             mask.unsqueeze(1)  # add channels and features dims, these will be
-                .unsqueeze(1)  # broadcast so OK to be set to 1
-                .type(torch.bool)
-                .to(device=acts.device)
+            .unsqueeze(1)  # broadcast so OK to be set to 1
+            .type(torch.bool)
+            .to(device=acts.device)
         )
 
         acts.masked_fill_(mask, 0)
         del mask
 
     def forward(
-            self, x: Tuple[torch.Tensor, torch.Tensor]
+        self, x: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Returns the result of applying the module to ``x[0]``.
 
@@ -513,15 +513,14 @@ class BatchNorm(torch.nn.Module):
 
     """
 
-    def __init__(
-            self,
-            batch_norm_type: torch.nn.Module,
-            num_features: int,
-    ):
+    def __init__(self, batch_norm_type: torch.nn.Module, num_features: int):
         super().__init__()
 
-        if batch_norm_type not in [torch.nn.BatchNorm1d, torch.nn.BatchNorm2d,
-                                   torch.nn.BatchNorm3d]:
+        if batch_norm_type not in [
+            torch.nn.BatchNorm1d,
+            torch.nn.BatchNorm2d,
+            torch.nn.BatchNorm3d,
+        ]:
             raise ValueError(f"Invalid batch norm type {batch_norm_type}")
 
         self.batch_norm = batch_norm_type(num_features)

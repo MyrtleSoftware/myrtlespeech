@@ -90,7 +90,8 @@ def build(
         rnn_layers.append(
             RNN(
                 rnn_type=rnn_type,
-                input_size=rnn_cfg.hidden_size * num_directions if i > 0
+                input_size=rnn_cfg.hidden_size * num_directions
+                if i > 0
                 else input_features,
                 hidden_size=rnn_cfg.hidden_size,
                 bias=rnn_cfg.bias,
