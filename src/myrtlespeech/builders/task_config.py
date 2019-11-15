@@ -11,7 +11,7 @@ from myrtlespeech.protos import task_config_pb2
 
 
 def build(
-    task_config: task_config_pb2.TaskConfig,
+    task_config: task_config_pb2.TaskConfig
 ) -> Tuple[
     SeqToSeq, int, torch.utils.data.DataLoader, torch.utils.data.DataLoader
 ]:
@@ -90,6 +90,48 @@ def build(
         raise ValueError(f"unsupported optimizer {optim_str}")
 
     seq_to_seq.optim = optim
+
+    # create learning rate scheduler
+    lr_scheduler_str = task_config.train_config.WhichOneof(
+        "supported_lr_scheduler"
+    )
+    if lr_scheduler_str == "fixed_lr":
+        lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
+            optimizer=seq_to_seq.optim, lr_lambda=lambda epoch: 1.0
+        )
+    elif lr_scheduler_str == "step_lr":
+        kwargs = {}
+
+        step_lr = task_config.train_config.step_lr
+        if step_lr.HasField("gamma"):
+            kwargs["gamma"] = step_lr.gamma.value
+        kwargs["step_size"] = step_lr.step_size
+
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer=seq_to_seq.optim, **kwargs
+        )
+    elif lr_scheduler_str == "exponential_lr":
+        lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer=seq_to_seq.optim,
+            gamma=task_config.train_config.exponential_lr.gamma,
+        )
+    elif lr_scheduler_str == "cosine_annealing_lr":
+        kwargs = {}
+
+        cosine_annealing_lr = task_config.train_config.cosine_annealing_lr
+        if cosine_annealing_lr.HasField("eta_min"):
+            kwargs["eta_min"] = cosine_annealing_lr.eta_min.value
+        kwargs["T_max"] = cosine_annealing_lr.t_max
+
+        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer=seq_to_seq.optim, **kwargs
+        )
+    else:
+        raise ValueError(
+            f"unsupported learning rate scheduler " f"{lr_scheduler_str}"
+        )
+
+    seq_to_seq.lr_scheduler = lr_scheduler
 
     # create dataloader
     def target_transform(target):
