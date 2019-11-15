@@ -135,7 +135,8 @@ class CTCBeamDecoder(torch.nn.Module):
             :math:`i\textsuperscript{th}` sequence in ``x``.
 
         Raises:
-            :py:class:`ValueError`: if ``lengths.dtype`` not in ``[torch.uint8, torch.int8, torch.int16, torch.int32, torch.int64]``.
+            :py:class:`ValueError`: if ``lengths.dtype`` not in ``[torch.uint8,
+                torch.int8, torch.int16, torch.int32, torch.int64]``.
 
             :py:class:`ValueError`: if the ``batch`` dimension of ``x`` is not
                 equal to the ``len(lengths)``.
@@ -178,7 +179,10 @@ class CTCBeamDecoder(torch.nn.Module):
             # Pnb[t][l]: an estimate of the probability of *prefix* l, at step
             #            t, based on paths that do not end in a blank and map
             #            to l
-            Pb, Pnb = defaultdict(Counter), defaultdict(Counter)  # type: ignore
+            Pb, Pnb = (
+                defaultdict(Counter),  # type: ignore
+                defaultdict(Counter),  # type: ignore
+            )
             # prob of null sequence ending in a blank and non-blank after
             # seeing no input (-1 as the first time step seen has index 0)
             Pb[-1][()] = 1.0
@@ -232,7 +236,9 @@ class CTCBeamDecoder(torch.nn.Module):
                                 Pb[t][l_plus] += ctc[t][self.blank_index] * (
                                     Pb[t - 1][l_plus] + Pnb[t - 1][l_plus]
                                 )
-                                Pnb[t][l_plus] += ctc[t][c] * Pnb[t - 1][l_plus]
+                                Pnb[t][l_plus] += (
+                                    ctc[t][c] * Pnb[t - 1][l_plus]
+                                )
 
                 # keep beam_width prefixes, scale scores by weighted number of
                 # words to compensate for LM reducing scores (1 added to smooth

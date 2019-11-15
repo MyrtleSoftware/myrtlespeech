@@ -47,7 +47,10 @@ def speech_to_texts(
     # model
     model_str = draw(
         st.sampled_from(
-            [f.name for f in descript.oneofs_by_name["supported_models"].fields]
+            [
+                f.name
+                for f in descript.oneofs_by_name["supported_models"].fields
+            ]
         )
     )
     if model_str == "deep_speech_1":
@@ -55,7 +58,7 @@ def speech_to_texts(
     elif model_str == "deep_speech_2":
         kwargs[model_str] = draw(deep_speech_2s())
         warnings.warn(
-            "TODO: fix hack that assumes input_features > 200 for deep_speech_2"
+            "TODO: fix hack that assumes input_features>200 for deep_speech_2"
         )
         assume(input_features > 200)
     else:
@@ -67,7 +70,10 @@ def speech_to_texts(
     # loss
     loss_str = draw(
         st.sampled_from(
-            [f.name for f in descript.oneofs_by_name["supported_losses"].fields]
+            [
+                f.name
+                for f in descript.oneofs_by_name["supported_losses"].fields
+            ]
         )
     )
     if loss_str == "ctc_loss":

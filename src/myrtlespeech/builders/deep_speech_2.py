@@ -2,7 +2,9 @@ import math
 
 import torch
 from myrtlespeech.builders.activation import build as build_activation
-from myrtlespeech.builders.fully_connected import build as build_fully_connected
+from myrtlespeech.builders.fully_connected import (
+    build as build_fully_connected,
+)
 from myrtlespeech.builders.lookahead import build as build_lookahead
 from myrtlespeech.builders.rnn import build as build_rnn
 from myrtlespeech.model.cnn import Conv1dTo2d
@@ -39,6 +41,7 @@ def build(
         A :py:class:`.DeepSpeech2` based on the config.
 
     Example:
+        >>> # noqa: E501
         >>> from google.protobuf import text_format
         >>> cfg_text = '''
         ... conv_block {
@@ -192,7 +195,10 @@ def _build_cnn(conv_blocks, input_features: int, input_channels: int):
                 MaskConv2d(
                     in_channels=input_channels,
                     out_channels=conv_cfg.output_channels,
-                    kernel_size=[conv_cfg.kernel_feature, conv_cfg.kernel_time],
+                    kernel_size=[
+                        conv_cfg.kernel_feature,
+                        conv_cfg.kernel_time,
+                    ],
                     stride=[conv_cfg.stride_feature, conv_cfg.stride_time],
                     padding_mode=padding_mode,
                     bias=conv_cfg.bias,

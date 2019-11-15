@@ -46,7 +46,9 @@ def rnn_match_cfg(rnn: RNN, rnn_cfg: rnn_pb2.RNN, input_features: int) -> None:
     forget_gate_bias = rnn_cfg.forget_gate_bias.value
     for l in range(rnn_cfg.num_layers):
         bias = getattr(rnn.rnn, f"bias_ih_l{l}")[hidden_size : 2 * hidden_size]
-        bias += getattr(rnn.rnn, f"bias_hh_l{l}")[hidden_size : 2 * hidden_size]
+        bias += getattr(rnn.rnn, f"bias_hh_l{l}")[
+            hidden_size : 2 * hidden_size
+        ]
         assert torch.allclose(bias, torch.tensor(forget_gate_bias))
 
 

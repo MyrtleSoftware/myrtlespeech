@@ -152,7 +152,9 @@ class TensorBoardLogger(ModelCallback):
         for k, v in kwargs["reports"].items():
             if isinstance(v, (int, float)):
                 self.writer.add_scalar(
-                    f"{stage}/{k}", v, global_step=kwargs["total_train_batches"]
+                    f"{stage}/{k}",
+                    v,
+                    global_step=kwargs["total_train_batches"],
                 )
             elif isinstance(v, dict):
                 for k_p, v_p in v.items():
@@ -213,7 +215,9 @@ def run() -> None:
         [
             ReportMeanBatchLoss(),
             ReportCTCDecoder(
-                seq_to_seq.post_process, seq_to_seq.alphabet, WordSegmentor(" ")
+                seq_to_seq.post_process,
+                seq_to_seq.alphabet,
+                WordSegmentor(" "),
             ),
             TensorBoardLogger(log_dir, seq_to_seq.model, histograms=False),
         ]

@@ -43,6 +43,7 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
         :py:class:`ValueError`: On invalid configuration.
 
     Example:
+        >>> # noqa: E501
         >>> from google.protobuf import text_format
         >>> cfg_text = '''
         ... alphabet: "acgt_";
@@ -216,8 +217,8 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
             separator_index = stt_cfg.ctc_beam_decoder.separator_index.value
             if not (0 <= separator_index <= max(0, len(alphabet) - 1)):
                 raise ValueError(
-                    f"ctc_beam_decoder.separator_index.value={separator_index} "
-                    f"[0, {max(0, len(alphabet) - 1)}]"
+                    f"ctc_beam_decoder.separator_index.value={separator_index}"
+                    f" [0, {max(0, len(alphabet) - 1)}]"
                 )
         post_process = build_ctc_beam_decoder(stt_cfg.ctc_beam_decoder)
     else:

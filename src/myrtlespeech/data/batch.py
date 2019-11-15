@@ -1,4 +1,3 @@
-from typing import Dict
 from typing import List
 from typing import Tuple
 
@@ -46,7 +45,8 @@ def pad_sequence(
 def seq_to_seq_collate_fn(
     batch: List[
         Tuple[
-            Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]
+            Tuple[torch.Tensor, torch.Tensor],
+            Tuple[torch.Tensor, torch.Tensor],
         ]
     ]
 ) -> Tuple[
@@ -57,7 +57,8 @@ def seq_to_seq_collate_fn(
     A ``collate_fn`` for sequence-to-sequence tasks.
 
     Args:
-        batch: A list of ``((tensor, tensor_len), (target, target_len))`` where:
+        batch: A list of ``((tensor, tensor_len), (target, target_len))``
+            where:
 
             tensor:
                 A :py:class:`torch.Tensor` of input for a model. The sequence

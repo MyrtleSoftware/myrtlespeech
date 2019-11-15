@@ -1,6 +1,5 @@
 import hypothesis.strategies as st
 import torch
-from google.protobuf import empty_pb2
 from hypothesis import assume
 from hypothesis import given
 from myrtlespeech.builders.fully_connected import build
@@ -39,7 +38,9 @@ def fully_connected_module_match_cfg(
     act_fn_is_none = fully_connected_cfg.activation.HasField("identity")
 
     if act_fn_is_none:
-        assert len(fully_connected) == fully_connected_cfg.num_hidden_layers + 1
+        assert (
+            len(fully_connected) == fully_connected_cfg.num_hidden_layers + 1
+        )
     else:
         assert (
             len(fully_connected)

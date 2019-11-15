@@ -46,9 +46,10 @@ class LibriSpeech(Dataset):
             already downloaded, it is not downloaded again. See the
             :py:meth:`LibriSpeech.download` method for more information.
 
-        skip_integrity_check: If :py:data:`True` the integrity check is skipped.
-            This is useful when doing quick experiments on the larger subsets
-            that can take time to verify and may have been recently checked.
+        skip_integrity_check: If :py:data:`True` the integrity check is
+            skipped. This is useful when doing quick experiments on the larger
+            subsets that can take time to verify and may have been recently
+            checked.
 
         max_duration: All samples with duration (in seconds) greater than this
             will be dropped.

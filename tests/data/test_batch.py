@@ -82,7 +82,7 @@ def test_pad_sequences_returns_tensor_with_correct_size(
 def test_pad_sequences_returns_tensor_with_correct_values(
     sequences: List[torch.Tensor], padding_value: int
 ) -> None:
-    """Ensures Tensor returned by pad_sequences has correct values + padding."""
+    """Ensures Tensor returned by pad_sequences has correct values+padding."""
     out = pad_sequence(sequences, padding_value)
 
     # half doesn't support equality on CPU so cast to float

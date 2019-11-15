@@ -182,6 +182,7 @@ class CallbackHandler:
                 TODO
 
         Example:
+            >>> # noqa: E501
             >>> handler = CallbackHandler(callbacks=[])
             >>> handler.state_dict
             {}
@@ -240,6 +241,7 @@ class CallbackHandler:
             Possibly modified ``last_input`` and ``last_target`` values.
 
         Example:
+            >>> # noqa: E501
             >>> callback = Callback()
             >>> callback.on_batch_begin = lambda **kwargs: {'last_input': {'foo': 1.0}}
             >>> handler = CallbackHandler(callbacks=[callback])
@@ -315,6 +317,7 @@ class CallbackHandler:
             Possibly modified ``last_loss`` and ``skip_bwd`` values.
 
         Example:
+            >>> # noqa: E501
             >>> callback = Callback()
             >>> callback.on_backward_begin = lambda **kwargs: {"skip_bwd": True, "last_loss": torch.tensor([0.0])}
             >>> handler = CallbackHandler(callbacks=[callback])
@@ -409,6 +412,7 @@ class CallbackHandler:
             Possibly modified ``stop_epoch`` value.
 
         Example:
+            >>> # noqa: E501
             >>> callback = Callback()
             >>> callback.on_batch_end = lambda **kwargs: {"stop_epoch": True}
             >>> handler = CallbackHandler(callbacks=[callback])
@@ -452,6 +456,7 @@ class CallbackHandler:
             Possibly modified ``stop_training`` value.
 
         Example:
+            >>> # noqa: E501
             >>> callback = Callback()
             >>> callback.on_epoch_end = lambda **kwargs: {"stop_training": True}
             >>> handler = CallbackHandler(callbacks=[callback])

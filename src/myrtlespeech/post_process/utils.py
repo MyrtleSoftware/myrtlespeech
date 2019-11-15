@@ -13,7 +13,8 @@ def levenshtein(a: Sequence, b: Sequence) -> int:
         without any warranty.  For more information, see*
         <http://creativecommons.org/publicdomain/zero/1.0>
 
-        -- `Magnug Lie Hetland <https://folk.idi.ntnu.no/mlh/hetland_org/coding/python/levenshtein.py>`_
+        -- `Magnug Lie Hetland <https://folk.idi.ntnu.no/mlh/hetland_org/\
+coding/python/levenshtein.py>`_
 
     Args:
         a: A :py:class:`Sequence` that supports equality (e.g.
