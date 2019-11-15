@@ -3,7 +3,7 @@ FROM continuumio/miniconda3
 # fix https://github.com/conda/conda/issues/7267
 RUN chown -R 1000:1000 /opt/conda/
 
-# Install headers to build regex as part of Black
+# install headers to build regex as part of Black
 # https://github.com/psf/black/issues/1112
 RUN apt update && apt install -y build-essential python3-dev
 
