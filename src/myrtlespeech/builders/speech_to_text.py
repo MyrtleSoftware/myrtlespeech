@@ -43,6 +43,7 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
         :py:class:`ValueError`: On invalid configuration.
 
     Example:
+        >>> # noqa: E501
         >>> from google.protobuf import text_format
         >>> cfg_text = '''
         ... alphabet: "acgt_";
@@ -115,7 +116,7 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
         ...     cfg_text,
         ...     speech_to_text_pb2.SpeechToText()
         ... )
-        >>> build(cfg)   # noqa: E501
+        >>> build(cfg)
         SpeechToText(
           (alphabet): Alphabet(symbols=['a', 'c', 'g', 't', '_'])
           (model): DeepSpeech2(

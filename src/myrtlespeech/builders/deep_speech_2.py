@@ -41,6 +41,7 @@ def build(
         A :py:class:`.DeepSpeech2` based on the config.
 
     Example:
+        >>> # noqa: E501
         >>> from google.protobuf import text_format
         >>> cfg_text = '''
         ... conv_block {
@@ -86,8 +87,7 @@ def build(
         DeepSpeech2(
           (cnn): Sequential(
             (0): Conv2dTo1d(seq_len_support=True)
-            (1): MaskConv1d(3, 8, kernel_size=(5,), stride=(1,), \
-padding_mode=PaddingMode.NONE)
+            (1): MaskConv1d(3, 8, kernel_size=(5,), stride=(1,), padding_mode=PaddingMode.NONE)
             (2): SeqLenWrapper(
               (module): ReLU()
               (seq_lens_fn): Identity()
@@ -98,8 +98,7 @@ padding_mode=PaddingMode.NONE)
             (rnn): LSTM(8, 32, bidirectional=True)
           )
           (fully_connected): FullyConnected(
-            (fully_connected): Linear(in_features=64, out_features=4, \
-bias=True)
+            (fully_connected): Linear(in_features=64, out_features=4, bias=True)
           )
         )
     """
