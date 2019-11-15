@@ -1,26 +1,14 @@
-import os
-import pathlib
-import typing
-
-import torch
 from myrtlespeech.builders.task_config import build
-from myrtlespeech.model.deep_speech_1 import DeepSpeech1
-from myrtlespeech.post_process.utils import levenshtein
 from myrtlespeech.protos import task_config_pb2
-from myrtlespeech.run.callbacks.callback import Callback
-from myrtlespeech.run.callbacks.callback import ModelCallback
-from myrtlespeech.run.callbacks.clip_grad_norm import ClipGradNorm
 from myrtlespeech.run.callbacks.csv_logger import CSVLogger
 from myrtlespeech.run.callbacks.mixed_precision import MixedPrecision
 from myrtlespeech.run.callbacks.report_mean_batch_loss import (
     ReportMeanBatchLoss,
 )
-from myrtlespeech.run.callbacks.stop_epoch_after import StopEpochAfter
 from myrtlespeech.run.run import ReportCTCDecoder
 from myrtlespeech.run.run import Saver
 from myrtlespeech.run.run import TensorBoardLogger
 from myrtlespeech.run.run import WordSegmentor
-from myrtlespeech.run.stage import Stage
 from myrtlespeech.run.train import fit
 
 
@@ -47,7 +35,7 @@ fit(
         # prof,
         ReportMeanBatchLoss(),
         ReportCTCDecoder(
-            seq_to_seq.post_process, seq_to_seq.alphabet, WordSegmentor(" "),
+            seq_to_seq.post_process, seq_to_seq.alphabet, WordSegmentor(" ")
         ),
         TensorBoardLogger(log_dir, seq_to_seq.model, histograms=False),
         MixedPrecision(seq_to_seq, opt_level="O1"),

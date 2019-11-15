@@ -1,6 +1,4 @@
-import fnmatch
 import os
-import shutil
 import tarfile
 import warnings
 from typing import Callable
@@ -9,10 +7,7 @@ from typing import Optional
 from typing import Sequence
 from typing import Tuple
 
-import numpy as np
 import pydub
-import requests
-import scipy.signal as sp
 import torch
 import torchaudio
 from myrtlespeech.data.dataset import utils
@@ -48,9 +43,10 @@ class CommonVoice(Dataset):
             already downloaded, it is not downloaded again. See the
             :py:meth:`CommonVoice.download` method for more information.
 
-        skip_integrity_check: If :py:data:`True` the integrity check is skipped.
-            This is useful when doing quick experiments on the larger subsets
-            that can take time to verify and may have been recently checked.
+        skip_integrity_check: If :py:data:`True` the integrity check is
+            skipped.  This is useful when doing quick experiments on the larger
+            subsets that can take time to verify and may have been recently
+            checked.
 
         max_duration: All samples with duration (in seconds) greater than this
             will be dropped.
@@ -149,14 +145,14 @@ class CommonVoice(Dataset):
     def download(self) -> None:
         """Extracts data set unless already cached.
 
-        If the clips directory and all required data set files already exist, this
-        function becomes a noop
+        If the clips directory and all required data set files already exist,
+        this function becomes a noop
 
-        If the clips directory or one of the data set files are missing then the function
-        attempts to find and extract the zipped data set file
+        If the clips directory or one of the data set files are missing then
+        the function attempts to find and extract the zipped data set file
 
-        If this file is not found, it prompts the user to download the data set from
-        Mozilla's website
+        If this file is not found, it prompts the user to download the data set
+        from Mozilla's website
         """
         os.makedirs(os.path.join(self.root, self.base_dir), exist_ok=True)
 
@@ -174,13 +170,13 @@ class CommonVoice(Dataset):
 
         path = os.path.join(self.root, "en.tar.gz")
         if not os.path.isfile(path):
-            # Get user to manually download file since Mozilla wants to collect email addresses
-            # and agree to not identify speakers when users do this
-            # In the future, we may want to host this ourselves since the data set is licensed
-            # with CC0
+            # Get user to manually download file since Mozilla wants to collect
+            # email addresses and agree to not identify speakers when users do
+            # this In the future, we may want to host this ourselves since the
+            # data set is licensed with CC0
             raise NotImplementedError(
-                f"Please download the data set from https://voice.mozilla.org/en and"
-                f"place it in {self.root}"
+                "Please download the data set from "
+                f"https://voice.mozilla.org/en and place it in {self.root}"
             )
 
         if utils.checksum_file(path, "md5") != self.archive_hash:

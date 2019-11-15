@@ -1,18 +1,6 @@
-import fnmatch
-import os
-import shutil
-import tarfile
-import warnings
-from typing import Callable
-from typing import List
-from typing import Optional
-from typing import Sequence
 from typing import Tuple
 
-import numpy as np
-import requests
 import torch
-import torchaudio
 from torch.utils.data import Dataset
 
 
@@ -65,7 +53,9 @@ class Composite(Dataset):
             return
         samples = zip(self.child_map, self.durations)
         sorted_samples = sorted(samples, key=lambda sample: sample[1])
-        self.child_map, self.durations = [list(c) for c in zip(*sorted_samples)]
+        self.child_map, self.durations = [
+            list(c) for c in zip(*sorted_samples)
+        ]
         assert (
             total_samples == len(self.child_map) == len(self.durations)
         ), "_sort_by_duration len mis-match"
