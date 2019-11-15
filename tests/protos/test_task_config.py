@@ -29,7 +29,10 @@ def task_configs(
     # model
     model_str = draw(
         st.sampled_from(
-            [f.name for f in descript.oneofs_by_name["supported_models"].fields]
+            [
+                f.name
+                for f in descript.oneofs_by_name["supported_models"].fields
+            ]
         )
     )
     if model_str == "speech_to_text":

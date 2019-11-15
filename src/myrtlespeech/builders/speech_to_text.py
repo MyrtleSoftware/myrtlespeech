@@ -121,7 +121,8 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
           (model): DeepSpeech2(
             (cnn): Sequential(
               (0): Conv2dTo1d(seq_len_support=True)
-              (1): MaskConv1d(80, 4, kernel_size=(5,), stride=(2,), padding_mode=PaddingMode.SAME)
+              (1): MaskConv1d(80, 4, kernel_size=(5,), stride=(2,), \
+padding_mode=PaddingMode.SAME)
               (2): SeqLenWrapper(
                 (module): Hardtanh(min_val=0.0, max_val=20.0)
                 (seq_lens_fn): Identity()
@@ -216,8 +217,8 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
             separator_index = stt_cfg.ctc_beam_decoder.separator_index.value
             if not (0 <= separator_index <= max(0, len(alphabet) - 1)):
                 raise ValueError(
-                    f"ctc_beam_decoder.separator_index.value={separator_index} "
-                    f"[0, {max(0, len(alphabet) - 1)}]"
+                    f"ctc_beam_decoder.separator_index.value={separator_index}"
+                    f" [0, {max(0, len(alphabet) - 1)}]"
                 )
         post_process = build_ctc_beam_decoder(stt_cfg.ctc_beam_decoder)
     else:

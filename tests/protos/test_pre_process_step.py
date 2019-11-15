@@ -3,7 +3,6 @@ from typing import Tuple
 from typing import Union
 
 import hypothesis.strategies as st
-from hypothesis import assume
 from myrtlespeech.protos import pre_process_step_pb2
 
 from tests.protos.test_stage import stages
@@ -20,7 +19,7 @@ def pre_process_steps(
     st.SearchStrategy[pre_process_step_pb2.PreProcessStep],
     st.SearchStrategy[Tuple[pre_process_step_pb2.PreProcessStep, Dict]],
 ]:
-    """Returns a SearchStrategy for a pre_process_step plus maybe the kwargs."""
+    """Returns a SearchStrategy for a pre_process_step and maybe the kwargs."""
     kwargs: Dict = {}
 
     kwargs["stage"] = draw(stages())
@@ -28,7 +27,10 @@ def pre_process_steps(
     descript = pre_process_step_pb2.PreProcessStep.DESCRIPTOR
     step_type_str = draw(
         st.sampled_from(
-            [f.name for f in descript.oneofs_by_name["pre_process_step"].fields]
+            [
+                f.name
+                for f in descript.oneofs_by_name["pre_process_step"].fields
+            ]
         )
     )
 

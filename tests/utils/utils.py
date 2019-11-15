@@ -87,7 +87,9 @@ def tensors(
     **kwargs
 ) -> st.SearchStrategy[torch.Tensor]:
     """Returns a strategy for generating `torch.Tensors`s of a given dtype."""
-    shape = st.lists(n_dims(**kwargs), min_size=min_n_dims, max_size=max_n_dims)
+    shape = st.lists(
+        n_dims(**kwargs), min_size=min_n_dims, max_size=max_n_dims
+    )
     return shape.flatmap(
         lambda s: arrays(s, dtype, elements).map(lambda a: torch.tensor(a))
     )

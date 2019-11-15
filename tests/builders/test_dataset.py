@@ -40,7 +40,9 @@ def dataset_match_cfg(
             assert all([symbol in cfg.label_symbols for symbol in label])
             assert cfg.label_len.lower <= len(label) <= cfg.label_len.upper
     else:
-        raise ValueError("invalid dataset={dataset}, dataset_cfg={dataset_cfg}")
+        raise ValueError(
+            "invalid dataset={dataset}, dataset_cfg={dataset_cfg}"
+        )
 
 
 # Tests -----------------------------------------------------------------------
@@ -50,7 +52,7 @@ def dataset_match_cfg(
 def test_build_passes_transform_to_fake_speech_to_text(
     add_seq_len_to_transforms: bool,
 ) -> None:
-    """Unit test that ensures build passes transforms to fake_speech_to_text."""
+    """Unit test to ensure build passes transforms to fake_speech_to_text."""
     dataset_cfg = text_format.Merge(
         """
     fake_speech_to_text {
@@ -91,7 +93,8 @@ def test_build_dataset_returns_correct_dataset(
 ) -> None:
     """Ensures Dataset returned by ``build`` has correct structure."""
     dataset = build(
-        dataset=dataset_cfg, add_seq_len_to_transforms=add_seq_len_to_transforms
+        dataset=dataset_cfg,
+        add_seq_len_to_transforms=add_seq_len_to_transforms,
     )
     dataset_match_cfg(dataset, dataset_cfg, add_seq_len_to_transforms)
 

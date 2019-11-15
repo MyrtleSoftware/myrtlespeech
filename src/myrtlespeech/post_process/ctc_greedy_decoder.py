@@ -36,7 +36,8 @@ class CTCGreedyDecoder(torch.nn.Module):
             for the :math:`i\textsuperscript{th}` sequence in ``x``.
 
         Raises:
-            :py:class:`ValueError`: if ``lengths.dtype`` not in ``[torch.uint8, torch.int8, torch.int16, torch.int32, torch.int64]``.
+            :py:class:`ValueError`: if ``lengths.dtype`` not in ``[torch.uint8,
+                torch.int8, torch.int16, torch.int32, torch.int64]``.
 
             :py:class:`ValueError`: if the ``batch`` dimension of ``x`` is not
                 equal to the ``len(lengths)``.
@@ -80,7 +81,11 @@ class CTCGreedyDecoder(torch.nn.Module):
                 symb = most_likely[i, b].item()
 
                 if symb != self.blank_index:
-                    if prev is None or prev == self.blank_index or symb != prev:
+                    if (
+                        prev is None
+                        or prev == self.blank_index
+                        or symb != prev
+                    ):
                         sentence.append(symb)
 
                 prev = symb

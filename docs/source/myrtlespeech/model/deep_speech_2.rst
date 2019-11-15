@@ -17,3 +17,11 @@ Message
 
 .. literalinclude:: ../../../../src/myrtlespeech/protos/deep_speech_2.proto
     :language: protobuf
+
+
+Builder
+~~~~~~~
+
+.. automodule:: myrtlespeech.builders.deep_speech_2
+    :members:
+    :show-inheritance:

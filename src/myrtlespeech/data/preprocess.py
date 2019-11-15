@@ -25,7 +25,9 @@ class AddSequenceLength:
     def __init__(self, length_dim=0):
         self.length_dim = length_dim
 
-    def __call__(self, data: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __call__(
+        self, data: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Returns tuple of ``data`` and a tensor containing its length."""
         seq_len = data.size(self.length_dim)
         return data, torch.tensor([seq_len], requires_grad=False)

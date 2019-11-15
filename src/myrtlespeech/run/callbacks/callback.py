@@ -187,7 +187,8 @@ class CallbackHandler:
             {}
             >>> handler.on_train_begin(epochs=100)
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 100, 'total_train_batches': 0, 'epoch_batches': 0, 'reports': {}}
+            {'epoch': 0, 'epochs': 100, 'total_train_batches': 0, \
+'epoch_batches': 0, 'reports': {}}
         """
         self.state_dict.update(
             dict(
@@ -241,7 +242,8 @@ class CallbackHandler:
 
         Example:
             >>> callback = Callback()
-            >>> callback.on_batch_begin = lambda **kwargs: {'last_input': {'foo': 1.0}}
+            >>> callback.on_batch_begin = lambda **kwargs: {'last_input': \
+{'foo': 1.0}}
             >>> handler = CallbackHandler(callbacks=[callback])
             >>> handler.on_batch_begin(x={'x': 0.0}, y={'y': 0.0})
             ({'foo': 1.0}, {'y': 0.0})
@@ -316,7 +318,8 @@ class CallbackHandler:
 
         Example:
             >>> callback = Callback()
-            >>> callback.on_backward_begin = lambda **kwargs: {"skip_bwd": True, "last_loss": torch.tensor([0.0])}
+            >>> callback.on_backward_begin = lambda **kwargs: {"skip_bwd": \
+True, "last_loss": torch.tensor([0.0])}
             >>> handler = CallbackHandler(callbacks=[callback])
             >>> handler.on_backward_begin(loss=torch.tensor([1.0]))
             (tensor([0.]), True)
@@ -414,11 +417,13 @@ class CallbackHandler:
             >>> handler = CallbackHandler(callbacks=[callback])
             >>> handler.on_train_begin(1)   # initialise state_dict
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 1, 'total_train_batches': 0, 'epoch_batches': 0, 'reports': {}}
+            {'epoch': 0, 'epochs': 1, 'total_train_batches': 0, \
+'epoch_batches': 0, 'reports': {}}
             >>> handler.on_batch_end()
             True
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 1, 'total_train_batches': 1, 'epoch_batches': 1, 'reports': {}, 'stop_epoch': True}
+            {'epoch': 0, 'epochs': 1, 'total_train_batches': 1, \
+'epoch_batches': 1, 'reports': {}, 'stop_epoch': True}
         """
         self.state_dict["stop_epoch"] = False
         self("on_batch_end")
@@ -453,11 +458,13 @@ class CallbackHandler:
 
         Example:
             >>> callback = Callback()
-            >>> callback.on_epoch_end = lambda **kwargs: {"stop_training": True}
+            >>> callback.on_epoch_end = lambda **kwargs: {"stop_training": \
+True}
             >>> handler = CallbackHandler(callbacks=[callback])
             >>> handler.on_train_begin(1)   # initialise state_dict
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 1, 'total_train_batches': 0, 'epoch_batches': 0, 'reports': {}}
+            {'epoch': 0, 'epochs': 1, 'total_train_batches': 0, \
+'epoch_batches': 0, 'reports': {}}
             >>> handler.on_epoch_end()
             True
             >>> handler.state_dict["epoch"]
