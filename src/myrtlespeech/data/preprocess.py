@@ -4,6 +4,7 @@ Utilities for preprocessing audio data.
 from typing import Tuple
 
 import torch
+import numpy as np
 from torchaudio.transforms import MelSpectrogram
 
 
@@ -83,6 +84,52 @@ class Standardize:
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + "()"
+
+
+class AddLeftContextAndSubsample:
+    """Add context frames and subsample.
+
+    Note that unlike AddContextFrames, this class only adds left (i.e previous)
+    context so is more appropriate for streaming use-cases.
+
+    Args:
+        n_context: Number of context frames to add to left of the frame in the
+            original signal.
+        subsample: (int) Take every `subsample`th set of stacked frames.
+    """
+    def __init__(self, n_context, subsample):
+        self.n_context = n_context
+        self.subsample = subsample
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        """Returns the :py:class:`torch.Tensor` after adding context frames.
+
+        Args:
+            x: :py:class:`torch.Tensor` with size ``(1, features, seq_len)``.
+
+        Returns:
+            A :py:class:`torch.Tensor` with size ``(n_context + 1, features,
+            math.ceil(seq_len / subsample))``.
+        """
+        # Pad to ensure first and last n_context frames in original sequence
+        # have at least n_context frames to their left and right respectively.
+        assert x.size(0) == 1
+        x = x.squeeze().T
+        steps, features = x.shape
+        padding = torch.zeros((self.n_context, features), dtype=x.dtype)
+        x = torch.cat((padding, x, padding))
+
+        window_size = self.n_context + 1
+        strides = x.stride()
+        strided_x = torch.as_strided(
+            x,
+            # Shape of the new array.
+            (steps, window_size, features),
+            # Strides of the new array (bytes to step in each dim).
+            (strides[0], strides[0], strides[1]),
+        )
+
+        return strided_x.clone().detach().permute(1, 2, 0)[:, :, ::self.subsample]
 
 
 class AddContextFrames:

@@ -1,610 +1,543 @@
-from typing import Optional
-from typing import Tuple
-
 import torch
+import numpy as np
+from torch import nn
+
+
+SUPPORTED_RNNS = {
+    'gru': nn.GRU,
+    'lstm': nn.LSTM,
+    'rnn': nn.RNN
+}
+
+
+class OverLastDim(nn.Module):
+    """Collapses a tensor to 2D, applies a module, and (re-)expands the tensor.
+
+    An n-dimensional tensor of shape (s_1, s_2, ..., s_n) is first collapsed to
+    a tensor with shape (s_1*s_2*...*s_n-1, s_n). The module is called with
+    this as input producing (s_1*s_2*...*s_n-1, s_n') --- note that the final
+    dimension can change. This is expanded to (s_1, s_2, ..., s_n-1, s_n') and
+    returned.
+
+    Args:
+        module (nn.Module): Module to apply. Must accept a 2D tensor as input
+            and produce a 2D tensor as output, optionally changing the size of
+            the last dimension.
+    """
+
+    def __init__(self, module):
+        super().__init__()
+        self.module = module
+
+    def forward(self, x):
+        *dims, input_size = x.size()
+
+        reduced_dims = 1
+        for dim in dims:
+            reduced_dims *= dim
+
+        x = x.view(reduced_dims, -1)
+        x = self.module(x)
+        x = x.view(*dims, -1)
+        return x
+
+
+def lstm(input_size, hidden_size, num_layers, batch_first, dropout,
+         forget_gate_bias, bidirectional=False):
+    """Returns an LSTM with forget gate bias init to `forget_gate_bias`.
+
+    Args:
+        input_size: See `torch.nn.LSTM`.
+        hidden_size: See `torch.nn.LSTM`.
+        num_layers: See `torch.nn.LSTM`.
+        batch_first: See `torch.nn.LSTM`.
+        dropout: See `torch.nn.LSTM`.
+        forget_gate_bias: For each layer and each direction, the total value of
+            to initialise the forget gate bias to.
+        bidirectional: See `torch.nn.LSTM`.
+
+    Returns:
+        A `torch.nn.LSTM`.
+    """
+    lstm = nn.LSTM(
+        input_size=input_size,
+        hidden_size=hidden_size,
+        num_layers=num_layers,
+        batch_first=batch_first,
+        dropout=dropout,
+        bidirectional=bidirectional
+    )
+    if forget_gate_bias is not None:
+        for name, v in lstm.named_parameters():
+            if "bias_ih" in name:
+                bias = getattr(lstm, name)
+                bias.data[hidden_size:2*hidden_size].fill_(forget_gate_bias)
+            if "bias_hh" in name:
+                bias = getattr(lstm, name)
+                bias.data[hidden_size:2*hidden_size].fill_(0)
+
+    return lstm
+
+
+class Lambda(nn.Module):
+    """A `torch.nn.Module` wrapper for a Python lambda."""
+    def __init__(self, lambda_fn, lambda_fn_desc=""):
+        super().__init__()
+        self.lambda_fn = lambda_fn
+        self.lambda_fn_desc = lambda_fn_desc
+
+    def forward(self, x):
+        return self.lambda_fn(x)
+
+    def extra_repr(self):
+        if self.lambda_fn_desc:
+            return f"lambda_fn={self.lambda_fn_desc}"
+        return ""
+
+
+class RNNLayer(nn.Module):
+    """A single RNNLayer with optional batch norm and bidir summation."""
+    def __init__(self, input_size, hidden_size, rnn_type=nn.LSTM,
+                 bidirectional=False, lookahead_context=None, batch_norm=True,
+                 batch_first=False, forget_gate_bias=1.0, relu_clip=20.0):
+        super().__init__()
+        self.bidirectional = bidirectional
+
+        if batch_norm:
+            self.bn = OverLastDim(nn.BatchNorm1d(input_size))
+
+        if isinstance(rnn_type, nn.LSTM) and not batch_norm:
+            # batch_norm will apply bias, no need to add a second to LSTM
+            self.rnn = lstm(input_size=input_size,
+                            hidden_size=hidden_size,
+                            batch_first=batch_first,
+                            forget_gate_bias=forget_gate_bias,
+                            bidirectional=bidirectional)
+        else:
+            self.rnn = rnn_type(input_size=input_size,
+                                hidden_size=hidden_size,
+                                bidirectional=bidirectional,
+                                batch_first=batch_first,
+                                bias=not batch_norm)
+
+        if lookahead_context is not None and bidirectional is False:
+            raise NotImplementedError()
+
+    def forward(self, x, hx=None):
+        if hasattr(self, 'bn'):
+            x = self.bn(x)
+        x, h = self.rnn(x, hx=hx)
+        if self.bidirectional:
+            # TxNx(H*2) -> TxNxH by sum.
+            seq_len, batch_size, _ = x.size()
+            x = x.view(seq_len, batch_size, 2, -1) \
+                 .sum(dim=2) \
+                 .view(seq_len, batch_size, -1)
+        return x, h
+
+    def _flatten_parameters(self):
+        self.rnn.flatten_parameters()
+
+
+class BNRNNSum(nn.Module):
+    """RNN wrapper with optional batch norm and bidir summation.
+
+    Instantiates an RNN. If it is an LSTM it initialises the forget gate
+    bias =`lstm_gate_bias`. Optionally applies a batch normalisation layer to
+    the input with the statistics computed over all time steps. If the RNN is
+    bidirectional, the output from the forward and backward units is summed
+    before return. If dropout > 0 then it is applied to all layer outputs
+    except the last.
+    """
+    def __init__(self, input_size, hidden_size, rnn_type=nn.LSTM,
+                 bidirectional=False, lookahead_context=None,
+                 rnn_layers=1, batch_norm=True, batch_first=False,
+                 dropout=0.0, forget_gate_bias=1.0, relu_clip=20.0):
+        super().__init__()
+        self.bidirectional = bidirectional
+        self.rnn_layers = rnn_layers
+
+        self.layers = torch.nn.ModuleList()
+        for i in range(rnn_layers):
+            final_layer = (rnn_layers - 1) == i
+
+            self.layers.append(
+                RNNLayer(
+                    input_size,
+                    hidden_size,
+                    rnn_type=rnn_type,
+                    bidirectional=bidirectional,
+                    lookahead_context=lookahead_context,
+                    batch_norm=batch_norm and i > 0,
+                    batch_first=batch_first,
+                    forget_gate_bias=forget_gate_bias,
+                    relu_clip=relu_clip
+                )
+            )
+
+            if dropout > 0.0 and not final_layer:
+                self.layers.append(torch.nn.Dropout(dropout))
+
+            input_size = hidden_size
+
+    def forward(self, x, hx=None):
+        if hx is not None and self.bidirectional:
+            raise NotImplementedError(
+                "hidden state not implemented for bidirectional RNNs"
+            )
+
+        hx = self._parse_hidden_state(hx)
+
+        hs = []
+        cs = []
+        rnn_idx = 0
+        for layer in self.layers:
+            if isinstance(layer, torch.nn.Dropout):
+                x = layer(x)
+            else:
+                x, h_out = layer(x, hx=hx[rnn_idx])
+                hs.append(h_out[0])
+                cs.append(h_out[1])
+                rnn_idx += 1
+
+        h_0 = torch.stack(hs, dim=0)
+        c_0 = torch.stack(cs, dim=0)
+        return x, (h_0, c_0)
+
+    def _parse_hidden_state(self, hx):
+        """
+        Dealing w. hidden state:
+        Typically in pytorch: (h_0, c_0)
+            h_0 = ``[num_layers * num_directions, batch, hidden_size]``
+            c_0 = ``[num_layers * num_directions, batch, hidden_size]``
+        """
+        if hx is None:
+            return [None] * self.rnn_layers
+        else:
+            h_0, c_0 = hx
+            assert h_0.shape[0] == self.rnn_layers
+            return [(h_0[i], c_0[i]) for i in range(h_0.shape[0])]
+
+    def _flatten_parameters(self):
+        for layer in self.layers:
+            if isinstance(layer, (torch.nn.LSTM, torch.nn.GRU, torch.nn.RNN)):
+                layer._flatten_parameters()
+
+
+def label_collate(labels):
+    """Collates the label inputs for the rnn-t prediction network.
+
+    If `labels` is already in torch.Tensor form this is a no-op.
+
+    Args:
+        labels: A torch.Tensor List of label indexes or a torch.Tensor.
+
+    Returns:
+        A padded torch.Tensor of shape (batch, max_seq_len).
+    """
+
+    if isinstance(labels, torch.Tensor):
+        return labels.type(torch.int64)
+    if not isinstance(labels, (list, tuple)):
+        raise ValueError(
+            f"`labels` should be a list or tensor not {type(labels)}"
+        )
+
+    batch_size = len(labels)
+    max_len = max(len(l) for l in labels)
+
+    cat_labels = np.full((batch_size, max_len), fill_value=0.0, dtype=np.int32)
+    for e, l in enumerate(labels):
+        cat_labels[e, :len(l)] = l
+    labels = torch.LongTensor(cat_labels)
+
+    return labels
 
 
 class RNNT(torch.nn.Module):
-    r"""`RNN-T <https://arxiv.org/pdf/1211.3711.pdf>`_ Network.
-
-    Architecture based on `Streaming End-to-end Speech Recognition For Mobile
-    Devices <https://arxiv.org/pdf/1811.06621.pdf>`_.
+    """A Recurrent Neural Network Transducer (RNN-T).
 
     Args:
-        encoder: A :py:class:`RNNTEncoder` with initialised RNN-T encoder.
+        in_features: Number of input features per step per batch.
+        vocab_size: Number of output symbols (not including blank).
+        relu_clip: ReLU clamp value: `min(max(0, x), relu_clip)`.
+        forget_gate_bias: Total initialized value of the bias used in the
+            forget gate. Set to None to use PyTorch's default initialisation.
+            (See: http://proceedings.mlr.press/v37/jozefowicz15.pdf)
+        drop_prob: Dropout probability in the encoder and decoder. Must be in
+            [0. 1.].
+        batch_norm: Use batch normalization in encoder and prediction network
+            if true.
+        encoder_n_hidden: Internal hidden unit size of the encoder.
+        encoder_rnn_layers: Encoder number of layers.
+        pred_n_hidden:  Internal hidden unit size of the prediction network.
+        pred_rnn_layers: Prediction network number of layers.
+        joint_n_hidden: Internal hidden unit size of the joint network.
+        rnn_type: string. Type of rnn in SUPPORTED_RNNS.
 
-            Must accept as input a tuple where the first element is the network
-            input (a :py:`torch.Tensor`) with size ``[batch, channels,
-            features, max_input_seq_len]`` and the second element is a
-            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-            represents the sequence length of the corresponding *input*
-            sequence to the rnn.
-
-            It must return a tuple where the first element is the result after
-            applying the module to the input. It must have size
-            ``[max_out_seq_len, batch, rnn_features]``. The second element of
-            the tuple return value is a :py:class:`torch.Tensor` with size
-            ``[batch]`` where each entry represents the sequence length of the
-            corresponding *output* sequence. These may be different than the
-            input sequence lengths due to downsampling in the encoder.
-
-
-        embedding: A :py:class:`torch.nn.Module` which is an embedding lookup
-            for targets (eg graphemes, wordpieces) which accepts a
-            :py:`torch.Tensor` as input of size ``[batch, max_output_seq_len]``.
-
-        dec_rnn: A :py:class:`torch.nn.Module` containing the recurrent part of
-            the RNN-T prediction.
-
-            Must accept as input a tuple where the first element is the
-            prediction network input (a :py:`torch.Tensor`) with size ``[batch,
-            max_output_seq_len + 1, in_features]`` and the second element is a
-            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-            represent the sequence length of the corresponding *input*
-            sequence to the rnn. *Note: this must be a `batch_first` rnn.*
-
-            It must return a tuple where the first element is the result after
-            applying the module to the input. It must have size ``[batch,
-            max_output_seq_len + 1, in_features]``. The second element of
-            the tuple return value is a :py:class:`torch.Tensor` with size
-            ``[batch]`` where each entry represents the sequence length of the
-            corresponding *output* sequence.
-
-        fully_connected: A :py:class:`torch.nn.Module` containing the fully
-            connected part of the RNNT joint network.
-
-            Must accept as input a tuple where the first element is
-            a :py:class:`torch.Tensor` with size ``[batch,
-            encoder_out_seq_len, dec_rnn_out_seq_len, hidden_dim]`` where
-            `hidden_dim` is the the concatenation of the `encoder` and
-            `dec_rnn` outputs along the hidden dimension axis. The second
-            element is and the input (a :py:class:`torch.Tensor`) with size
-            ``[batch, max_fc_in_seq_len, max_fc_in_features]`` and the second
-            element is a :py:class:`torch.Tensor` of size ``[batch]``
-            where each entry represents the sequence length of the
-            corresponding *input* sequence to the fully connected layer(s).
-
-            It must return a tuple where the first element is the result after
-            applying the module to the previous layers output. It must have
-            size ``[batch, max_out_seq_len, out_features]``. The second element
-            is returned unchanged but in this context should be a
-            :py:class:`torch.Tensor` of size ``[batch]`` that contains the
-            *output* lengths of the audio features inputs.
+    Examples:
+        >>> Network(in_features=320, vocab_size=28)
+        Network(
+          (encoder): Sequential(
+            (0): Linear(in_features=320, out_features=1152, bias=True)
+            (1): Hardtanh(min_val=0.0, max_val=20.0)
+            (2): Dropout(p=0.25)
+            (3): Linear(in_features=1152, out_features=1152, bias=True)
+            (4): Hardtanh(min_val=0.0, max_val=20.0)
+            (5): Dropout(p=0.25)
+            (6): BNRNNSum(
+              (layers): ModuleList(
+                (0): RNNLayer(
+                  (rnn): LSTM(1152, 1152)
+                )
+                (1): Dropout(p=0.25)
+                (2): RNNLayer(
+                  (rnn): LSTM(1152, 1152)
+                )
+              )
+            )
+            (7): Lambda(lambda_fn=Access RNN output)
+            (8): Linear(in_features=1152, out_features=1152, bias=True)
+            (9): Hardtanh(min_val=0.0, max_val=20.0)
+            (10): Dropout(p=0.25)
+            (11): Linear(in_features=1152, out_features=512, bias=True)
+            (12): Hardtanh(min_val=0.0, max_val=20.0)
+            (13): Dropout(p=0.25)
+          )
+          (prediction): ModuleDict(
+            (dec_rnn): BNRNNSum(
+              (layers): ModuleList(
+                (0): RNNLayer(
+                  (rnn): LSTM(256, 256, batch_first=True)
+                )
+                (1): Dropout(p=0.25)
+                (2): RNNLayer(
+                  (rnn): LSTM(256, 256, batch_first=True)
+                )
+              )
+            )
+            (embed): Embedding(28, 256)
+          )
+          (joint_net): Sequential(
+            (0): Linear(in_features=768, out_features=512, bias=True)
+            (1): Hardtanh(min_val=0.0, max_val=20.0)
+            (2): Dropout(p=0.25)
+            (3): Linear(in_features=512, out_features=29, bias=True)
+          )
+        )
 
     """
-
-    def __init__(self, encoder, embedding, dec_rnn, fully_connected):
+    def __init__(self, in_features, vocab_size, relu_clip=20.0,
+                 forget_gate_bias=1.0, drop_prob=0.25, batch_norm=False,
+                 encoder_n_hidden=1152, encoder_rnn_layers=2,
+                 pred_n_hidden=256, pred_rnn_layers=2, joint_n_hidden=512,
+                 rnn_type="lstm"):
         super().__init__()
-
-        assert (
-            dec_rnn.batch_first is True
-        ), "dec_rnn should be a batch_first rnn"
-
-        self.encode = encoder
-
-        self.predict_net = self._predict_net(embedding, dec_rnn)
-
-        self.joint_net = self._joint_net(fully_connected)
+        self._pred_n_hidden = pred_n_hidden
 
         self.use_cuda = torch.cuda.is_available()
 
-    @staticmethod
-    def _predict_net(embedding, dec_rnn):
-        return torch.nn.ModuleDict({"embed": embedding, "dec_rnn": dec_rnn})
+        self.encoder = self._encoder(
+            in_features,
+            encoder_n_hidden,
+            encoder_rnn_layers,
+            joint_n_hidden,
+            forget_gate_bias,
+            drop_prob,
+            batch_norm,
+            rnn_type,
+            relu_clip
+        )
 
-    @staticmethod
-    def _joint_net(fully_connected):
-        return torch.nn.ModuleDict({"fully_connected": fully_connected})
+        self.prediction = self._predict(
+            vocab_size,
+            pred_n_hidden,
+            pred_rnn_layers,
+            forget_gate_bias,
+            drop_prob,
+            batch_norm,
+            rnn_type,
+        )
 
-    def forward(
-        self,
-        x: Tuple[
-            Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]
-        ],
-    ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        r"""Returns the result of applying the RNN-T network to `x`.
+        self.joint_net = self._joint_net(
+            vocab_size, pred_n_hidden, joint_n_hidden, drop_prob, relu_clip
+        )
+        if self.use_cuda:
+            self.cuda()
 
-        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
-        :py:func:`torch.cuda.is_available` was :py:data:`True` on
-        initialisation.
+    def _encoder(self, in_features, encoder_n_hidden, encoder_rnn_layers,
+                 joint_n_hidden, forget_gate_bias, drop_prob, batch_norm,
+                 rnn_type, relu_clip):
+        return torch.nn.Sequential(
+            torch.nn.Linear(in_features, encoder_n_hidden),
+            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip),
+            torch.nn.Dropout(p=drop_prob),
+            torch.nn.Linear(encoder_n_hidden, encoder_n_hidden),
+            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip),
+            torch.nn.Dropout(p=drop_prob),
+            BNRNNSum(
+                input_size=encoder_n_hidden,
+                hidden_size=encoder_n_hidden,
+                rnn_type=SUPPORTED_RNNS[rnn_type],
+                bidirectional=False,
+                lookahead_context=None,
+                rnn_layers=encoder_rnn_layers,
+                batch_norm=batch_norm,
+                batch_first=False,
+                dropout=drop_prob,
+                forget_gate_bias=forget_gate_bias,
+            ),
+            Lambda(lambda x: x[0], lambda_fn_desc="Access RNN output"),
+            torch.nn.Linear(encoder_n_hidden, encoder_n_hidden),
+            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip),
+            torch.nn.Dropout(p=drop_prob),
+            torch.nn.Linear(encoder_n_hidden, joint_n_hidden),
+            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip),
+            torch.nn.Dropout(p=drop_prob),
+        )
 
-        Args:
-            x: A Tuple ``(x[0], x[1])``. ``x[0]`` is input to the network and is
-                a Tuple ``x[0] = (x[0][0], x[0][1])`` where both elements are
-                :py:class:`torch.Tensor`s. ``x[0][0]`` is the audio feature
-                input with  size ``[batch, channels, features,
-                max_input_seq_len]`` while ``x[0][1]`` is the target label
-                tensor of size ``[batch, max_label_length]``.
-
-                ``x[1]`` is a Tuple of two :py:class:`torch.Tensor`s both of
-                size ``[batch]`` that contain the *input* lengths of a) the
-                audio feature inputs ``x[1][0]`` and b) the target sequences
-                ``x[1][1]``.
-
-        Returns:
-            A Tuple where the first element is the output of the RNNT network: a
-                :py:class:`torch.Tensor` with size ``[batch, max_seq_len,
-                max_label_length + 1, vocab_size + 1]``, and the second element
-                is a Tuple of two :py:class:`torch.Tensor`s both of
-                size ``[batch]`` that contain the *output* lengths of a) the
-                audio features inputs and b) the target sequences. These may be
-                of different lengths than the inputs as a result of
-                downsampling.
-            """
-
-        self._certify_inputs_forward(x)
-
-        audio_data, label_data = self._prepare_inputs_forward(x, self.use_cuda)
-
-        f = self.encode(audio_data)  # f[0] = (T, B, H1)
-        g = self.prediction(label_data)  # g[0] = (U, B, H2)
-
-        joint_inp = self._enc_pred_to_joint(f, g)
-        out = self.joint(joint_inp)
-
-        del f, g, audio_data, label_data, x, joint_inp
-
-        return out
-
-    def prediction(
-        self, y: Tuple[torch.Tensor, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        r"""Returns the result of applying the RNN-T prediction network.
-
-        This function is only appropriate during training (when the ground-truth
-        labels are available).
-
-        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
-        :py:func:`torch.cuda.is_available` was :py:data:`True` on
-        initialisation.
-
-        Args:
-            y: A Tuple where the first element is the target label tensor of
-                size ``[batch, max_label_length]`` and the second is a
-                :py:class:`torch.Tensor` of size ``[batch]`` that contains the
-                *input* lengths of these target label sequences.
-
-        Returns:
-            Output from ``dec_rnn``. See initialisation docstring.
-        """
-
-        y = self.embedding(y)
-        y = self._append_SOS(y)
-        out = self.dec_rnn(y)
-
-        del y
-
-        return out
-
-    def embedding(
-        self, y: Tuple[torch.Tensor, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        r"""Wrapper function on `self._embedding`.
-
-        Casts inputs to int64 if necessary before applying embedding.
-
-        Args:
-            y: A Tuple where the first element is the target label tensor of
-                size ``[batch, max_label_length]`` and the second is a
-                :py:class:`torch.Tensor` of size ``[batch]`` that contains the
-                *input* lengths of these target label sequences.
-
-        Returns:
-            A Tuple where the first element is the embedded label tensor of
-                size ``[batch, max_label_length, hidden_size]`` and the second
-                is a :py:class:`torch.Tensor` of size ``[batch]`` that contains
-                the *output* lengths of these target label sequences. These
-                lenghts will be unchanged from the input.
-        """
-
-        y_0, y_1 = y
-
-        if y_0.dtype != torch.long:
-            y_0 = y_0.long()
-
-        out = (self.predict_net["embed"](y_0), y_1)
-
-        del y, y_0, y_1
-
-        return out
-
-    @staticmethod
-    def _append_SOS(y):
-        r"""Appends the SOS token (all zeros) to the start of the target tensor.
-        """
-        y_0, y_1 = y
-
-        B, _, H = y_0.shape
-        # preprend blank
-        start = torch.zeros((B, 1, H)).type(y_0.dtype).to(y_0.device)
-        y_0 = torch.cat([start, y_0], dim=1)  # (B, U + 1, H)
-        y_0 = y_0.contiguous()
-
-        del start, y
-
-        return (y_0, y_1)
-
-    def joint(
-        self,
-        x: Tuple[
-            Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]
-        ],
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        r"""Returns the result of applying the RNN-T joint network.
-
-        Args:
-            x: A Tuple ``(x[0], x[1])``. ``x[0][0]`` is the first element of the
-                encoder network output (i.e. `.encode(...)[0]` - see
-                :py:class:`.RNNTEncoder` docstring). ``x[0][1]`` is the first
-                element of the prediction network output (i.e.
-                `.prediction(...)[0]` - see prediction docstring).
-
-                ``x[1]`` is a Tuple of two :py:class:`torch.Tensor`s both of
-                size ``[batch]`` that contain the *input* lengths of a) the
-                audio feature inputs ``x[1][0]`` and b) the target sequences
-                ``x[1][1]``.
-
-        Returns:
-            The output of the :py:class:`.RNNT` network. See initialisation
-                docstring.
-        """
-        (f, g), seq_lengths = x
-
-        T, B1, H1 = f.shape
-        B2, U_, H2 = g.shape
-
-        assert (
-            B1 == B2
-        ), "Batch size from prediction network and transcription must be equal"
-
-        f = f.transpose(1, 0)  # (T, B, H1) -> (B, T, H1)
-        f = f.unsqueeze(dim=2)  # (B, T, 1, H)
-        f = f.expand((B1, T, U_, H1)).contiguous()
-
-        g = g.unsqueeze(dim=1)  # (B, 1, U_, H)
-        g = g.expand((B1, T, U_, H2)).contiguous()
-
-        joint_inp = torch.cat([f, g], dim=3).contiguous()  # (B, T, U_, H1 + H2)
-
-        del g, f, x
-
-        # fully_connected expects a single length (not a tuple of lengths)
-        # So pass seq_lengths[0] and ignore output:
-
-        out, _ = self.joint_net["fully_connected"]((joint_inp, seq_lengths[0]))
-
-        del joint_inp
-
-        return out, seq_lengths
-
-    @staticmethod
-    def _certify_inputs_forward(inp):
-        try:
-            ((x, y), (x_lens, y_lens)) = inp
-        except ValueError:
-            raise ValueError(
-                "Unable to unpack inputs to RNNT. Are you using the \
-            `RNNTTraining()` callback found in `myrtlespeech.run.callbacks.rnn_t_training`?"
+    def _predict(self, vocab_size, pred_n_hidden, pred_rnn_layers,
+                 forget_gate_bias, drop_prob, batch_norm, rnn_type):
+        return torch.nn.ModuleDict({
+            "embed": torch.nn.Embedding(vocab_size, pred_n_hidden),
+            "dec_rnn": BNRNNSum(
+                input_size=pred_n_hidden,
+                hidden_size=pred_n_hidden,
+                rnn_type=SUPPORTED_RNNS[rnn_type],
+                bidirectional=False,
+                lookahead_context=None,
+                rnn_layers=pred_rnn_layers,
+                batch_norm=batch_norm,
+                batch_first=False,
+                dropout=drop_prob,
+                forget_gate_bias=forget_gate_bias
             )
-        B1, C, I, T = x.shape
-        B2, U = y.shape
+        })
 
-        B3, = x_lens.shape
-        B4, = y_lens.shape
-        assert (
-            B1 == B2 and B1 == B3 and B1 == B4
-        ), "Batch size must be the same for inputs and targets"
+    def _joint_net(self, vocab_size, pred_n_hidden, joint_n_hidden, drop_prob,
+                   relu_clip):
+        return torch.nn.Sequential(
+            torch.nn.Linear(pred_n_hidden + joint_n_hidden, joint_n_hidden),
+            torch.nn.Hardtanh(min_val=0.0, max_val=relu_clip),
+            torch.nn.Dropout(p=drop_prob),
+            torch.nn.Linear(joint_n_hidden, vocab_size + 1)
+        )
 
-        if not (x_lens <= T).all():
-            raise ValueError(
-                "x_lens must be less than or equal to max number of time-steps"
-            )
-        if not (y_lens <= U).all():
-            raise ValueError(
-                "y_lens must be less than or equal to max number of output symbols"
-            )
+    def forward(self, batch, state=None):
+        # batch: ((x, y), (x_lens, y_lens))
 
-        del x, y, x_lens, y_lens, inp
-        return (
-            B1,
-            C,
-            I,
-            T,
-            U,
-        )  # return (batch, channel, audio_feat_input, max_seq_len, max_output_len)
+        # x: (B, channels, features, seq_len)
+        (x, y), (x_lens, y_lens) = batch
+        y = label_collate(y)
 
-    @staticmethod
-    def _prepare_inputs_forward(inp, use_cuda):
-        ((x_inp, y), (x_lens, y_lens)) = inp
-        if use_cuda:
-            x_inp = x_inp.cuda()
-            x_lens = x_lens.cuda()
-            y = y.cuda()
-            y_lens = y_lens.cuda()
+        batch, channels, features, seq_len = x.shape
+        x = x.view(batch, channels*features, seq_len).permute(2, 0, 1)
 
-        audio_data = (x_inp, x_lens)
-        label_data = (y, y_lens)
+        f = self.encode(x)
+        g, _ = self.predict(y, state)
+        out = self.joint(f, g)
 
-        del x_inp, y, x_lens, y_lens, inp
+        return out, (x_lens, y_lens)
 
-        return audio_data, label_data
+    def encode(self, x):
+        """
+        Args:
+            x: (T, B, I)
 
-    @staticmethod
-    def _enc_pred_to_joint(f, g):
-        f_inp = f[0]
-        g_inp = g[0]
-        seq_lengths = (f[1], g[1])  # (time_lens, label_lens)
-        del f, g
-        return ((f_inp, g_inp), seq_lengths)
+        Returns:
+            f: (B, T, H)
+        """
+        if self.is_cuda:
+            x = x.cuda()
+
+        if self.is_half:
+            x = x.half()
+
+        return self.encoder(x).transpose(0, 1)
+
+    def predict(self, y, state=None, add_sos=True):
+        """
+        B - batch size
+        U - label length
+        H - Hidden dimension size
+        L - Number of decoder layers = 2
+
+        Args:
+            y: (B, U)
+
+        Returns:
+            Tuple (g, hid) where:
+                g: (B, U + 1, H)
+                hid: (h, c) where h is the final sequence hidden state and c is
+                    the final cell state:
+                        h (tensor), shape (L, B, H)
+                        c (tensor), shape (L, B, H)
+        """
+        if y is not None:
+            if self.is_cuda:
+                y = y.cuda()
+            y = self.prediction["embed"](y)
+
+            if self.is_half:
+                y = y.half()
+        else:
+            B = 1 if state is None else state[0].size(1)
+            y = torch.zeros((1, B, self._pred_n_hidden))
+            if self.is_cuda:
+                y = y.cuda()
+            if self.is_half:
+                y = y.half()
+
+        # preprend blank "start of sequence" symbol
+        if add_sos:
+            B, U, H = y.shape
+            start = torch.zeros((B, 1, H))
+            if self.is_cuda:
+                start = start.cuda()
+            if self.is_half:
+                start = start.half()
+            y = torch.cat([start, y], dim=1).contiguous()   # (B, U + 1, H)
+        else:
+            start = None   # makes del call later easier
+
+        y = y.transpose(0, 1).contiguous()   # (U + 1, B, H)
+
+        self.prediction["dec_rnn"]._flatten_parameters()
+        g, hid = self.prediction["dec_rnn"](y, state)
+
+        g = g.transpose(0, 1).contiguous()   # (B, U + 1, H)
+
+        del y, start, state
+
+        return g, hid
+
+    def joint(self, f, g):
+        """
+        f should be shape (B, T, H)
+        g should be shape (B, U + 1, H)
+
+        returns:
+            logits of shape (B, T, U, K + 1)
+        """
+        # Combine the input states and the output states
+        B, T, H = f.shape
+        B, U_, H2 = g.shape
+
+        f = f.unsqueeze(dim=2)   # (B, T, 1, H)
+        f = f.expand((B, T, U_, H))
+
+        g = g.unsqueeze(dim=1)   # (B, 1, U + 1, H)
+        g = g.expand((B, T, U_, H2))
+
+        inp = torch.cat([f, g], dim=3)   # (B, T, U, 2H)
+        res = self.joint_net(inp)
+        del f, g, inp
+        return res
 
     @property
-    def dec_rnn(self):
-        r"""Decoder RNN (in prediction network)."""
-        return self.predict_net["dec_rnn"]
+    def is_cuda(self):
+        return list(self.parameters())[0].is_cuda
 
-
-class RNNTEncoder(torch.nn.Module):
-    r"""`RNN-T <https://arxiv.org/pdf/1211.3711.pdf>`_ encoder.
-
-    The RNN-T Transcription Network. All of the submodules other than ``rnn1``
-    are Optional.
-
-    .. note:: If present, the modules are applied in the following order:
-        ``fc1`` -> ``rnn1`` -> ``time_reducer`` -> ``rnn2`` -> ``fc2``
-
-    Architecture based on `Streaming End-to-end Speech Recognition For Mobile
-    Devices <https://arxiv.org/pdf/1811.06621.pdf>`_ with addition of Optional
-    fully connected layers at the start and end of the encoder.
-
-    Args:
-        rnn1: A :py:class:`torch.nn.Module` containing the first recurrent part
-            of the RNN-T encoder.
-
-            Must accept as input a tuple where the first element is the network
-            input (a :py:`torch.Tensor`) with size ``[max_seq_len, batch,
-            in_features]`` and the second element is a
-            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-            represents the sequence length of the corresponding *input*
-            sequence to the rnn.
-
-            It must return a tuple where the first element is the result after
-            applying the module to the input. It must have size
-            ``[max_rnn_seq_len, batch, rnn_features]``. The second element of
-            the tuple return value is a :py:class:`torch.Tensor` with size
-            ``[batch]`` where each entry represents the sequence length of the
-            corresponding *output* sequence.
-
-        fc1: An Optional :py:class:`torch.nn.Module` containing the first fully
-            connected part of the RNN-T encoder.
-
-            Must accept as input a tuple where the first element is the network
-            input (a :py`torch.Tensor`) with size ``[max_seq_len, batch,
-            in_features]`` and the second element is a
-            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-            represents the sequence length of the corresponding *input*
-            sequence to the fc layer.
-
-            It must return a tuple where the first element is the result after
-            applying this fc layer over the final dimension only. This layer
-            *must not change* the hidden size dimension so this has size
-            ``[max_seq_len, batch, in_features]``. The second element of
-            the tuple return value is a :py:class:`torch.Tensor` with size
-            ``[batch]`` where each entry represents the sequence length of the
-            corresponding *output* sequence (which will be identical to the
-            input lenghts).
-
-        time_reducer: An Optional ``Callable`` that reduces the number of
-            timesteps into ``rnn2`` by stacking adjacent frames in the
-            frequency dimension as employed in `Streaming End-to-end Speech
-            Recognition For Mobile Devices <https://arxiv.org/pdf/1811.06621.pdf>`_.
-
-            This Callable takes two arguments: a Tuple of ``rnn1`` output and
-            the *input* sequence lengths of size ``[batch]``,
-            and an optional ``time_reduction_factor`` (see below).
-
-            This Callable must return a Tuple where the first element is the
-            result after applying the module to the input which must have size
-            ``[ceil(max_rnn_seq_len/time_reduction_factor) , batch,
-            rnn_features * time_reduction_factor ]``. The second element of the
-            tuple must be a :py:class:`torch.Tensor` of size ``[batch]``
-            that contains the new length of the corresponding sequence.
-
-        time_reduction_factor: An Optional ``int`` with default value 1 (i.e. no
-            reduction). If ``time_reducer`` is not None, this is the ratio by
-            which the time dimension is reduced. If ``time_reducer`` _is_ None,
-            this must be 1.
-
-        rnn2: An Optional :py:class:`torch.nn.Module` containing the second
-            recurrent part of the RNN-T encoder. This must be None unless
-            ``time_reducer`` is not None.
-
-            Must accept as input a tuple where the first element is the output
-            from time_reducer (a :py:`torch.Tensor`) with size
-            ``[max_downsampled_seq_len, batch, rnn1_features *
-            time_reduction_factor]`` and the second element is a
-            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-            represents the sequence length of the corresponding *input*
-            sequence to the rnn.
-
-            It must return a tuple where the first element is the result after
-            applying the module to the output. It must have size
-            ``[max_downsampled_seq_len, batch, rnn_features]``. The second
-            element of the tuple return value is a :py:class:`torch.Tensor`
-            with size ``[batch]`` where each entry represents the sequence
-            length of the corresponding *output* sequence. These may be
-            different than the input sequence lengths due to downsampling.
-
-        fc2: An Optional :py:class:`torch.nn.Module` containing the second fully
-            connected part of the RNN-T encoder.
-
-            Must accept as input a tuple where the first element is the network
-            input (a :py`torch.Tensor`) with size ``[max_downsampled_seq_len,
-            batch, rnn_features]`` and the second element is a
-            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-            represents the sequence length of the corresponding *input*
-            sequence to the fc layer.
-
-            It must return a tuple where the first element is the result after
-            applying this fc layer over the final dimension only. This layer
-            *must not change* the hidden size dimension so this has size
-            ``[max_downsampled_seq_len, batch, rnn_features]``. The second
-            element of the tuple return value is a :py:class:`torch.Tensor`
-            with size ``[batch]`` where each entry represents the sequence
-            length of the corresponding *output* sequence.
-
-
-    Returns:
-        A Tuple where the first element is the  output of ``fc2`` if it is not
-            None, else the output of ``rnn2`` if it is not None, else the output
-            of `rnn1` and the second element is a :py:class:`torch.Tensor` of
-            size ``[batch]`` where each entry represents the sequence length of
-            the corresponding *output* sequence to the encoder.
-    """
-
-    def __init__(
-        self,
-        rnn1: torch.nn.Module,
-        fc1: Optional[torch.nn.Module] = None,
-        time_reducer: Optional[torch.nn.Module] = None,
-        time_reduction_factor: Optional[int] = 1,
-        rnn2: Optional[torch.nn.Module] = None,
-        fc2: Optional[torch.nn.Module] = None,
-    ):
-        assert isinstance(time_reduction_factor, int)
-        if time_reducer is None:
-            assert (
-                rnn2 is None
-            ), "Do not pass rnn2 without a time_reducer Callable"
-            assert (
-                time_reduction_factor == 1
-            ), f"if `time_reducer` is None, must have time_reduction_factor == 1 \
-                but it is = {time_reduction_factor}"
-        else:
-            assert (
-                time_reduction_factor > 1
-            ), f"time_reduction_factor must be > 1 but = {time_reduction_factor}"
-
-        assert rnn1.rnn.batch_first is False
-        if rnn2:
-            assert rnn2.rnn.batch_first is False
-
-        super().__init__()
-
-        if fc1:
-            self.fc1 = fc1
-        self.rnn1 = rnn1
-        self.time_reducer = time_reducer
-        self.time_reduction_factor = time_reduction_factor
-        if rnn2:
-            self.rnn2 = rnn2
-        if fc2:
-            self.fc2 = fc2
-
-        self.use_cuda = torch.cuda.is_available()
-
-        if self.use_cuda:
-            if fc1 is not None:
-                self.fc1 = self.fc1.cuda()
-            self.rnn1 = self.rnn1.cuda()
-            if rnn2 is not None:
-                self.rnn2 = self.rnn2.cuda()
-            if fc2 is not None:
-                self.fc2 = self.fc2.cuda()
-
-    def forward(
-        self, x: Tuple[torch.Tensor, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        r"""Returns result of applying the RNN-T encoder to the audio features.
-
-        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
-        :py:func:`torch.cuda.is_available` was :py:data:`True` on
-        initialisation.
-
-        See :py:class:`.RNNTEncoder` for detailed information about the input
-        and output of each module.
-
-        Args:
-            x: Tuple where the first element is the encoder
-                input (a :py:`torch.Tensor`) with size ``[batch, channels,
-                features, max_input_seq_len]`` and the second element is a
-                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-                represents the sequence length of the corresponding *input*
-                sequence to the rnn. The channel dimension contains context frames
-                and is immediately flattened into the `features` dimension. This
-                reshaping operation is not dealt with in preprocessing so that:
-                a) this model and `myrtlespeech.model.deep_speech_2` can
-                share the same preprocessing and b) because future edits to
-                `myrtlespeech.model.rnn_t.RNNTEncoder` may add convolutions
-                before input to `fc1`/`rnn1` as in `awni-speech<https://github.com/awni/speech>`_
-
-        Returns:
-            Output from `fc2`` if present else output from `rnn2`` if present,
-            else output from ``rnn1``. See initialisation docstring.
-        """
-
-        self._certify_inputs_encode(x)
-
-        if self.use_cuda:
-            h = (x[0].cuda(), x[1].cuda())
-
-        # Add Optional convolutions here in the future?
-        h = self._prepare_inputs_fc1(h)
-        if hasattr(self, "fc1"):
-            h = h[0].transpose(2, 3), h[1]
-            h = self.fc1(h)
-            h = h[0].transpose(2, 3), h[1]
-
-        h = self._prepare_inputs_rnn1(h)
-
-        h = self.rnn1(h)
-
-        if self.time_reducer:
-            h = self.time_reducer(h)
-            h = self.rnn2(h)
-
-        if hasattr(self, "fc2"):
-            h = self.fc2(h)
-
-        del x
-
-        return h
-
-    @staticmethod
-    def _certify_inputs_encode(inp):
-
-        (x, x_lens) = inp
-        B1, C, I, T = x.shape
-        B2, = x_lens.shape
-        assert B1 == B2, "Batch size must be the same for inputs and targets"
-        del x, x_lens, inp
-
-    @staticmethod
-    def _prepare_inputs_rnn1(inp):
-        r"""Reshapes inputs to prepare for `rnn1`.
-        """
-        (x, x_lens) = inp
-        B, C, I, T = x.shape
-
-        assert C == 1, f"There should only be a single channel input but C={C}"
-
-        x = x.squeeze(1)  # B, I, T
-        x = x.permute(2, 0, 1).contiguous()  # T, B, I
-        del inp
-        return (x, x_lens)
-
-    @staticmethod
-    def _prepare_inputs_fc1(inp):
-        r"""Reshapes inputs to prepare them for `fc1`.
-
-        This involves flattening n_context in channel dimension in the hidden
-        dimension.
-        """
-
-        (x, x_lens) = inp
-        B, C, I, T = x.shape
-
-        if not C == 1:
-            x = x.view(B, 1, C * I, T).contiguous()
-
-        del inp
-        return (x, x_lens)
+    @property
+    def is_half(self):
+        return list(self.parameters())[0].dtype == torch.float16

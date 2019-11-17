@@ -11,9 +11,10 @@ message PreProcessStep {
 
   oneof pre_process_step {
     MFCC mfcc = 2;
-    LogMelFB lmfb = 5;
-    Standardize standardize = 3;
-    ContextFrames context_frames = 4;
+    LogMelFB lmfb = 3;
+    Standardize standardize = 4;
+    LeftContextFrames left_context_frames = 5;
+    ContextFrames context_frames = 6;
   }
 }
 
@@ -45,6 +46,13 @@ message LogMelFB {
 
 // Standardize the input.
 message Standardize {
+}
+
+
+message LeftContextFrames {
+  // Number of context frames (channels) to add to the left.
+  uint32 n_context = 1;
+  uint32 subsample = 2;
 }
 
 

@@ -21,6 +21,7 @@ from myrtlespeech.builders.rnn_t_greedy_decoder import (
 from myrtlespeech.builders.rnn_t_loss import build as build_rnn_t_loss
 from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.data.preprocess import AddContextFrames
+from myrtlespeech.data.preprocess import AddLeftContextAndSubsample
 from myrtlespeech.data.preprocess import LogMelFB
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.model.cnn import Conv1dTo2d
@@ -307,6 +308,8 @@ def _build_pre_process_steps(
             pass
         elif isinstance(step[0], AddContextFrames):
             input_channels = 2 * step[0].n_context + 1
+        elif isinstance(step[0], AddLeftContextAndSubsample):
+            input_channels = step[0].n_context + 1
         else:
             raise ValueError(f"unknown step={step[0]}")
         pre_process_steps.append(step)

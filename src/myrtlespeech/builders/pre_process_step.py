@@ -3,6 +3,7 @@ from typing import Union
 
 import torch
 from myrtlespeech.data.preprocess import AddContextFrames
+from myrtlespeech.data.preprocess import AddLeftContextAndSubsample
 from myrtlespeech.data.preprocess import LogMelFB
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.protos import pre_process_step_pb2
@@ -12,7 +13,7 @@ from torchaudio.transforms import MFCC
 
 def build(
     pre_process_step_cfg: pre_process_step_pb2.PreProcessStep,
-) -> Tuple[Union[MFCC, Standardize, AddContextFrames, LogMelFB], Stage]:
+) -> Tuple[Union[MFCC, Standardize, AddLeftContextAndSubsample, AddContextFrames, LogMelFB], Stage]:
     """Returns tuple of ``(preprocessing callable, stage)``.
 
     Args:
@@ -42,6 +43,11 @@ def build(
         )
     elif step_type == "standardize":
         step = Standardize()
+    elif step_type == "left_context_frames":
+        step = AddLeftContextAndSubsample(
+            n_context=pre_process_step_cfg.left_context_frames.n_context,
+            subsample=pre_process_step_cfg.left_context_frames.subsample
+        )
     elif step_type == "context_frames":
         step = AddContextFrames(
             n_context=pre_process_step_cfg.context_frames.n_context
