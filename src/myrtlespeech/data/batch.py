@@ -130,7 +130,7 @@ def collate_label_list(
 
         batch_size = len(labels)
 
-        fill_token = -2  # i.e. choose a symbol that is *not* valid
+        fill_token = 0  # i.e. choose a symbol that is *not* valid
         max_len = max(len(l) for l in labels)
 
         lengths = torch.IntTensor([len(l) for l in labels]).to(device)

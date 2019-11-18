@@ -1,7 +1,3 @@
-import math
-
-import torch
-
 from myrtlespeech.post_process.rnn_t_decoder_base import TransducerDecoder
 
 
@@ -17,12 +13,10 @@ class RNNTGreedyDecoder(TransducerDecoder):
         cutoff_prob: Skip to next step in search if current highest character
             probability is less than this.
     """
-    def __init__(self, blank_index, model, max_symbols_per_step=100,
-                 cutoff_prob=0.01):
+    def __init__(self, blank_index, model, max_symbols_per_step=100):
         super().__init__(blank_index, model)
         assert max_symbols_per_step is None or max_symbols_per_step > 0
         self.max_symbols = max_symbols_per_step
-        self._log_cutoff_prob = math.log(cutoff_prob)
 
     def __call__(self, *inp):
         (x, y), (x_lens, y_lens) = inp
@@ -45,30 +39,29 @@ class RNNTGreedyDecoder(TransducerDecoder):
         if self._model.is_half:
             x = x.half()
 
+        batch, channels, features, seq_len = x.shape
+        x = x.view(batch, channels*features, seq_len).permute(2, 0, 1)
+        logits = self._model.encode(x)
+
         output = []
-        for batch_idx in range(x.size(0)):
-            inseq = x[batch_idx]
-            channels, features, seq_len = inseq.shape
-            inseq = inseq.view(channels*features, seq_len).T.unsqueeze(0)
+        for batch_idx in range(logits.size(0)):
+            inseq = logits[batch_idx, :, :].unsqueeze(1)
             logitlen = out_lens[batch_idx]
             sentence = self._greedy_decode(inseq, logitlen)
             output.append(sentence)
 
         return output
 
-    @torch.no_grad()
     def _greedy_decode(self, x, out_len):
         training_state = self._model.training
         self._model.eval()
 
         device = x.device
 
-        fs = self._model.encode(x)
-
         hidden = None
         label = []
         for time_idx in range(out_len):
-            f = fs[time_idx, :, :].unsqueeze(0)
+            f = x[time_idx, :, :].unsqueeze(0)
 
             not_blank = True
             symbols_added = 0
@@ -86,9 +79,6 @@ class RNNTGreedyDecoder(TransducerDecoder):
                 # get index k, of max prob
                 v, k = logp.max(0)
                 k = k.item()
-
-                if v < self._log_cutoff_prob:
-                    break
 
                 if k == self._blank_id:
                     not_blank = False

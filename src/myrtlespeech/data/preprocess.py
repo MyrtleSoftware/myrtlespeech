@@ -3,33 +3,37 @@ Utilities for preprocessing audio data.
 """
 from typing import Tuple
 
+import python_speech_features
 import torch
-import numpy as np
-from torchaudio.transforms import MelSpectrogram
 
 
 class LogMelFB:
-    r"""Wrapper on `torchaudio.transforms.MelSpectrogram` that applies log.
+    """Compute the log Mel Feature-bank features of audiodata."""
+    def __init__(self, n_mels, win_length=400, hop_length=160,
+                 sample_rate=16000):
+        self.nfilt = n_mels
+        self.n_mels = n_mels
+        self.winlen = float(win_length) / sample_rate
+        self.winstep = float(hop_length) / sample_rate
+        self.sample_rate = sample_rate
 
-    Args:
-        See `torchaudio.transforms.MelSpectrogram`
+    def __call__(self, audiodata):
+        audiodata = audiodata.T.squeeze().numpy()
+        out = python_speech_features.logfbank(audiodata,
+                                              samplerate=self.sample_rate,
+                                              winlen=self.winlen,
+                                              winstep=self.winstep,
+                                              nfilt=self.nfilt)
+        out = torch.tensor(out)
+        return out
 
-    Returns:
-        See `torchaudio.transforms.MelSpectrogram`
-    """
-
-    def __init__(self, **kwargs):
-        self.MelSpectrogram = MelSpectrogram(**kwargs)
-
-    def __call__(self, waveform):
-        r"""See initization docstring."""
-        feat = self.MelSpectrogram(waveform)
-
-        # Numerical stability:
-        feat = torch.where(
-            feat == 0, torch.tensor(torch.finfo(waveform.dtype).eps), feat
-        )
-        return feat.log()
+    def __repr__(self):
+        params = '(nfilt={0}, winlen={1}, winstep={2}, sample_rate={3})'
+        params = params.format(self.nfilt,
+                               self.winlen,
+                               self.winstep,
+                               self.sample_rate)
+        return self.__class__.__name__ + params
 
 
 class AddSequenceLength:
@@ -113,8 +117,6 @@ class AddLeftContextAndSubsample:
         """
         # Pad to ensure first and last n_context frames in original sequence
         # have at least n_context frames to their left and right respectively.
-        assert x.size(0) == 1
-        x = x.squeeze().T
         steps, features = x.shape
         padding = torch.zeros((self.n_context, features), dtype=x.dtype)
         x = torch.cat((padding, x, padding))
@@ -128,8 +130,10 @@ class AddLeftContextAndSubsample:
             # Strides of the new array (bytes to step in each dim).
             (strides[0], strides[0], strides[1]),
         )
+        out = strided_x.permute(1, 2, 0)   # channels, features, time
+        out = out[:, :, ::self.subsample]
 
-        return strided_x.clone().detach().permute(1, 2, 0)[:, :, ::self.subsample]
+        return out.detach()
 
 
 class AddContextFrames:
