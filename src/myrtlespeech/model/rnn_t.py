@@ -158,6 +158,9 @@ class RNNT(torch.nn.Module):
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
         initialisation.
 
+        .. note:: The length of the sequence is increased by one as the start
+        of sequence hidden state (all zeros) is appended.
+
         Args:
             y: A Tuple where the first element is the target label tensor of
                 size ``[batch, max_label_length]`` and the second is a
@@ -170,8 +173,9 @@ class RNNT(torch.nn.Module):
 
         y = self.embedding(y)
         y = self._append_SOS(y)
+        y = (y[0], y[1] + 1)
         out = self.dec_rnn(y)
-
+        y = (y[0], y[1] - 1)
         del y
 
         return out
@@ -194,7 +198,7 @@ class RNNT(torch.nn.Module):
                 size ``[batch, max_label_length, hidden_size]`` and the second
                 is a :py:class:`torch.Tensor` of size ``[batch]`` that contains
                 the *output* lengths of these target label sequences. These
-                lenghts will be unchanged from the input.
+                lengths will be +1 greater than the input.
         """
 
         y_0, y_1 = y
@@ -221,6 +225,9 @@ class RNNT(torch.nn.Module):
         y_0 = y_0.contiguous()
 
         del start, y
+
+        # lengths have increased by 1:
+        # y_1 += 1
 
         return (y_0, y_1)
 
@@ -301,7 +308,8 @@ class RNNT(torch.nn.Module):
             )
         if not (y_lens <= U).all():
             raise ValueError(
-                "y_lens must be less than or equal to max number of output symbols"
+                f"y_lens must be less than or equal to max number of output \
+                symbols but {y_lens.max()} > {U}"
             )
 
         del x, y, x_lens, y_lens, inp
@@ -492,6 +500,13 @@ class RNNTEncoder(torch.nn.Module):
 
         if fc1:
             self.fc1 = fc1
+            #####################
+            # update size of fc1 to accept ds_int input
+            weight_saved = fc1.fully_connected[0].weight
+            weight_new = torch.nn.Parameter(weight_saved[:, :320])
+            fc1.fully_connected[0].weight = weight_new
+            fc1.in_features = 320
+            ###########
         self.rnn1 = rnn1
         self.time_reducer = time_reducer
         self.time_reduction_factor = time_reduction_factor
@@ -510,6 +525,10 @@ class RNNTEncoder(torch.nn.Module):
                 self.rnn2 = self.rnn2.cuda()
             if fc2 is not None:
                 self.fc2 = self.fc2.cuda()
+
+        ### add extra hard tahn
+        tanh = torch.nn.Hardtanh(min_val=0.0, max_val=20.0)
+        self.hardtanh = lambda x: (tanh(x[0]), x[1])
 
     def forward(
         self, x: Tuple[torch.Tensor, torch.Tensor]
@@ -555,7 +574,7 @@ class RNNTEncoder(torch.nn.Module):
             h = h[0].transpose(2, 3), h[1]
             h = self.fc1(h)
             h = h[0].transpose(2, 3), h[1]
-
+            h = self.hardtanh(h)
         h = self._prepare_inputs_rnn1(h)
 
         h = self.rnn1(h)
@@ -566,7 +585,7 @@ class RNNTEncoder(torch.nn.Module):
 
         if hasattr(self, "fc2"):
             h = self.fc2(h)
-
+            h = self.hardtanh(h)
         del x
 
         return h
@@ -606,7 +625,12 @@ class RNNTEncoder(torch.nn.Module):
         B, C, I, T = x.shape
 
         if not C == 1:
-            x = x.view(B, 1, C * I, T).contiguous()
+            # delete one of the channels (for equivalence with ds_internal)
+            # Delete the final channel
+            x = x[:, 1:]
+            assert x.shape == (B, (C - 1), I, T)
+            _, C, _, _ = x.shape  # get new channel size
 
+            x = x.view(B, 1, C * I, T).contiguous()
         del inp
         return (x, x_lens)
