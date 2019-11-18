@@ -154,12 +154,15 @@ class RNNT(torch.nn.Module):
         This function is only appropriate during training (when the ground-truth
         labels are available).
 
+        .. note:: The length of the sequence is increased by one as the
+        start-of-sequence embedded state (all zeros) is appended to the start of
+        label sequence. Note that this change *is not* reflected in the
+        output lengths as the :py:class:`RNNTLoss` requires the true label
+        lengths.
+
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
         initialisation.
-
-        .. note:: The length of the sequence is increased by one as the start
-        of sequence hidden state (all zeros) is appended.
 
         Args:
             y: A Tuple where the first element is the target label tensor of
@@ -173,9 +176,13 @@ class RNNT(torch.nn.Module):
 
         y = self.embedding(y)
         y = self._append_SOS(y)
+        # Update the lengths with +1 for input to the dec_rnn
         y = (y[0], y[1] + 1)
         out = self.dec_rnn(y)
-        y = (y[0], y[1] - 1)
+        # Revert the lengths with -1 so the true lengths are provided to the
+        # :py:class:`RNNTLoss`
+        out = (out[0], out[1] - 1)
+
         del y
 
         return out
@@ -274,7 +281,6 @@ class RNNT(torch.nn.Module):
 
         # fully_connected expects a single length (not a tuple of lengths)
         # So pass seq_lengths[0] and ignore output:
-
         out, _ = self.joint_net["fully_connected"]((joint_inp, seq_lengths[0]))
 
         del joint_inp
