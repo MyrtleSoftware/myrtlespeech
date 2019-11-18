@@ -497,13 +497,6 @@ class RNNTEncoder(torch.nn.Module):
 
         if fc1:
             self.fc1 = fc1
-            #####################
-            # update size of fc1 to accept ds_int input
-            weight_saved = fc1.fully_connected[0].weight
-            weight_new = torch.nn.Parameter(weight_saved[:, :320])
-            fc1.fully_connected[0].weight = weight_new
-            fc1.in_features = 320
-            ###########
         self.rnn1 = rnn1
         self.time_reducer = time_reducer
         self.time_reduction_factor = time_reduction_factor
@@ -622,12 +615,6 @@ class RNNTEncoder(torch.nn.Module):
         B, C, I, T = x.shape
 
         if not C == 1:
-            # delete one of the channels (for equivalence with ds_internal)
-            # Delete the final channel
-            x = x[:, 1:]
-            assert x.shape == (B, (C - 1), I, T)
-            _, C, _, _ = x.shape  # get new channel size
-
             x = x.view(B, 1, C * I, T).contiguous()
         del inp
         return (x, x_lens)
