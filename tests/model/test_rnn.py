@@ -47,7 +47,6 @@ def test_correct_rnn_type_and_size_returned(
         rnn_type=rnn_type,
         input_size=input_size,
         hidden_size=hidden_size,
-        num_layers=num_layers,
         bias=bias,
         # warning raised when num_layers > 1 and dropout != 0.0 as this option
         # set does not make sense

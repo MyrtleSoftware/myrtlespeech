@@ -129,8 +129,16 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
               )
               (3): Conv1dTo2d(seq_len_support=True)
             )
-            (rnn): RNN(
-              (rnn): LSTM(4, 1024, num_layers=3, bidirectional=True)
+            (rnn): Sequential(
+              (0): RNN(
+                (rnn): LSTM(4, 1024, bidirectional=True)
+              )
+              (1): RNN(
+                (rnn): LSTM(2048, 1024, bidirectional=True)
+              )
+              (2): RNN(
+                (rnn): LSTM(2048, 1024, bidirectional=True)
+              )
             )
             (fully_connected): FullyConnected(
               (fully_connected): Sequential(
