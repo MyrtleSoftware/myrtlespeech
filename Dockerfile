@@ -1,4 +1,8 @@
+FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
 FROM continuumio/miniconda3
+
+RUN apt-get install locate && locate cuda | grep /cuda$
+RUN git
 
 # fix https://github.com/conda/conda/issues/7267
 RUN chown -R 1000:1000 /opt/conda/
@@ -32,6 +36,28 @@ RUN git clone https://github.com/NVIDIA/apex && \
     pip install -v --no-cache-dir ./ && \
     cd .. && \
     rm -rf apex
+
+USER root
+RUN apt-get update && apt-get install make cmake build-essential -y #&& make deps/warp-transducer
+
+USER user
+RUN git clone https://github.com/HawkAaron/warp-transducer build/warp-transducer; exit 0
+RUN cd build/warp-transducer && \
+    git reset --hard c6d12f9e1562833c2b4e7ad84cb22aa4ba31d18c && \
+		mkdir build && \
+		cd build && \
+		cmake .. && \
+		make
+ENV WARP_RNNT_PATH=/usr/local/lib
+ENV CUDA_HOME=/usr/local/cuda
+RUN echo "export WARP_RNNT_PATH=/usr/local/lib" >> ~/.bashrc && \
+    echo "export CUDA_HOME=/usr/local/cuda" >> ~/.bashrc
+USER root
+RUN cp build/warp-transducer/build/libwarprnnt.so $WARP_RNNT_PATH
+USER user
+RUN export CUDA_HOME=/usr/local/cuda && export WARP_RNNT_PATH=/usr/local/lib && \
+  cd build/warp-transducer/pytorch_binding && \
+		python3 setup.py install --user
 
 # use CI Hypothesis profile, see ``tests/__init__.py``
 ENV HYPOTHESIS_PROFILE ci

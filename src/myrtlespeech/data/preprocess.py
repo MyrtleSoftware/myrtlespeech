@@ -4,32 +4,78 @@ Utilities for preprocessing audio data.
 import random
 from typing import Tuple
 
+import python_speech_features
 import torch
 from torchaudio.transforms import MelSpectrogram
 
+# class LogMelFB:
+#     r"""Wrapper on `torchaudio.transforms.MelSpectrogram` that applies log.
+#
+#     Args:
+#         See `torchaudio.transforms.MelSpectrogram`
+#
+#     Returns:
+#         See `torchaudio.transforms.MelSpectrogram`
+#     """
+#
+#     def __init__(self, **kwargs):
+#         self.MelSpectrogram = MelSpectrogram(**kwargs)
+#
+#     def __call__(self, waveform):
+#         r"""See initization docstring."""
+#         feat = self.MelSpectrogram(waveform)
+#
+#         # Numerical stability:
+#         feat = torch.where(
+#             feat == 0, torch.tensor(torch.finfo(waveform.dtype).eps), feat
+#         )
+#
+#         return feat.log()
+class MelSpectrogramFake:
+    def __init__(self, n_mels):
+        self.n_mels = n_mels
+
 
 class LogMelFB:
-    r"""Wrapper on `torchaudio.transforms.MelSpectrogram` that applies log.
+    """Compute the log Mel Feature-bank features of audiodata."""
 
-    Args:
-        See `torchaudio.transforms.MelSpectrogram`
+    def __init__(
+        self,
+        n_mels,
+        win_length=0.025,
+        winstep=0.01,
+        sample_rate=16000,
+        hop_length=1,
+    ):
+        self.nfilt = n_mels
 
-    Returns:
-        See `torchaudio.transforms.MelSpectrogram`
-    """
+        # use dsi values
+        winlen, winstep, samplerate = 0.025, 0.01, 16000
+        self.winlen = winlen
+        self.winstep = winstep
+        self.sample_rate = sample_rate
 
-    def __init__(self, **kwargs):
-        self.MelSpectrogram = MelSpectrogram(**kwargs)
+        # for accessing n_mels
+        self.MelSpectrogram = MelSpectrogramFake(n_mels)
 
-    def __call__(self, waveform):
-        r"""See initization docstring."""
-        feat = self.MelSpectrogram(waveform)
-
-        # Numerical stability:
-        feat = torch.where(
-            feat == 0, torch.tensor(torch.finfo(waveform.dtype).eps), feat
+    def __call__(self, audiodata):
+        audiodata = audiodata.numpy()
+        res = python_speech_features.logfbank(
+            audiodata,
+            samplerate=self.sample_rate,
+            winlen=self.winlen,
+            winstep=self.winstep,
+            nfilt=self.nfilt,
         )
-        return feat.log()
+
+        res = (
+            torch.from_numpy(res)
+            .unsqueeze(0)
+            .transpose(1, 2)
+            .type(torch.float32)
+        )
+
+        return res
 
 
 class AddSequenceLength:
@@ -160,7 +206,20 @@ class AddContextFrames:
             (strides[0], strides[0], strides[1]),
         )
 
-        return strided_x.clone().detach().permute(1, 2, 0)
+        #####################
+        strided_x = strided_x.clone().detach()
+        # subsample
+
+        self.subsample = 2
+        subsampled_signal = [
+            x.unsqueeze(0)
+            for i, x in enumerate(strided_x)
+            if i % self.subsample == 0
+        ]
+        subsampled_tensor = torch.cat(subsampled_signal, dim=0)
+        ##############
+
+        return subsampled_tensor.permute(1, 2, 0)
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + f"(n_context={self.n_context})"
