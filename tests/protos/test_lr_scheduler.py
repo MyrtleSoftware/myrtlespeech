@@ -83,7 +83,8 @@ def cosine_annealing_lrs(
     st.SearchStrategy[lr_scheduler_pb2.CosineAnnealingLR],
     st.SearchStrategy[Tuple[lr_scheduler_pb2.CosineAnnealingLR, Dict]],
 ]:
-    """Returns a SearchStrategy for an CosineAnnealingLR plus maybe the kwargs."""
+    """Returns a SearchStrategy for an CosineAnnealingLR plus maybe the
+    kwargs. """
     kwargs: Dict = {}
 
     kwargs["t_max"] = draw(st.integers(1, 30))
