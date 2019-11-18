@@ -198,7 +198,7 @@ class RNNT(torch.nn.Module):
                 size ``[batch, max_label_length, hidden_size]`` and the second
                 is a :py:class:`torch.Tensor` of size ``[batch]`` that contains
                 the *output* lengths of these target label sequences. These
-                lengths will be +1 greater than the input.
+                lengths will be the same as the input lengths.
         """
 
         y_0, y_1 = y
@@ -225,9 +225,6 @@ class RNNT(torch.nn.Module):
         y_0 = y_0.contiguous()
 
         del start, y
-
-        # lengths have increased by 1:
-        # y_1 += 1
 
         return (y_0, y_1)
 
