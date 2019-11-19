@@ -19,7 +19,7 @@ def pre_process_steps(
     st.SearchStrategy[pre_process_step_pb2.PreProcessStep],
     st.SearchStrategy[Tuple[pre_process_step_pb2.PreProcessStep, Dict]],
 ]:
-    """Returns a SearchStrategy for a pre_process_step and maybe the kwargs."""
+    """Returns a SearchStrategy for a pre_process_step + maybe the kwargs."""
     kwargs: Dict = {}
 
     kwargs["stage"] = draw(stages())
@@ -37,7 +37,7 @@ def pre_process_steps(
     if step_type_str == "mfcc":
         kwargs["mfcc"] = draw(_mfccs())
     elif step_type_str == "spec_augment":
-        kwargs["spec_augment"] = draw(_spec_augements())
+        kwargs["spec_augment"] = draw(_spec_augments())
     elif step_type_str == "standardize":
         kwargs["standardize"] = draw(_standardizes())
     elif step_type_str == "context_frames":
@@ -76,20 +76,19 @@ def _mfccs(
 
 
 @st.composite
-def _spec_augements(
+def _spec_augments(
     draw, return_kwargs: bool = False
 ) -> Union[
-    st.SearchStrategy[pre_process_step_pb2.MFCC],
+    st.SearchStrategy[pre_process_step_pb2.SpecAugment],
     st.SearchStrategy[Tuple[pre_process_step_pb2.SpecAugment, Dict]],
 ]:
     """Returns a SearchStrategy for SpecAugments plus maybe the kwargs."""
     kwargs: Dict = {}
 
-    kwargs["W"] = draw(st.integers(0, 80))
-    kwargs["F"] = draw(st.integers(10, 100))
-    kwargs["T"] = draw(st.integers(10, 30))
-    kwargs["mF"] = draw(st.integers(1, 3))
-    kwargs["mT"] = draw(st.integers(1, 3))
+    kwargs["feature_mask"] = draw(st.integers(0, 80))
+    kwargs["time_mask"] = draw(st.integers(0, 100))
+    kwargs["n_feature_masks"] = draw(st.integers(0, 3))
+    kwargs["n_time_masks"] = draw(st.integers(0, 3))
 
     # initialise and return
     all_fields_set(pre_process_step_pb2.SpecAugment, kwargs)
