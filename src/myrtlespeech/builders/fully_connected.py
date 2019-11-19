@@ -53,18 +53,18 @@ def build(
         >>> build(cfg, input_features=32, output_features=16)
         Sequential(
           (0): FullyConnected(
-            (fully_connected): Linear(in_features=32, out_features=64,
-            bias=True)
+            (fully_connected): Linear(in_features=32, out_features=64, \
+bias=True)
             (activation): ReLU()
           )
           (1): FullyConnected(
-            (fully_connected): Linear(in_features=64, out_features=64,
-            bias=True)
+            (fully_connected): Linear(in_features=64, out_features=64, \
+bias=True)
             (activation): ReLU()
           )
           (2): FullyConnected(
-            (fully_connected): Linear(in_features=64, out_features=16,
-            bias=True)
+            (fully_connected): Linear(in_features=64, out_features=16, \
+bias=True)
           )
         )
     """
