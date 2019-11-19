@@ -28,6 +28,7 @@ def rnns(
     kwargs["num_layers"] = draw(st.integers(1, 4))
     kwargs["bias"] = draw(st.booleans())
     kwargs["bidirectional"] = draw(st.booleans())
+    kwargs["batch_norm"] = draw(st.booleans())
     if kwargs["rnn_type"] == rnn_pb2.RNN.RNN_TYPE.LSTM and kwargs["bias"]:
         kwargs["forget_gate_bias"] = FloatValue(
             value=draw(

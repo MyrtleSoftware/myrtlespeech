@@ -33,6 +33,7 @@ def fully_connecteds(
     else:
         kwargs["hidden_size"] = draw(st.integers(1, 32))
         kwargs["activation"] = draw(activations())
+    kwargs["batch_norm"] = draw(st.booleans())
 
     all_fields_set(fully_connected_pb2.FullyConnected, kwargs)
     fc = fully_connected_pb2.FullyConnected(**kwargs)
