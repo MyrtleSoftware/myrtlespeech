@@ -201,13 +201,13 @@ class SpecAugment:
         # mask features
         for _ in range(self.n_feature_masks):
             f_to_mask = random.randint(0, self.feature_mask)
-            f_start = random.randint(0, n_features - f_to_mask)
+            f_start = random.randint(0, max(0, n_features - f_to_mask))
             x[:, f_start:f_start + f_to_mask, :] = 0
 
         # mask time steps
         for _ in range(self.n_time_masks):
             t_to_mask = random.randint(0, self.time_mask)
-            t_start = random.randint(0, n_time_steps - t_to_mask)
+            t_start = random.randint(0, max(0, n_time_steps - t_to_mask))
             x[:, :, t_start:t_start+t_to_mask] = 0
 
         return x
