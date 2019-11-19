@@ -145,14 +145,16 @@ class SpecAugment:
     """`SpecAugment <https://arxiv.org/pdf/1904.08779.pdf>`_.
 
     Args:
-        feature_mask: The number of features, typically frequencies, to mask.
-            This will be drawn from a uniform distribution from 0 to
-            ``feature_mask`` each time SpecAugment is called. ``feature_mask``
-            is F in the original paper.
+        feature_mask: The maximum number of feature dimensions - typically
+            frequencies - a single mask will zero. The actual number will be
+            drawn from a uniform distribution from 0 to ``feature_mask`` each
+            time SpecAugment is called. ``feature_mask`` is :math:`F` in the
+            original paper.
 
-        time_mask: The number of time steps to mask. This will be drawn from a
-            uniform distribution from 0 to ``time_mask`` each time SpecAugment
-            is called. ``time_mask`` is t in the original paper.
+        time_mask: The maximum number of time steps a single mask will zero.
+            The actual number masked will be drawn from a uniform distribution
+            from 0 to ``time_mask`` each time SpecAugment is called.
+            ``time_mask`` is :math:`T` in the original paper.
 
         n_feature_masks: The number of feature masks to apply. :math:`m_F` in
             the original paper.
@@ -161,7 +163,7 @@ class SpecAugment:
             original paper.
 
     Raises:
-        :py:class:`ValueError` if any arguments are less than 0.
+        :py:class:`ValueError`: if any parameters are less than 0.
     """
 
     def __init__(
