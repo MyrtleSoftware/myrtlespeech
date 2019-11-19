@@ -137,24 +137,23 @@ def build(
         output_features=rnn_t_cfg.fully_connected.hidden_size,
     )
 
-    ##decoder/prediction network
-    # can get embedding dims from the rnnt
-    embedding = nn.Embedding(vocab_size, rnn_t_cfg.dec_rnn.hidden_size)
+    # can get embedding dimension from the dec_rnn config
+    embedding = nn.Embedding(
+        vocab_size, embedding_dim=rnn_t_cfg.dec_rnn.hidden_size
+    )
     dec_rnn, prediction_out = build_rnn(
         rnn_t_cfg.dec_rnn, rnn_t_cfg.dec_rnn.hidden_size
     )
 
-    ##joint
-    fc_in_dim = encoder_out + prediction_out  # features are concatenated
+    joint_in_dim = encoder_out + prediction_out  # features are concatenated
 
     fully_connected = build_fully_connected(
         rnn_t_cfg.fully_connected,
-        input_features=fc_in_dim,
+        input_features=joint_in_dim,
         output_features=vocab_size + 1,
     )
     rnnt = RNNT(encoder, embedding, dec_rnn, fully_connected)
-    if torch.cuda.is_available():
-        rnnt.cuda()
+
     return rnnt
 
 

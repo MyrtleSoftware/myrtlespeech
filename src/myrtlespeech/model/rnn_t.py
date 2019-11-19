@@ -88,6 +88,9 @@ class RNNT(torch.nn.Module):
 
         self.use_cuda = torch.cuda.is_available()
 
+        if self.use_cuda:
+            self.cuda()
+
     @staticmethod
     def _predict_net(embedding, dec_rnn):
         return torch.nn.ModuleDict({"embed": embedding, "dec_rnn": dec_rnn})
