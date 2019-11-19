@@ -1,10 +1,10 @@
 """
 Utilities for preprocessing audio data.
 """
+import random
 from typing import Tuple
 
 import torch
-from myrtlespeech.data.spec_augment import spec_augment
 
 
 class AddSequenceLength:
@@ -142,43 +142,65 @@ class AddContextFrames:
 
 
 class SpecAugment:
-    """Applies SpecAugment (https://arxiv.org/pdf/1904.08779.pdf) transforms
-    to the data
+    """`SpecAugment <https://arxiv.org/pdf/1904.08779.pdf>`_.
 
-    The parameters for various policies given in the original paper are:
-    -----------------------------------------
-    Policy | W  | F  | m_F |  T  |  p  | m_T
-    -----------------------------------------
-    None   |  0 |  0 |  -  |  0  |  -  |  -
-    -----------------------------------------
-    LB     | 80 | 27 |  1  | 100 | 1.0 | 1
-    -----------------------------------------
-    LD     | 80 | 27 |  2  | 100 | 1.0 | 2
-    -----------------------------------------
-    SM     | 40 | 15 |  2  |  70 | 0.2 | 2
-    -----------------------------------------
-    SS     | 40 | 27 |  2  |  70 | 0.2 | 2
-    -----------------------------------------
-    LB : LibriSpeech basic
-    LD : LibriSpeech double
-    SM : Switchboard mild
-    SS : Switchboard strong
+    Args:
+        feature_mask: The number of features, typically frequencies, to mask.
+            This will be drawn from a uniform distribution from 0 to
+            ``feature_mask`` each time SpecAugment is called. ``feature_mask``
+            is F in the original paper.
+
+        time_mask: The number of time steps to mask. This will be drawn from a
+            uniform distribution from 0 to ``time_mask`` each time SpecAugment
+            is called. ``time_mask`` is t in the original paper.
+
+        n_feature_masks: The number of feature masks to apply. :math:`m_F` in
+            the original paper.
+
+        n_time_masks: The number of time masks to apply. :math:`m_T` in the
+            original paper.
     """
 
     def __init__(
-        self, W: int = 80, F: int = 27, T: int = 100, mF: int = 1, mT: int = 1
+        self,
+        feature_mask: int,
+        time_mask: int,
+        n_feature_masks: int = 1,
+        n_time_masks: int = 1
     ):
-        self.W = W
-        self.F = F
-        self.T = T
-        self.mF = mF
-        self.mT = mT
+        self.feature_mask = feature_mask
+        self.time_mask = time_mask
+        self.n_feature_masks = n_feature_masks
+        self.n_time_masks = n_time_masks
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
-        return spec_augment(x, self.W, self.F, self.T, self.mF, self.mT)
+        """Returns ``x`` after applying SpecAugment.
+
+        Args:
+            x: :py:class:`torch.Tensor` with size
+                ``(channels, features, time steps)``.
+
+        Returns:
+            :py:class:`torch.Tensor` with size ``(channels, features, time
+            steps)`` where some of the features and time steps may be set to 0.
+        """
+        _, n_features, n_time_steps = x.size()
+
+        # mask features
+        for _ in range(self.n_feature_masks):
+            f_to_mask = random.randint(0, self.feature_mask)
+            f_start = random.randint(0, n_features - f_to_mask)
+            x[:, f_start:f_start + f_to_mask, :] = 0
+
+        for _ in range(self.n_time_masks):
+            t_to_mask = random.randint(0, self.time_mask)
+            t_start = random.randint(0, n_time_steps - t_to_mask)
+            x[:, :, t_start:t_start+t_to_mask] = 0
+
+        return x
 
     def __repr__(self) -> str:
         return (
             self.__class__.__name__
-            + f"(W={self.W}, F={self.F}, T={self.T}, mF={self.mF}, mT={self.mT})"
+            + f"(freq_mask={self.freq_mask}, time_mask={self.time_mask})"
         )
