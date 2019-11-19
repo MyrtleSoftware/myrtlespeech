@@ -19,7 +19,7 @@ def build(
     input_channels: int,
     vocab_size: int,
 ) -> RNNT:
-    """Returns a :py:class:`.RNNT` based on the config.
+    r"""Returns a :py:class:`.RNNT` based on the config.
 
     Args:
         rnn_t_cfg: An ``RNNT`` protobuf object containing
@@ -152,9 +152,7 @@ def build(
         input_features=joint_in_dim,
         output_features=vocab_size + 1,
     )
-    rnnt = RNNT(encoder, embedding, dec_rnn, fully_connected)
-
-    return rnnt
+    return RNNT(encoder, embedding, dec_rnn, fully_connected)
 
 
 def build_rnnt_enc(
@@ -165,19 +163,19 @@ def build_rnnt_enc(
     """Returns a :py:class:`.RNNTEncoder` based on the config.
 
     Args:
-        rnn_t_cfg: An ``RNNT`` protobuf object containing
+        rnn_t_enc: An ``RNNTEncoder`` protobuf object containing
             the config for the desired :py:class:`torch.nn.Module`.
 
         input_features: The number of features for the input.
 
         output_features: The number of output features of the encoder if
-            rnn_t_enc.HasField("fc2"). Otherwise the outpus size will be
+            rnn_t_enc.HasField("fc2"). Otherwise the output size will be
             equal to the hidden size of `rnn2` if present else `rnn1`.
 
     Returns:
-        A Tuple where the first element is an :py:class:`.RNNTEncoder` based
+        A Tuple where the first element is an :py:class:`RNNTEncoder` based
             on the config and the second element is the encoder output feature
-            size. See :py:class:`.RNNTEncoder` docstrings for more information.
+            size. See :py:class:`RNNTEncoder` docstrings for more information.
 
     Example:
         >>> from google.protobuf import text_format
