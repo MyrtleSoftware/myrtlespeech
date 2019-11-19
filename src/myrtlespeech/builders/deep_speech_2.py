@@ -99,8 +99,10 @@ def build(
               (rnn): LSTM(8, 32, bidirectional=True)
             )
           )
-          (fully_connected): FullyConnected(
-            (fully_connected): Linear(in_features=64, out_features=4, bias=True)
+          (fully_connected): Sequential(
+            (0): FullyConnected(
+              (fully_connected): Linear(in_features=64, out_features=4, bias=True)
+            )
           )
         )
     """

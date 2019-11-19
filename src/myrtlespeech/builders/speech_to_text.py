@@ -140,11 +140,13 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
                 (rnn): LSTM(2048, 1024, bidirectional=True)
               )
             )
-            (fully_connected): FullyConnected(
-              (fully_connected): Sequential(
-                (0): Linear(in_features=2048, out_features=1024, bias=True)
-                (1): Hardtanh(min_val=0.0, max_val=20.0)
-                (2): Linear(in_features=1024, out_features=5, bias=True)
+            (fully_connected): Sequential(
+              (0): FullyConnected(
+                (fully_connected): Linear(in_features=2048, out_features=1024, bias=True)
+                (activation): Hardtanh(min_val=0.0, max_val=20.0)
+              )
+              (1): FullyConnected(
+                (fully_connected): Linear(in_features=1024, out_features=5, bias=True)
               )
             )
           )
