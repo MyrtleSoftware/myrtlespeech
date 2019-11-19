@@ -159,6 +159,9 @@ class SpecAugment:
 
         n_time_masks: The number of time masks to apply. :math:`m_T` in the
             original paper.
+
+    Raises:
+        :py:class:`ValueError` if any arguments are less than 0.
     """
 
     def __init__(
@@ -168,6 +171,15 @@ class SpecAugment:
         n_feature_masks: int = 1,
         n_time_masks: int = 1
     ):
+        if feature_mask < 0:
+            raise ValueError(f"feature_mask={feature_mask} < 0")
+        if time_mask < 0:
+            raise ValueError(f"time_mask={time_mask} < 0")
+        if n_feature_masks < 0:
+            raise ValueError(f"n_feature_masks={n_feature_masks} < 0")
+        if n_time_masks < 0:
+            raise ValueError(f"n_time_masks={n_time_masks} < 0")
+
         self.feature_mask = feature_mask
         self.time_mask = time_mask
         self.n_feature_masks = n_feature_masks
@@ -192,6 +204,7 @@ class SpecAugment:
             f_start = random.randint(0, n_features - f_to_mask)
             x[:, f_start:f_start + f_to_mask, :] = 0
 
+        # mask time steps
         for _ in range(self.n_time_masks):
             t_to_mask = random.randint(0, self.time_mask)
             t_start = random.randint(0, n_time_steps - t_to_mask)
@@ -202,5 +215,8 @@ class SpecAugment:
     def __repr__(self) -> str:
         return (
             self.__class__.__name__
-            + f"(freq_mask={self.freq_mask}, time_mask={self.time_mask})"
+            + f"(feature_mask={self.feature_mask},"
+            + f" time_mask={self.time_mask},"
+            + f" n_feature_masks={self.n_feature_masks},"
+            + f" n_time_masks={self.n_time_masks})"
         )
