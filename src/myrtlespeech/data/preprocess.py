@@ -171,7 +171,7 @@ class SpecAugment:
         feature_mask: int,
         time_mask: int,
         n_feature_masks: int = 1,
-        n_time_masks: int = 1
+        n_time_masks: int = 1,
     ):
         if feature_mask < 0:
             raise ValueError(f"feature_mask={feature_mask} < 0")
@@ -204,13 +204,13 @@ class SpecAugment:
         for _ in range(self.n_feature_masks):
             f_to_mask = random.randint(0, self.feature_mask)
             f_start = random.randint(0, max(0, n_features - f_to_mask))
-            x[:, f_start:f_start + f_to_mask, :] = 0
+            x[:, f_start : f_start + f_to_mask, :] = 0
 
         # mask time steps
         for _ in range(self.n_time_masks):
             t_to_mask = random.randint(0, self.time_mask)
             t_start = random.randint(0, max(0, n_time_steps - t_to_mask))
-            x[:, :, t_start:t_start+t_to_mask] = 0
+            x[:, :, t_start : t_start + t_to_mask] = 0
 
         return x
 

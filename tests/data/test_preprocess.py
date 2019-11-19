@@ -12,10 +12,9 @@ from tests.utils.utils import tensors
 
 # Fixtures and Strategies -----------------------------------------------------
 
+
 @st.composite
-def spec_augments(
-    draw
-) -> st.SearchStrategy[SpecAugment]:
+def spec_augments(draw) -> st.SearchStrategy[SpecAugment]:
     """Returns a SearchStrategy for SpecAugment."""
     kwargs: Dict = {}
     kwargs["feature_mask"] = draw(st.integers(0, 30))
@@ -27,6 +26,7 @@ def spec_augments(
 
 
 # Tests -----------------------------------------------------------------------
+
 
 @given(data=st.data(), tensor=tensors(min_n_dims=1))
 def test_add_sequence_length_returns_correct_seq_len(
@@ -47,18 +47,15 @@ def test_add_sequence_length_returns_correct_seq_len(
 
 # SpecAugment ---------------------------
 
+
 @given(
     spec_augment=spec_augments(),
     tensor=tensors(
-        min_n_dims=3,
-        max_n_dims=3,
-        min_dim_size=1,
-        max_dim_size=100
-    )
+        min_n_dims=3, max_n_dims=3, min_dim_size=1, max_dim_size=100
+    ),
 )
 def test_spec_augment_returns_tensor_same_shape(
-    spec_augment: SpecAugment,
-    tensor: torch.Tensor
+    spec_augment: SpecAugment, tensor: torch.Tensor
 ) -> None:
     """Ensures SpecAugment returns a tensor with the same shape."""
     out = spec_augment(tensor)
@@ -68,15 +65,11 @@ def test_spec_augment_returns_tensor_same_shape(
 @given(
     sa=spec_augments(),
     tensor=tensors(
-        min_n_dims=3,
-        max_n_dims=3,
-        min_dim_size=1,
-        max_dim_size=100
-    )
+        min_n_dims=3, max_n_dims=3, min_dim_size=1, max_dim_size=100
+    ),
 )
 def test_spec_augment_n_zeros_less_than_max(
-    sa: SpecAugment,
-    tensor: torch.Tensor
+    sa: SpecAugment, tensor: torch.Tensor
 ) -> None:
     """Ensures number of parameters zeroed by SpecAugment is less than the max.
 
@@ -87,11 +80,11 @@ def test_spec_augment_n_zeros_less_than_max(
             n_time_masks*time_mask*features
         )
     """
-    tensor.fill_(1)   # ensure no zeros before SpecAugment applied
+    tensor.fill_(1)  # ensure no zeros before SpecAugment applied
     channels, features, time_steps = tensor.size()
     out = sa(tensor)
-    max = sa.n_feature_masks*sa.feature_mask*time_steps
-    max += sa.n_time_masks*sa.time_mask*features
+    max = sa.n_feature_masks * sa.feature_mask * time_steps
+    max += sa.n_time_masks * sa.time_mask * features
     max *= channels
     assert (out == 0).sum() <= max
 

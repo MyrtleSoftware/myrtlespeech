@@ -39,7 +39,7 @@ def build(
             feature_mask=spec.feature_mask,
             time_mask=spec.time_mask,
             n_feature_masks=spec.n_feature_masks,
-            n_time_masks=spec.n_time_masks
+            n_time_masks=spec.n_time_masks,
         )
     elif step_type == "standardize":
         step = Standardize()
