@@ -35,7 +35,12 @@ def build(
         )
     elif step_type == "spec_augment":
         spec = pre_process_step_cfg.spec_augment
-        step = SpecAugment(W=spec.W, F=spec.F, T=spec.T, mF=spec.mF, mT=spec.mT)
+        step = SpecAugment(
+            feature_mask=spec.feature_mask,
+            time_mask=spec.time_mask,
+            n_feature_masks=spec.n_feature_masks,
+            n_time_masks=spec.n_time_masks
+        )
     elif step_type == "standardize":
         step = Standardize()
     elif step_type == "context_frames":

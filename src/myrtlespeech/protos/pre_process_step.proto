@@ -30,22 +30,19 @@ message MFCC {
 }
 
 
-// Applies SpecAugment transformation (https://arxiv.org/pdf/1904.08779.pdf)
+// Applies SpecAugment transformation (https://arxiv.org/pdf/1904.08779.pdf).
 message SpecAugment {
-  // Time warping parameter
-  uint32 W = 1;
+  // Number of features to mask will be drawn from Uniform[0, feature_mask].
+  uint32 feature_mask = 1;
 
-  // Frequency mask parameter
-  uint32 F = 2;
+  // Number of time steps to mask will be drawn from Uniform[0, time_mask].
+  uint32 time_mask = 2;
 
-  // Time mask parameter
-  uint32 T = 3;
+  // Number of feature masks to apply.
+  uint32 n_feature_masks = 3;
 
-  // Number of frequency masking lines
-  uint32 mF = 4;
-
-  // Number of time masking lines
-  uint32 mT = 5;
+  // Number of time masks to apply.
+  uint32 n_time_masks = 4;
 }
 
 
