@@ -118,7 +118,7 @@ class ReportDecoderWERBase(Callback):
             self.distances.append(distance)
             self.lengths.append(len(exp))
 
-        if kwargs["epoch_batches"] % 100 == 0 and kwargs["epoch_batches"] != 0:
+        if kwargs["epoch_batches"] % 10 == 0 and kwargs["epoch_batches"] != 0:
             try:
                 print(
                     kwargs["epoch_batches"],
