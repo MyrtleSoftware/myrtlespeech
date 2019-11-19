@@ -7,6 +7,7 @@ from myrtlespeech.builders.fully_connected import (
 )
 from myrtlespeech.builders.lookahead import build as build_lookahead
 from myrtlespeech.builders.rnn import build as build_rnn
+from myrtlespeech.model.cnn import BatchNorm
 from myrtlespeech.model.cnn import Conv1dTo2d
 from myrtlespeech.model.cnn import Conv2dTo1d
 from myrtlespeech.model.cnn import MaskConv1d
@@ -169,6 +170,14 @@ def _build_cnn(conv_blocks, input_features: int, input_channels: int):
                 )
             )
 
+            if conv_block.batch_norm:
+                layers.append(
+                    BatchNorm(
+                        batch_norm_type=torch.nn.BatchNorm1d,
+                        num_features=conv_cfg.output_channels,
+                    )
+                )
+
             input_channels = conv_cfg.output_channels
 
         elif convnd_str == "conv2d":
@@ -208,6 +217,14 @@ def _build_cnn(conv_blocks, input_features: int, input_channels: int):
                     bias=conv_cfg.bias,
                 )
             )
+
+            if conv_block.batch_norm:
+                layers.append(
+                    BatchNorm(
+                        batch_norm_type=torch.nn.BatchNorm2d,
+                        num_features=conv_cfg.output_channels,
+                    )
+                )
 
             input_channels = conv_cfg.output_channels
 
