@@ -1,4 +1,3 @@
-import pickle
 from typing import Dict
 from typing import Tuple
 
@@ -6,7 +5,6 @@ import hypothesis.strategies as st
 import numpy as np
 import torch
 from hypothesis import given
-from myrtlespeech.data.spec_augment import sparse_image_warp
 from myrtlespeech.data.spec_augment import spec_augment
 
 
