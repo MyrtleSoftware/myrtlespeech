@@ -31,9 +31,6 @@ from torchaudio.transforms import MelSpectrogram
 #         )
 #
 #         return feat.log()
-class MelSpectrogramFake:
-    def __init__(self, n_mels):
-        self.n_mels = n_mels
 
 
 class LogMelFB:
@@ -47,25 +44,25 @@ class LogMelFB:
         sample_rate=16000,
         hop_length=1,
     ):
-        self.nfilt = n_mels
-
-        # use dsi values
-        winlen, winstep, samplerate = 0.025, 0.01, 16000
-        self.winlen = winlen
+        self.n_mels = n_mels
+        self.win_length = win_length
         self.winstep = winstep
         self.sample_rate = sample_rate
+        self.hop_length = hop_length
 
-        # for accessing n_mels
-        self.MelSpectrogram = MelSpectrogramFake(n_mels)
+        # Define .MelSpectrogram property so that parameters are accessible
+        self.MelSpectrogram = MelSpectrogramFake(
+            n_mels, win_length, sample_rate, hop_length
+        )
 
     def __call__(self, audiodata):
         audiodata = audiodata.numpy()
         res = python_speech_features.logfbank(
             audiodata,
             samplerate=self.sample_rate,
-            winlen=self.winlen,
+            winlen=self.win_length,
             winstep=self.winstep,
-            nfilt=self.nfilt,
+            nfilt=self.n_mels,
         )
 
         res = (
@@ -76,6 +73,14 @@ class LogMelFB:
         )
 
         return res
+
+
+class MelSpectrogramFake:
+    def __init__(self, n_mels, win_length, sample_rate, hop_length):
+        self.n_mels = n_mels
+        self.win_length = win_length
+        self.sample_rate = sample_rate
+        self.hop_length = hop_length
 
 
 class AddSequenceLength:
