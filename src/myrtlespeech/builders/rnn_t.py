@@ -130,12 +130,21 @@ def build(
         )
 
     """
+    # encoder output size is only required for build_rnnt_enc if fc2 layer
+    # is present (else it is necessarily specified by the encoder's rnn hidden
+    # size). If fc2 layer *is* present, output size will be equal to joint
+    # network hidden size:
+    out_enc_size = None
+    if rnn_t_cfg.rnn_t_encoder.HasField("fc2"):
+        out_enc_size = rnn_t_cfg.fully_connected.hidden_size
 
     encoder, encoder_out = build_rnnt_enc(
         rnn_t_cfg.rnn_t_encoder,
         input_features * input_channels,
-        output_features=rnn_t_cfg.fully_connected.hidden_size,
+        output_features=out_enc_size,
     )
+    if out_enc_size is not None:
+        assert encoder_out == out_enc_size
 
     # can get embedding dimension from the dec_rnn config
     embedding = nn.Embedding(
