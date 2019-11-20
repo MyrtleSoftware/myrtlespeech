@@ -12,14 +12,21 @@ Development
    .. code-block:: bash
 
       conda env create -f environment.yml
-2. Install myrtlespeech:
+
+2. Activate environment:
+
+   .. code-block:: bash
+
+      source activate myrtlespeech
+
+3. Install myrtlespeech:
 
   .. code-block:: bash
 
     pip install -e .
 
 
-3. Install `pre-commit <https://pre-commit.com>`_ into git hooks.
+4. Install `pre-commit <https://pre-commit.com>`_ into git hooks.
 
    .. code-block:: bash
 
@@ -32,7 +39,7 @@ Development
 
       pre-commit run --all-files
 
-4. Compile the `Protocol Buffer
+5. Compile the `Protocol Buffer
    <https://developers.google.com/protocol-buffers/>`_ files into Python
    modules:
 
@@ -46,7 +53,7 @@ Development
         modified.
 
 
-5. Install `NVIDIA Apex
+6. Install `NVIDIA Apex
    <https://github.com/NVIDIA/apex/tree/880ab925bce9f817a93988b021e12db5f67f7787>`_.
    As of 2019-08-21 it does _not_ have a Conda package and must be installed
    manually:
@@ -56,7 +63,7 @@ Development
     make deps/apex
 
 
-6. Install `Warp-Transducer Loss <https://github.com/HawkAaron/warp-transducer/commit/c6d12f9e1562833c2b4e7ad84cb22aa4ba31d18c>`_:
+7. Install `Warp-Transducer Loss <https://github.com/HawkAaron/warp-transducer/commit/c6d12f9e1562833c2b4e7ad84cb22aa4ba31d18c>`_:
 
   .. code-block:: bash
 
