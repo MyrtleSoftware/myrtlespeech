@@ -9,13 +9,16 @@ import torch
 from torchaudio.transforms import MelSpectrogram
 
 # class LogMelFB:
-#     r"""Wrapper on `torchaudio.transforms.MelSpectrogram` that applies log.
+#     r"""Computes the log Mel-feature-bank of audiodata.
+#
+#     Wrapper on `torchaudio.transforms.MelSpectrogram` that applies log.
 #
 #     Args:
 #         See `torchaudio.transforms.MelSpectrogram`
 #
 #     Returns:
-#         See `torchaudio.transforms.MelSpectrogram`
+#         See `torchaudio.transforms.MelSpectrogram`. Returns natural log of
+#           this quantity.
 #     """
 #
 #     def __init__(self, **kwargs):
@@ -34,7 +37,13 @@ from torchaudio.transforms import MelSpectrogram
 
 
 class LogMelFB:
-    """Compute the log Mel Feature-bank features of audiodata."""
+    r"""Computes the log Mel-feature-bank of audiodata.
+
+    Note: this is a preprocessing step copied from our internal codebase. It
+    will shortly be replaced with an equivalent operation from
+    `torchaudio.transforms.MelSpectrogram`. In the meantime it is advised that
+    none of the default args are altered.
+    """
 
     def __init__(
         self,
