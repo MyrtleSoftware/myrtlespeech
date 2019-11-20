@@ -17,7 +17,7 @@ Development
 
    .. code-block:: bash
 
-      source activate myrtlespeech
+      conda activate myrtlespeech
 
 3. Install myrtlespeech:
 
