@@ -234,11 +234,9 @@ class TensorBoardLogger(ModelCallback):
     def on_step_end(self, **kwargs):
         if not self.training or not self.histograms:
             return
-        # When using MixedPrecision callback, it is advised to log before
-        # rescaling (see class docstring). However, if user does not follow
-        # this guidance this callback will thrown an exception for the batches
-        # for which the loss is rescaled (as there are no gradients).
-        # Hence use a try/except:
+        # If MixedPrecision callback is used, this callback will thrown an
+        # exception for the batches for which the loss is rescaled (as there
+        # are no gradients). Hence use a try/except:
         try:
             for name, param in self.model.named_parameters():
                 if param.grad is None:
@@ -249,7 +247,7 @@ class TensorBoardLogger(ModelCallback):
                     global_step=kwargs["total_train_batches"],
                 )
         except ValueError:
-            return
+            pass
 
     def on_batch_end(self, **kwargs):
         if not self.training or not self.histograms:
