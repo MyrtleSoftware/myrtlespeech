@@ -118,16 +118,6 @@ class ReportDecoderWERBase(Callback):
             self.distances.append(distance)
             self.lengths.append(len(exp))
 
-        if kwargs["epoch_batches"] % 10 == 0 and kwargs["epoch_batches"] != 0:
-            try:
-                print(
-                    kwargs["epoch_batches"],
-                    "wer:",
-                    float(sum(self.distances)) / sum(self.lengths) * 100,
-                )
-            except:
-                pass
-
     def on_epoch_end(self, **kwargs):
         if self.training:
             return
