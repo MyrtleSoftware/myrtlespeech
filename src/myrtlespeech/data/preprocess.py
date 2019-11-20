@@ -6,34 +6,6 @@ from typing import Tuple
 
 import python_speech_features
 import torch
-from torchaudio.transforms import MelSpectrogram
-
-# class LogMelFB:
-#     r"""Computes the log Mel-feature-bank of audiodata.
-#
-#     Wrapper on `torchaudio.transforms.MelSpectrogram` that applies log.
-#
-#     Args:
-#         See `torchaudio.transforms.MelSpectrogram`
-#
-#     Returns:
-#         See `torchaudio.transforms.MelSpectrogram`. Returns natural log of
-#           this quantity.
-#     """
-#
-#     def __init__(self, **kwargs):
-#         self.MelSpectrogram = MelSpectrogram(**kwargs)
-#
-#     def __call__(self, waveform):
-#         r"""See initization docstring."""
-#         feat = self.MelSpectrogram(waveform)
-#
-#         # Numerical stability:
-#         feat = torch.where(
-#             feat == 0, torch.tensor(torch.finfo(waveform.dtype).eps), feat
-#         )
-#
-#         return feat.log()
 
 
 class LogMelFB:
