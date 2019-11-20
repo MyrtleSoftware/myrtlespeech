@@ -207,9 +207,28 @@ class ReportRNNTDecoder(ReportDecoderWERBase):
 
 
 class TensorBoardLogger(ModelCallback):
-    """TODO"""
+    r"""Enables TensorBoard logging.
 
-    def __init__(self, path: Union[str, Path], model, histograms=False):
+    .. note::
+        If :py:class:`MixedPrecision` is used then this should appear earlier in
+        the list of callbacks (i.e. have a lower index) as the
+        :py:class:`MixedPrecision` callback shold rescale the losses *after*
+        logging.
+
+    Args:
+        path: A path-like object that represents the tensorboard log_dir
+            location.
+        model: A :py:class:`torch.nn.Module`.
+        histograms: If True, gradient and parameter histograms are saved.
+            Defaults to False as this adds *substantial* overhead.
+    """
+
+    def __init__(
+        self,
+        path: Union[str, Path],
+        model: torch.nn.Module,
+        histograms: bool = False,
+    ):
         super().__init__(model)
         self.writer = SummaryWriter(log_dir=str(path))
         self.histograms = histograms
@@ -225,8 +244,11 @@ class TensorBoardLogger(ModelCallback):
     def on_step_end(self, **kwargs):
         if not self.training or not self.histograms:
             return
-        # when using MixedPrecision, if loss is rescaled, there will be no
-        # gradients. Therefore put the histogram logging in a try/except:
+        # When using MixedPrecision callback, it is advised to log before
+        # rescaling (see class docstring). However, if user does not follow
+        # this guidance this callback will thrown an exception for the batches
+        # for which the loss is rescaled (as there are no gradients).
+        # Hence use a try/except:
         try:
             for name, param in self.model.named_parameters():
                 if param.grad is None:

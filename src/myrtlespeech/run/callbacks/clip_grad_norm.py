@@ -9,9 +9,11 @@ from myrtlespeech.run.callbacks.callback import ModelCallback
 class ClipGradNorm(ModelCallback):
     """Clips gradient norm of the model's parameters.
 
-    If :py:class:`.MixedPrecision` is used then this must appear later in the
-    list of callbacks (i.e. have a higher index) as the
-    :py:class:`.MixedPrecision` callback needs to first rescale the gradients.
+    .. note::
+        If :py:class:`.MixedPrecision` is used then this must appear later in
+        the list of callbacks (i.e. have a higher index) as the
+        :py:class:`.MixedPrecision` callback needs to first rescale the
+        gradients.
 
     Uses :py:func:`torch.nn.utils.clip_grad_norm_` internally.
 
