@@ -7,6 +7,9 @@ RUN chown -R 1000:1000 /opt/conda/
 # https://github.com/psf/black/issues/1112
 RUN apt update && apt install -y build-essential python3-dev
 
+# install cmake and make for warp-transducer build
+RUN apt install cmake make -y 
+
 # create non-root user
 RUN useradd --create-home --shell /bin/bash user
 USER user
@@ -33,9 +36,25 @@ RUN git clone https://github.com/NVIDIA/apex && \
     cd .. && \
     rm -rf apex
 
+RUN git clone https://github.com/HawkAaron/warp-transducer.git && \
+    cd /home/user/myrtlespeech/warp-transducer && \
+    git checkout c6d12f9e1562833c2b4e7ad84cb22aa4ba31d18c && \
+    mkdir build && \
+    cd build && \
+    export WARP_RNNT_PATH=`pwd` && \
+    cmake .. && \
+    make && \
+    cd ../pytorch_binding && \
+    python3 setup.py install --user && \
+    cd .. && rm -rf pytorch_binding/test tensorflow_binding && \
+    echo "export WARP_RNNT_PATH=$WARP_RNNT_PATH" >> ~/.bashrc
+
 # use CI Hypothesis profile, see ``tests/__init__.py``
 ENV HYPOTHESIS_PROFILE ci
 
 ENTRYPOINT ["/bin/bash", "--login", "-c"]
 
-CMD ["pytest"]
+CMD ["pytest tests"]
+
+
+
