@@ -13,6 +13,7 @@ from myrtlespeech.builders.pre_process_step import (
 )
 from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.data.preprocess import AddContextFrames
+from myrtlespeech.data.preprocess import SpecAugment
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.model.cnn import Conv1dTo2d
 from myrtlespeech.model.deep_speech_1 import DeepSpeech1
@@ -249,6 +250,8 @@ def _build_pre_process_steps(
         step = build_pre_process_step(step_cfg)
         if isinstance(step[0], MFCC):
             input_features = step[0].n_mfcc
+        elif isinstance(step[0], SpecAugment):
+            pass
         elif isinstance(step[0], Standardize):
             pass
         elif isinstance(step[0], AddContextFrames):

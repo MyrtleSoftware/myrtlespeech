@@ -51,6 +51,8 @@ class SeqToSeq(torch.nn.Module):
 
         def process(x):
             for step, stage in self.pre_process_steps:
+                if stage is Stage.TRAIN and not self.training:
+                    continue
                 if stage is Stage.EVAL and self.training:
                     continue
                 x = step(x)

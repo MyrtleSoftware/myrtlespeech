@@ -2,6 +2,7 @@ from typing import Tuple
 from typing import Union
 
 from myrtlespeech.data.preprocess import AddContextFrames
+from myrtlespeech.data.preprocess import SpecAugment
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.protos import pre_process_step_pb2
 from myrtlespeech.run.stage import Stage
@@ -31,6 +32,14 @@ def build(
                 "win_length": pre_process_step_cfg.mfcc.win_length,
                 "hop_length": pre_process_step_cfg.mfcc.hop_length,
             },
+        )
+    elif step_type == "spec_augment":
+        spec = pre_process_step_cfg.spec_augment
+        step = SpecAugment(
+            feature_mask=spec.feature_mask,
+            time_mask=spec.time_mask,
+            n_feature_masks=spec.n_feature_masks,
+            n_time_masks=spec.n_time_masks,
         )
     elif step_type == "standardize":
         step = Standardize()

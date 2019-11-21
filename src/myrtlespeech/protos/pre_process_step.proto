@@ -13,6 +13,7 @@ message PreProcessStep {
     MFCC mfcc = 2;
     Standardize standardize = 3;
     ContextFrames context_frames = 4;
+    SpecAugment spec_augment = 5;
   }
 }
 
@@ -26,6 +27,22 @@ message MFCC {
 
   // Step between successive windows in number of frames.
   uint32 hop_length = 3;
+}
+
+
+// Applies SpecAugment transformation (https://arxiv.org/pdf/1904.08779.pdf).
+message SpecAugment {
+  // Number of features to mask will be drawn from Uniform[0, feature_mask].
+  uint32 feature_mask = 1;
+
+  // Number of time steps to mask will be drawn from Uniform[0, time_mask].
+  uint32 time_mask = 2;
+
+  // Number of feature masks to apply.
+  uint32 n_feature_masks = 3;
+
+  // Number of time masks to apply.
+  uint32 n_time_masks = 4;
 }
 
 
