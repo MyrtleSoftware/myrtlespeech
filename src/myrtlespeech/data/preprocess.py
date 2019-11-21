@@ -25,6 +25,9 @@ class LogMelFB:
         sample_rate=16000,
         hop_length=1,
     ):
+        # use dsi values
+        win_length, winstep, sample_rate = 0.025, 0.01, 16000
+
         self.n_mels = n_mels
         self.win_length = win_length
         self.winstep = winstep
