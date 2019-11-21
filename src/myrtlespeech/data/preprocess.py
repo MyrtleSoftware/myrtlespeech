@@ -4,67 +4,36 @@ Utilities for preprocessing audio data.
 import random
 from typing import Tuple
 
-import python_speech_features
 import torch
+from torchaudio.transforms import MelSpectrogram
 
 
 class LogMelFB:
     r"""Computes the log Mel-feature-bank of audiodata.
 
-    Note: this is a preprocessing step copied from our internal codebase. It
-    will shortly be replaced with an equivalent operation from
-    `torchaudio.transforms.MelSpectrogram`. In the meantime it is advised that
-    none of the default args are altered.
+    Wrapper on `torchaudio.transforms.MelSpectrogram` that applies log.
+
+    Args:
+        See `torchaudio.transforms.MelSpectrogram`
+
+    Returns:
+        See `torchaudio.transforms.MelSpectrogram`. Returns natural log of
+          this quantity.
     """
 
-    def __init__(
-        self,
-        n_mels,
-        win_length=0.025,
-        winstep=0.01,
-        sample_rate=16000,
-        hop_length=1,
-    ):
-        # use dsi values
-        win_length, winstep, sample_rate = 0.025, 0.01, 16000
+    def __init__(self, **kwargs):
+        self.MelSpectrogram = MelSpectrogram(**kwargs)
 
-        self.n_mels = n_mels
-        self.win_length = win_length
-        self.winstep = winstep
-        self.sample_rate = sample_rate
-        self.hop_length = hop_length
+    def __call__(self, waveform):
+        r"""See initization docstring."""
+        feat = self.MelSpectrogram(waveform)
 
-        # Define .MelSpectrogram property so that parameters are accessible
-        self.MelSpectrogram = MelSpectrogramFake(
-            n_mels, win_length, sample_rate, hop_length
+        # Numerical stability:
+        feat = torch.where(
+            feat == 0, torch.tensor(torch.finfo(waveform.dtype).eps), feat
         )
 
-    def __call__(self, audiodata):
-        audiodata = audiodata.numpy()
-        res = python_speech_features.logfbank(
-            audiodata,
-            samplerate=self.sample_rate,
-            winlen=self.win_length,
-            winstep=self.winstep,
-            nfilt=self.n_mels,
-        )
-
-        res = (
-            torch.from_numpy(res)
-            .unsqueeze(0)
-            .transpose(1, 2)
-            .type(torch.float32)
-        )
-
-        return res
-
-
-class MelSpectrogramFake:
-    def __init__(self, n_mels, win_length, sample_rate, hop_length):
-        self.n_mels = n_mels
-        self.win_length = win_length
-        self.sample_rate = sample_rate
-        self.hop_length = hop_length
+        return feat.log()
 
 
 class AddSequenceLength:
