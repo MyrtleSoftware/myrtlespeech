@@ -49,7 +49,7 @@ class WordSegmentor:
 
 
 class ReportDecoderWERBase(Callback):
-    """Base class for reporting WERs.
+    """Base class for reporting error rates (WERs and CERs).
 
     *Do not use this class directly.* When overriding the base class, you must
     define the following:
@@ -62,21 +62,43 @@ class ReportDecoderWERBase(Callback):
 
         alphabet: converts sequences of indices to sequences of symbols (strs).
 
-        eval_every: WER is cacluated every `eval_every`th epoch. Default is 1.
+        eval_every: WER/CER is cacluated every `eval_every`th epoch. Default
+            is 1.
+
+        calc_quantities: Iterable of strings of error quantities to calculate.
+            The strings can take the following values:
+
+                'wer': Word-error rate is calculated.
+
+                'cer': Character-error rate is calculated.
+
+            `calc_quantities` defaults to ('cer', 'wer').
     """
 
-    def __init__(self, decoder, alphabet, eval_every=1):
+    def __init__(
+        self, decoder, alphabet, eval_every=1, calc_quantities=("cer", "wer")
+    ):
         self.decoder = decoder
         self.alphabet = alphabet
         self.eval_every = eval_every
 
+        for idx, error_rate in enumerate(calc_quantities):
+            assert error_rate in [
+                "cer",
+                "wer",
+            ], f"calc_quantities[{idx}]={error_rate} is not in ['cer', 'wer']."
+        assert (
+            list(set(calc_quantities)).sort() == list(calc_quantities).sort()
+        ), f"Repeated error rate in {calc_quantities}"
+        assert len(calc_quantities) > 0, "calc_quantities cannot be empty!."
+        self.calc_quantities = list(calc_quantities)
+
     def _reset(self, **kwargs):
-        kwargs["reports"][self.decoder.__class__.__name__] = {
-            "wer": -1.0,
-            "transcripts": [],
-        }
-        self.distances = []
-        self.lengths = []
+        decoder_report = {quant: -1 for quant in self.calc_quantities}
+        decoder_report["transcripts"] = []
+        kwargs["reports"][self.decoder.__class__.__name__] = decoder_report
+        self.distances = {quant: [] for quant in self.calc_quantities}
+        self.lengths = {quant: [] for quant in self.calc_quantities}
 
     def on_train_begin(self, **kwargs):
         self._reset(**kwargs)
@@ -109,27 +131,46 @@ class ReportDecoderWERBase(Callback):
         target_lens = kwargs["last_target"][1]
         acts = self.decoder(*kwargs[self.decoder_input_key])
         for act, target, target_len in zip(acts, targets, target_lens):
-            act = self._process_sentence(act)
-            exp = self._process_sentence([int(e) for e in target[:target_len]])
-
+            act_chars = self._process_sentence(act)
+            exp_chars = self._process_sentence(
+                [int(e) for e in target[:target_len]]
+            )
+            act = "".join(act_chars)
+            exp = "".join(exp_chars)
+            act_words = act.split()
+            exp_words = exp.split()
             transcripts.append((act, exp))
 
-            distance = levenshtein(act, exp)
-            self.distances.append(distance)
-            self.lengths.append(len(exp))
+            for error_rate in self.calc_quantities:
+                if error_rate == "wer":
+                    distance = levenshtein(act_words, exp_words)
+                    self.lengths[error_rate].append(len(exp_words))
+                elif error_rate == "cer":
+                    distance = levenshtein(act_chars, exp_chars)
+                    self.lengths[error_rate].append(len(exp_chars))
+                else:
+                    raise ValueError("error_rate is not in ['cer', 'wer'].")
+
+                self.distances[error_rate].append(distance)
 
     def on_epoch_end(self, **kwargs):
         if self.training:
             return
-        lengths = sum(self.lengths)
-        if lengths != 0:
-            wer = float(sum(self.distances)) / sum(self.lengths) * 100
-        else:
-            warnings.warn(
-                "Total length of input sequences == 0. Cannot calculate WER"
-            )
-            wer = -1  # return infeasible value
-        kwargs["reports"][self.decoder.__class__.__name__]["wer"] = wer
+        for error_rate in self.calc_quantities:
+            lengths = sum(self.lengths[error_rate])
+            if lengths != 0:
+                err = (
+                    float(sum(self.distances[error_rate]))
+                    / sum(self.lengths[error_rate])
+                    * 100
+                )
+            else:
+                warnings.warn(
+                    "Total length of input sequences == 0. Cannot calculate WER"
+                )
+                err = -1  # return infeasible value
+
+            kwargs["reports"][self.decoder.__class__.__name__][error_rate] = err
 
 
 class ReportCTCDecoder(ReportDecoderWERBase):
