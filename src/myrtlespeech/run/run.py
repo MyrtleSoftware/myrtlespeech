@@ -48,12 +48,11 @@ class WordSegmentor:
         return new_sentence
 
 
-class ReportDecoderWERBase(Callback):
+class ReportDecoderBase(Callback):
     """Base class for reporting error rates (WERs and CERs).
 
     *Do not use this class directly.* When overriding the base class, you must
     define the following:
-        `self._process_sentence()` method
         `self.decoder_input_key` @property - this gives the kwargs key required
             to access the decoder input.
 
@@ -61,6 +60,9 @@ class ReportDecoderWERBase(Callback):
         decoder: decodes output to sequence of indices.
 
         alphabet: converts sequences of indices to sequences of symbols (strs).
+
+        word_segmentor: groups sequences of symbols into sequences of words.
+            By default this splits words on the space symbol " ".
 
         eval_every: WER/CER is cacluated every `eval_every`th epoch. Default
             is 1.
@@ -76,10 +78,16 @@ class ReportDecoderWERBase(Callback):
     """
 
     def __init__(
-        self, decoder, alphabet, eval_every=1, calc_quantities=("cer", "wer")
+        self,
+        decoder,
+        alphabet,
+        word_segmentor=WordSegmentor(" "),
+        eval_every=1,
+        calc_quantities=("cer", "wer"),
     ):
         self.decoder = decoder
         self.alphabet = alphabet
+        self.word_segmentor = word_segmentor
         self.eval_every = eval_every
 
         for idx, error_rate in enumerate(calc_quantities):
@@ -106,14 +114,6 @@ class ReportDecoderWERBase(Callback):
     def on_epoch_begin(self, **kwargs):
         self._reset(**kwargs)
 
-    def _process_sentence(self, sentence: List[int]) -> List[str]:
-        """Method to convert list of indexes to list of characters.
-        This must be overidden by the inherited class"""
-
-        raise NotImplementedError(
-            "Must implement this method according to the given decoder type"
-        )
-
     @property
     def decoder_input_key(self):
         raise NotImplementedError(
@@ -131,15 +131,13 @@ class ReportDecoderWERBase(Callback):
         target_lens = kwargs["last_target"][1]
         acts = self.decoder(*kwargs[self.decoder_input_key])
         for act, target, target_len in zip(acts, targets, target_lens):
-            act_chars = self._process_sentence(act)
-            exp_chars = self._process_sentence(
+            act_chars = self.alphabet.get_symbols(act)
+            exp_chars = self.alphabet.get_symbols(
                 [int(e) for e in target[:target_len]]
             )
-            act = "".join(act_chars)
-            exp = "".join(exp_chars)
-            act_words = act.split()
-            exp_words = exp.split()
-            transcripts.append((act, exp))
+            act_words = self.word_segmentor(act_chars)
+            exp_words = self.word_segmentor(exp_chars)
+            transcripts.append((act_words, exp_words))
 
             for error_rate in self.calc_quantities:
                 if error_rate == "wer":
@@ -166,64 +164,62 @@ class ReportDecoderWERBase(Callback):
                 )
             else:
                 warnings.warn(
-                    "Total length of input sequences == 0. Cannot calculate WER"
+                    "Total length of input sequences == 0. Cannot calculate WER/CER"
                 )
                 err = -1  # return infeasible value
 
             kwargs["reports"][self.decoder.__class__.__name__][error_rate] = err
 
 
-class ReportCTCDecoder(ReportDecoderWERBase):
+class ReportCTCDecoder(ReportDecoderBase):
     """CTC Decoder Callback
 
     Args:
-        ctc_decoder: decodes output to sequence of indices based on CTC
-
-        alphabet: converts sequences of indices to sequences of symbols (strs)
-
-        word_segmentor: groups sequences of symbols into sequences of words
-
-        eval_every: WER is cacluated every `eval_every`th epoch. Default is 1.
+        See :py:class`ReportDecoderBase`.
     """
 
-    def __init__(self, ctc_decoder, alphabet, word_segmentor, eval_every=1):
-        super().__init__(ctc_decoder, alphabet, eval_every)
-        self.word_segmentor = word_segmentor
-
-    def _process_sentence(self, sentence: List[int]) -> List[str]:
-        symbols = self.alphabet.get_symbols(sentence)
-        return self.word_segmentor(symbols)
+    def __init__(
+        self,
+        ctc_decoder,
+        alphabet,
+        word_segmentor,
+        eval_every=1,
+        calc_quantities=("cer", "wer"),
+    ):
+        super().__init__(
+            ctc_decoder, alphabet, word_segmentor, eval_every, calc_quantities
+        )
 
     @property
     def decoder_input_key(self):
         return "last_output"
 
 
-class ReportRNNTDecoder(ReportDecoderWERBase):
+class ReportRNNTDecoder(ReportDecoderBase):
     """RNNT Decoder Callback.
 
     Args:
-        rnnt_decoder: decodes output to sequence of indices based on CTC
-
-        alphabet: converts sequences of indices to sequences of symbols (strs)
-
-        eval_every: WER is cacluated every `eval_every`th epoch. Default is 1.
-
         skip_first_epoch: bool. Default = False. If True, the first eval epoch
             is skipped. This is useful as the decoding is *very* slow with an
             un-trained model (i.e. inference is considerably faster when the
-            model is more confident in its predictions)
+            model is more confident in its predictions).
 
+        See :py:class`ReportDecoderBase` for other args.
     """
 
     def __init__(
-        self, rnnt_decoder, alphabet, eval_every=1, skip_first_epoch=False
+        self,
+        rnnt_decoder,
+        alphabet,
+        word_segmentor=WordSegmentor(" "),
+        eval_every=1,
+        calc_quantities=("cer", "wer"),
+        skip_first_epoch=False,
     ):
-        super().__init__(rnnt_decoder, alphabet, eval_every)
+        super().__init__(
+            rnnt_decoder, alphabet, word_segmentor, eval_every, calc_quantities
+        )
         self.skip_first_epoch = skip_first_epoch
-
-    def _process_sentence(self, sentence: List[int]) -> List[str]:
-        return self.alphabet.get_symbols(sentence)
 
     def on_batch_end(self, **kwargs):
         if self.skip_first_epoch and kwargs["epoch"] == 0:
@@ -233,8 +229,7 @@ class ReportRNNTDecoder(ReportDecoderWERBase):
     @property
     def decoder_input_key(self):
         return "last_input"  # i.e. we can't use the rnnt output during
-        # decoding as this was computed using
-        # ground-truth labels!
+        # decoding as this was computed using ground-truth labels!
 
 
 class TensorBoardLogger(ModelCallback):
