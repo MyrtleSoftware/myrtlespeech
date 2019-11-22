@@ -18,7 +18,7 @@ class LogMelFB:
 
     Returns:
         See `torchaudio.transforms.MelSpectrogram`. Returns natural log of
-          this quantity.
+            this quantity.
     """
 
     def __init__(self, **kwargs):

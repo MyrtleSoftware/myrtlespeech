@@ -16,10 +16,11 @@ def build(
             decoding. See the py:class:`myrtlespeech.model.rnn_t.RNNT`
             docstring for more information.
 
-
     Returns:
         A :py:class:`RNNTBeamDecoder` based on the config.
 
+    Raises:
+        :py:class:`ValueError` if ``max_symbols_per_step`` < 1.
     """
 
     if (

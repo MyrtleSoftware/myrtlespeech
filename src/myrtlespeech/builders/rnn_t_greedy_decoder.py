@@ -7,7 +7,7 @@ def build(
     rnn_t_greedy_decoder_cfg: rnn_t_greedy_decoder_pb2.RNNTGreedyDecoder,
     model: RNNT,
 ) -> RNNTGreedyDecoder:
-    """Returns a :py:class:`RNNTGreedyDecoder` based on the config.
+    r"""Returns a :py:class:`RNNTGreedyDecoder` based on the config.
 
     Args:
         rnn_t_greedy_decoder_cfg: A ``RNNTGreedyDecoder`` protobuf object
@@ -22,6 +22,8 @@ def build(
     Returns:
         A :py:class:`RNNTGreedyDecoder` based on the config.
 
+    Raises:
+        :py:class:`ValueError` if ``max_symbols_per_step`` < 1.
     """
     if (
         not rnn_t_greedy_decoder_cfg.max_symbols_per_step == 0
