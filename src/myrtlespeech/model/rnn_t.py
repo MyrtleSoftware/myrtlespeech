@@ -7,8 +7,8 @@ import torch
 class RNNT(torch.nn.Module):
     r"""`RNN-T <https://arxiv.org/pdf/1211.3711.pdf>`_ Network.
 
-    Architecture based on `Streaming End-to-end Speech Recognition For Mobile
-    Devices <https://arxiv.org/pdf/1811.06621.pdf>`_.
+    Architecture loosely  based on `Streaming End-to-end Speech Recognition
+    For Mobile Devices <https://arxiv.org/pdf/1811.06621.pdf>`_.
 
     Args:
         encoder: A :py:class:`RNNTEncoder` with initialised RNN-T encoder.
