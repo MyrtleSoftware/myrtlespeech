@@ -15,7 +15,7 @@ RUN echo "deb  http://deb.debian.org/debian  stretch main" >> /etc/apt/sources.l
     echo "deb-src  http://deb.debian.org/debian  stretch main" >> /etc/apt/sources.list && \
     apt update
 RUN apt-get install gcc-6 g++-6 -y
-ENV DCMAKE_C_COMPILER '/usr/bin/gcc-6'
+ENV CXX=/usr/bin/gcc-6
 
 # create non-root user
 RUN useradd --create-home --shell /bin/bash user
@@ -50,7 +50,8 @@ RUN git clone https://github.com/HawkAaron/warp-transducer.git && \
     cd build && \
     export WARP_RNNT_PATH=`pwd` && \
     cmake ..
-RUN cd /home/user/myrtlespeech/warp-transducer/build && make
+RUN cd /home/user/myrtlespeech/warp-transducer/build && \
+    make CC=gcc-6 CPP=g++-6 CXX=g++-6 LD=g++-6
 RUN cd /home/user/myrtlespeech/warp-transducer/build && \
     cd ../pytorch_binding && \
     python3 setup.py install --user && \
