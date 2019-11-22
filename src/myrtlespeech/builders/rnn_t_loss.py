@@ -3,7 +3,7 @@ from myrtlespeech.protos import rnn_t_loss_pb2
 
 
 def build(rnn_t_loss_cfg: rnn_t_loss_pb2.RNNTLoss) -> RNNTLoss:
-    """Returns a :py:class:`.RNNTLoss` based on the config.
+    r"""Returns a :py:class:`.RNNTLoss` based on the config.
 
     Args:
         rnn_t_loss_cfg: A ``RNNTLoss`` protobuf object containing the config
@@ -26,6 +26,7 @@ def build(rnn_t_loss_cfg: rnn_t_loss_pb2.RNNTLoss) -> RNNTLoss:
         RNNTLoss(
           (rnnt_loss): RNNTLoss()
         )
+
     """
     reduction_map = {
         rnn_t_loss_pb2.RNNTLoss.NONE: "none",
