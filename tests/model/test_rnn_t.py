@@ -14,7 +14,7 @@ from tests.protos.test_rnn_t import rnn_t
 @given(
     data=st.data(),
     rnn_t_cfg=rnn_t(),
-    input_features=st.integers(min_value=2, max_value=32),
+    input_features=st.integers(min_value=2, max_value=12),
     input_channels=st.integers(min_value=1, max_value=5),
     vocab_size=st.integers(min_value=2, max_value=32),
 )
@@ -33,11 +33,11 @@ def test_all_gradients_computed_for_all_model_parameters(
     # generate random input
     batch = data.draw(st.integers(1, 4))
     seq_len = data.draw(st.integers(3, 8))
-    label_seq_len = data.draw(st.integers(1, 6))
+    label_seq_len = data.draw(st.integers(2, 6))
 
     x = torch.empty((batch, input_channels, input_features, seq_len)).normal_()
     seq_lens = torch.randint(
-        low=1, high=seq_len + 1, size=(batch,), dtype=torch.long
+        low=1, high=seq_len, size=(batch,), dtype=torch.long
     )
     y = torch.randint(
         low=0,
@@ -46,8 +46,12 @@ def test_all_gradients_computed_for_all_model_parameters(
         dtype=torch.long,
     )
     label_seq_lens = torch.randint(
-        low=1, high=label_seq_len + 1, size=(batch,), dtype=torch.long
+        low=1, high=label_seq_len, size=(batch,), dtype=torch.long
     )
+    # ensure max values are present in lengths
+    seq_lens[0] = seq_len
+    label_seq_lens[0] = label_seq_len
+
     if torch.cuda.is_available():
         input = (
             (x.cuda(), y.cuda()),
