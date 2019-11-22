@@ -8,7 +8,7 @@ RUN chown -R 1000:1000 /opt/conda/
 RUN apt update && apt install -y build-essential python3-dev
 
 # install cmake and make for warp-transducer build
-RUN apt install cmake make -y
+RUN apt-get install cmake make -y
 
 # create non-root user
 RUN useradd --create-home --shell /bin/bash user
