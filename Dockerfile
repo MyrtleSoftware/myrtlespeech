@@ -8,13 +8,12 @@ RUN chown -R 1000:1000 /opt/conda/
 RUN apt update && apt install -y build-essential python3-dev
 
 # install cmake and make and ggc-6 for warp-transducer build
-RUN apt-get update && apt-get install cmake make -y
-RUN apt-get install software-properties-common build-essential -y && \
-    apt-get update
-RUN echo "deb  http://deb.debian.org/debian  stretch main" >> /etc/apt/sources.list && \
+RUN apt-get update && apt-get install cmake make -y && \
+    apt-get install software-properties-common -y && \
+    apt-get update && \
+    echo "deb  http://deb.debian.org/debian  stretch main" >> /etc/apt/sources.list && \
     echo "deb-src  http://deb.debian.org/debian  stretch main" >> /etc/apt/sources.list && \
-    apt update
-RUN apt-get install gcc-6 g++-6 -y
+    apt update && apt-get install gcc-6 g++-6 -y
 
 # create non-root user
 RUN useradd --create-home --shell /bin/bash user
@@ -51,10 +50,8 @@ RUN git clone https://github.com/HawkAaron/warp-transducer.git && \
     mkdir build && \
     cd build && \
     export WARP_RNNT_PATH=`pwd` && \
-    cmake -D CMAKE_C_COMPILER=gcc-6 -D CMAKE_CXX_COMPILER=g++-6 ..
-RUN cd /home/user/myrtlespeech/warp-transducer/build && \
-    make CC=gcc-6 CPP=g++-6 CXX=g++-6 LD=g++-6
-RUN cd /home/user/myrtlespeech/warp-transducer/build && \
+    cmake -D CMAKE_C_COMPILER=gcc-6 -D CMAKE_CXX_COMPILER=g++-6 .. && \
+    make CC=gcc-6 CPP=g++-6 CXX=g++-6 LD=g++-6 && \
     cd ../pytorch_binding && \
     python3 setup.py install --user && \
     cd .. && rm -rf pytorch_binding/test tensorflow_binding && \
