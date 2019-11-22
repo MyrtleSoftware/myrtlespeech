@@ -21,8 +21,8 @@ from myrtlespeech.builders.rnn_t_greedy_decoder import (
 from myrtlespeech.builders.rnn_t_loss import build as build_rnn_t_loss
 from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.data.preprocess import AddContextFrames
-from myrtlespeech.data.preprocess import SpecAugment
 from myrtlespeech.data.preprocess import LogMelFB
+from myrtlespeech.data.preprocess import SpecAugment
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.model.cnn import Conv1dTo2d
 from myrtlespeech.model.deep_speech_1 import DeepSpeech1
@@ -194,7 +194,8 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
     else:
         raise ValueError(f"model={model_type} not supported")
 
-    # capture "blank_index"s in all CTC/RNNT-based components and check all match
+    # capture "blank_index"s in all CTC/RNNT-based components to check
+    # all match
     blank_indices: List[int] = []
 
     # loss
@@ -215,8 +216,9 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
         if not (blank_index == max(0, len(alphabet) - 1)):
             raise ValueError(
                 f"{loss_type}.blank_index={blank_index} must be final element \
-                in stt_cfg.alphabet in order to use the same graphene/characters \
-                indexes in the prediction and joint rnnt networks"
+                in stt_cfg.alphabet in order to use the same \
+                graphene/characters indexes in the prediction and \
+                joint rnnt networks"
             )
     else:
         raise ValueError(f"loss={loss_type} not supported")
@@ -230,17 +232,21 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
         elif post_process_type == "ctc_beam_decoder":
             blank_index_pp = stt_cfg.ctc_beam_decoder.blank_index
             if stt_cfg.ctc_beam_decoder.HasField("separator_index"):
-                separator_index = stt_cfg.ctc_beam_decoder.separator_index.value
+                separator_index = (
+                    stt_cfg.ctc_beam_decoder.separator_index.value
+                )
                 if not (0 <= separator_index <= max(0, len(alphabet) - 1)):
                     raise ValueError(
-                        f"ctc_beam_decoder.separator_index.value={separator_index} "
+                        f"ctc_beam_decoder.separator_index.value"
+                        f"={separator_index} "
                         f"[0, {max(0, len(alphabet) - 1)}]"
                     )
             post_process = build_ctc_beam_decoder(stt_cfg.ctc_beam_decoder)
         else:
             raise ValueError(
-                f"This path should not execute: post_process_type=\
-            {post_process_type} is not in ['ctc_greedy_decoder', 'ctc_beam_decoder']"
+                f"This path should not execute: post_process_type="
+                f"{post_process_type} is not in"
+                f"['ctc_greedy_decoder', 'ctc_beam_decoder']"
             )
 
         # check blank index:
@@ -263,16 +269,18 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
             )
         else:
             raise ValueError(
-                f"This path should not execute: post_process_type=\
-            {post_process_type} is not in ['rnn_t_greedy_decoder', 'rnn_t_beam_decoder']"
+                f"This path should not execute: post_process_type="
+                f"{post_process_type} is not in "
+                f"['rnn_t_greedy_decoder', 'rnn_t_beam_decoder']"
             )
         # check blank:
         blank_indices.append(blank_index_pp)
         if not (blank_index == max(0, len(alphabet) - 1)):
             raise ValueError(
-                f"{loss_type}.blank_index={blank_index} must be final element \
-                in stt_cfg.alphabet in order to use the same graphene/characters \
-                indexes in the prediction and joint rnnt networks."
+                f"{loss_type}.blank_index={blank_index} must be final element"
+                f"in stt_cfg.alphabet in order to use the same"
+                f"graphene/characters indexes in the prediction and"
+                f"joint rnnt networks."
             )
     else:
         raise ValueError(f"post_process={post_process_type} not supported")

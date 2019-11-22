@@ -43,8 +43,9 @@ class CTCBeamDecoder(torch.nn.Module):
             dimension of the ``x`` argument of
             :py:meth:`CTCBeamDecoder.forward`. This symbol is used to delineate
             tokens (words) in a predicted sequence. For example in English this
-            is typically the index of the space: ``" "``. The ``language_model``,
-            if set, is applied each time a token (word) is predicted.
+            is typically the index of the space: ``" "``. The
+            ``language_model``, if set, is applied each time a token (word) is
+            predicted.
 
         word_weight: Word count weight. Referred to as :math:`\beta` in the
             paper above.

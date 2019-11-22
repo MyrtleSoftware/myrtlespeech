@@ -4,7 +4,6 @@ from typing import Tuple
 from typing import Union
 
 import hypothesis.strategies as st
-from google.protobuf.wrappers_pb2 import FloatValue
 from myrtlespeech.protos import rnn_t_encoder_pb2
 
 from tests.protos.test_fully_connected import fully_connecteds

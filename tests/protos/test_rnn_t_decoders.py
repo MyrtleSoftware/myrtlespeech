@@ -1,15 +1,12 @@
 from typing import Dict
-from typing import List
 from typing import Optional
 from typing import Tuple
 from typing import Union
 
 import hypothesis.strategies as st
-from google.protobuf.wrappers_pb2 import FloatValue
 from myrtlespeech.protos import rnn_t_beam_decoder_pb2
 from myrtlespeech.protos import rnn_t_greedy_decoder_pb2
 
-from tests.protos.test_rnn import rnns
 from tests.protos.utils import all_fields_set
 
 

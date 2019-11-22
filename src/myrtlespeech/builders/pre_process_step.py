@@ -12,7 +12,9 @@ from torchaudio.transforms import MFCC
 
 def build(
     pre_process_step_cfg: pre_process_step_pb2.PreProcessStep,
-) -> Tuple[Union[MFCC, Standardize, AddContextFrames, LogMelFB], Stage]:
+) -> Tuple[
+    Union[MFCC, Standardize, AddContextFrames, LogMelFB, SpecAugment], Stage
+]:
     """Returns tuple of ``(preprocessing callable, stage)``.
 
     Args:
