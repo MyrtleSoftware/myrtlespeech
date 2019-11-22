@@ -25,4 +25,6 @@ message TrainConfig {
     // Shuffle batches before every epoch.
     bool shuffle_batches_before_every_epoch = 6;
   }
+
+  bool sortagrad = 11;
 }
