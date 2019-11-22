@@ -11,6 +11,9 @@ RUN apt update && apt install -y build-essential python3-dev
 RUN apt-get update && apt-get install cmake make -y
 RUN apt-get install software-properties-common build-essential -y && \
     apt-get update
+RUN echo "deb  http://deb.debian.org/debian  stretch main" >> /etc/apt/sources.list && \
+    echo "deb-src  http://deb.debian.org/debian  stretch main" >> /etc/apt/sources.list && \
+    apt update
 RUN apt-get install gcc-6 g++-6 -y
 ENV DCMAKE_C_COMPILER '/usr/bin/gcc-6'
 
