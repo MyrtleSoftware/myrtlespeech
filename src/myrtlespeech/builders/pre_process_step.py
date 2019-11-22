@@ -2,6 +2,7 @@ from typing import Tuple
 from typing import Union
 
 from myrtlespeech.data.preprocess import AddContextFrames
+from myrtlespeech.data.preprocess import Downsample
 from myrtlespeech.data.preprocess import LogMelFB
 from myrtlespeech.data.preprocess import SpecAugment
 from myrtlespeech.data.preprocess import Standardize
@@ -13,7 +14,10 @@ from torchaudio.transforms import MFCC
 def build(
     pre_process_step_cfg: pre_process_step_pb2.PreProcessStep,
 ) -> Tuple[
-    Union[MFCC, Standardize, AddContextFrames, LogMelFB, SpecAugment], Stage
+    Union[
+        MFCC, Standardize, AddContextFrames, LogMelFB, SpecAugment, Downsample
+    ],
+    Stage,
 ]:
     """Returns tuple of ``(preprocessing callable, stage)``.
 
@@ -56,6 +60,8 @@ def build(
         step = AddContextFrames(
             n_context=pre_process_step_cfg.context_frames.n_context
         )
+    elif step_type == "downsample":
+        step = Downsample(subsample=pre_process_step_cfg.downsample.subsample)
     else:
         raise ValueError(f"unknown pre_process_step '{step_type}'")
 

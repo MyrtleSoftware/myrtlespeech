@@ -164,23 +164,55 @@ class AddContextFrames:
             (strides[0], strides[0], strides[1]),
         )
 
-        #####################
-        strided_x = strided_x.clone().detach()
-        # subsample
-
-        self.subsample = 2
-        subsampled_signal = [
-            x.unsqueeze(0)
-            for i, x in enumerate(strided_x)
-            if i % self.subsample == 0
-        ]
-        subsampled_tensor = torch.cat(subsampled_signal, dim=0)
-        ##############
-
-        return subsampled_tensor.permute(1, 2, 0)
+        return strided_x.clone().detach().permute(1, 2, 0)
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + f"(n_context={self.n_context})"
+
+
+class Downsample:
+    r"""Downsamples input sequence.
+
+    Args:
+        subsample: The integer rate of subsampling.
+
+    Raises:
+        :py:class:`ValueError` if ``subsample < 2
+    """
+
+    def __init__(self, subsample: int):
+        if subsample < 2:
+            raise ValueError(
+                f"Downsampling can only occur with subsample < 2 "
+                f"but subsample ={subsample}"
+            )
+        self.subsample = subsample
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        """Returns the :py:class:`torch.Tensor` after adding downsampling.
+
+        Args:
+            x: :py:class:`torch.Tensor` with size ``(channels, features,
+                seq_len)``.
+
+        Returns:
+            A :py:class:`torch.Tensor` with size ``(channels, features,
+                seq_len // self.subsample)``.
+        """
+        x = x.transpose(0, 2)  #
+
+        assert (
+            x.shape[0] >= self.subsample
+        ), f"Downsampling not possible since seq_len < self.subsample"
+
+        subsampled_signal = [
+            x_row.unsqueeze(0)
+            for i, x_row in enumerate(x)
+            if i % self.subsample == 0
+        ]
+        subsampled_tensor = torch.cat(subsampled_signal, dim=0)
+
+        return subsampled_tensor.transpose(0, 2).contiguous()
 
 
 class SpecAugment:

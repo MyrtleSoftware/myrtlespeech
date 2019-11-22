@@ -5,6 +5,7 @@ import pytest
 from hypothesis import given
 from myrtlespeech.builders.pre_process_step import build
 from myrtlespeech.data.preprocess import AddContextFrames
+from myrtlespeech.data.preprocess import Downsample
 from myrtlespeech.data.preprocess import LogMelFB
 from myrtlespeech.data.preprocess import SpecAugment
 from myrtlespeech.data.preprocess import Standardize
@@ -44,6 +45,9 @@ def pre_process_step_match_cfg(
     elif step_str == "context_frames":
         assert isinstance(step[0], AddContextFrames)
         assert step[0].n_context == step_cfg.context_frames.n_context
+    elif step_str == "downsample":
+        assert isinstance(step[0], Downsample)
+        assert step[0].subsample == step_cfg.downsample.subsample
     else:
         raise ValueError(f"unknown pre_process_step {step_str}")
 

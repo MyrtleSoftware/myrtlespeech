@@ -110,7 +110,7 @@ def build(
               (fully_connected): Sequential(
                 (0): Linear(in_features=1152, out_features=1152, bias=True)
                 (1): Hardtanh(min_val=0.0, max_val=20.0)
-                (2): Linear(in_features=1152, out_features=576, bias=True)
+                (2): Linear(in_features=1152, out_features=512, bias=True)
               )
             )
           )
@@ -123,7 +123,7 @@ def build(
           (joint_net): ModuleDict(
             (fully_connected): FullyConnected(
               (fully_connected): Sequential(
-                (0): Linear(in_features=832, out_features=512, bias=True)
+                (0): Linear(in_features=768, out_features=512, bias=True)
                 (1): Hardtanh(min_val=0.0, max_val=20.0)
                 (2): Linear(in_features=512, out_features=29, bias=True)
               )
@@ -169,7 +169,7 @@ def build(
 def build_rnnt_enc(
     rnn_t_enc: rnn_t_encoder_pb2.RNNTEncoder,
     input_features: int,
-    output_features: Optional[int],
+    output_features: Optional[int] = None,
 ) -> Tuple[RNNTEncoder, int]:
     """Returns a :py:class:`.RNNTEncoder` based on the config.
 
