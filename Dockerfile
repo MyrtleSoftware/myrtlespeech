@@ -42,8 +42,9 @@ RUN git clone https://github.com/HawkAaron/warp-transducer.git && \
     mkdir build && \
     cd build && \
     export WARP_RNNT_PATH=`pwd` && \
-    cmake .. && \
-    make && \
+    cmake ..
+RUN cd /home/user/myrtlespeech/warp-transducer/build && make
+RUN cd /home/user/myrtlespeech/warp-transducer/build && \
     cd ../pytorch_binding && \
     python3 setup.py install --user && \
     cd .. && rm -rf pytorch_binding/test tensorflow_binding && \
