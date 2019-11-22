@@ -137,9 +137,11 @@ def build(
     # size). If fc2 layer *is* present, output size will be equal to joint
     # network hidden size:
     out_enc_size = None
-    if rnn_t_cfg.rnn_t_encoder.HasField("fc2"):
+    if (
+        rnn_t_cfg.rnn_t_encoder.HasField("fc2")
+        and rnn_t_cfg.fully_connected.hidden_size > 0
+    ):
         out_enc_size = rnn_t_cfg.fully_connected.hidden_size
-
     encoder, encoder_out = build_rnnt_enc(
         rnn_t_cfg.rnn_t_encoder,
         input_features * input_channels,
@@ -250,6 +252,11 @@ def build_rnnt_enc(
     """
     if not rnn_t_enc.HasField("fc2"):
         assert output_features is None
+    elif output_features is not None:
+        assert (
+            output_features > 0
+        ), f"encoder output_features must be > 0 \
+            but output_features={output_features}"
 
     # maybe add fc1:
     fc1: Optional[torch.nn.Module] = None
