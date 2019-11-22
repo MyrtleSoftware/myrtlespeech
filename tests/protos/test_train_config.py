@@ -60,6 +60,8 @@ def train_configs(
     else:
         raise ValueError(f"unknown shuffle type {shuffle_str}")
 
+    kwargs["sortagrad"] = draw(st.booleans())
+
     # initialise and return
     all_fields_set(train_config_pb2.TrainConfig, kwargs)
     train_config = train_config_pb2.TrainConfig(**kwargs)
