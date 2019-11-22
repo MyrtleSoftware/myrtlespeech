@@ -145,8 +145,9 @@ def speech_to_texts(
     except TypeError:
         speech_to_text = None
         warnings.warn(
-            "This test has (effectively) been disabled. TODO: prevent networks \
-            that are trained with rnnt being built with ctc-loss and vice versa"
+            "This test has (effectively) been disabled. TODO: prevent networks"
+            f"that are trained with rnnt being built with"
+            f"ctc-loss and vice versa"
         )
 
     if not return_kwargs:

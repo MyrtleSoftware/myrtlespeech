@@ -59,7 +59,8 @@ class StackTime:
         if T // self.time_reduction_factor == 0:
             raise ValueError(
                 f"Cannot have time_reduction_factor={self.time_reduction_factor} \
-            with input sequence length T = {T} since T // time_reduction_factor == 0"
+            with input sequence length T = {T} since \
+            T // time_reduction_factor == 0"
             )
 
         inp = inp.transpose(0, 1)  # (T, B, P) -> (B, T, P)
@@ -77,7 +78,11 @@ class StackTime:
         inp = inp.contiguous()
 
         inp = inp.view(
-            (B, T // self.time_reduction_factor, P * self.time_reduction_factor)
+            (
+                B,
+                T // self.time_reduction_factor,
+                P * self.time_reduction_factor,
+            )
         )
 
         inp = inp.transpose(0, 1).contiguous()

@@ -23,7 +23,8 @@ def test_build_returns(task_cfg: task_config_pb2.TaskConfig) -> None:
         else:
             warnings.warn(
                 "Not checking if model is returned. Remove above `if` \
-            statement once tests/protos/test_speech_to_text.py has had exception handling removed"
+            statement once tests/protos/test_speech_to_text.py has had \
+            exception handling removed"
             )
 
         assert isinstance(epochs, int)

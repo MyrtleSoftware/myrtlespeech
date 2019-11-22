@@ -28,13 +28,14 @@ class RNNTDecoderBase(torch.nn.Module):
             decoding. See the py:class:`myrtlespeech.model.rnn_t.RNNT`
             docstring for more information.
 
-        max_symbols_per_step: The maximum number of symbols that can be added to
-            output sequence in a single time step. Default value is None: in
+        max_symbols_per_step: The maximum number of symbols that can be added
+            to output sequence in a single time step. Default value is None: in
             this case the limit is set to 100 (to avoid the potentially
             infinite loop that could occur with no limit).
 
     Properties:
-        _pred_step(label, hidden): performs a single step of prediction network.
+        _pred_step(label, hidden): performs a single step of prediction
+            network.
         _joint_step(enc, pred): performs a single step of the joint network.
         _get_last_idx(label): gets final index of a list of indexes.
     """

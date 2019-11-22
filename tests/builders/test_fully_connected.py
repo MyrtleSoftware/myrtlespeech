@@ -49,8 +49,8 @@ def fully_connected_module_match_cfg(
     assert len(fully_connected) == expected_len
 
     # Now check that the linear/activation_fn/dropout layers appear in the
-    # expected order. If the following condition is met, we check for the correct
-    # module type :
+    # expected order. If the following condition is met, we check for the
+    # correct module type :
     # if module_idx % total_types == <module_type>_idx:
     #     assert isinstance(module, <module_type>)
 

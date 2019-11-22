@@ -1,11 +1,7 @@
 import math
-from collections import Counter
-from collections import defaultdict
-from typing import Callable
 from typing import List
 from typing import Optional
 from typing import Tuple
-from typing import Union
 
 import torch
 from myrtlespeech.model.rnn_t import RNNT
@@ -66,7 +62,14 @@ class RNNTBeamDecoder(RNNTDecoderBase):
         self.log_prune_threshold = math.log(prune_threshold)
 
     def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
-        r"""Beam RNNT decode method. See :py:class:`RNNTDecoderBase` for args"""
+        r"""Beam RNN-T decode method.
+
+        Args:
+            See :py:class:`RNNTDecoderBase`.
+
+        Returns:
+            See :py:class:`RNNTDecoderBase`.
+        """
 
         fs, fs_lens = self.model.encode(inp)
         fs = fs[: fs_lens[0], :, :]  # size: seq_len, batch = 1, rnn_features

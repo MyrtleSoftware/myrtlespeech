@@ -1,13 +1,8 @@
-import inspect
-
 import hypothesis.strategies as st
-import pytest
 import torch
 from hypothesis import given
-from hypothesis import reproduce_failure
 from hypothesis import settings
 from myrtlespeech.builders.rnn_t import build as build_rnn_t
-from myrtlespeech.model.rnn_t import RNNT
 from myrtlespeech.protos import rnn_t_pb2
 
 from tests.protos.test_rnn_t import rnn_t
@@ -54,7 +49,10 @@ def test_all_gradients_computed_for_all_model_parameters(
         low=1, high=label_seq_len + 1, size=(batch,), dtype=torch.long
     )
     if torch.cuda.is_available():
-        input = ((x.cuda(), y.cuda()), (seq_lens.cuda(), label_seq_lens.cuda()))
+        input = (
+            (x.cuda(), y.cuda()),
+            (seq_lens.cuda(), label_seq_lens.cuda()),
+        )
     else:
         input = ((x, y), (seq_lens, label_seq_lens))
 

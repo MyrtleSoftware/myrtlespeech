@@ -89,7 +89,7 @@ def test_correct_rnn_type_and_size_returned(
         bias += getattr(rnn.rnn, f"bias_hh_l{l}")[
             hidden_size : 2 * hidden_size
         ]
-        bias = bias.cpu()
+        bias = torch.tensor(bias).cpu()
         assert torch.allclose(bias, torch.tensor(forget_gate_bias))
 
 

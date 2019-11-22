@@ -119,15 +119,16 @@ class RNN(torch.nn.Module):
         ],
     ) -> Tuple[
         Tuple[
-            torch.Tensor, Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]
+            torch.Tensor,
+            Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]],
         ],
         torch.Tensor,
     ]:
         r"""Returns the result of applying the rnn to ``x[0]``.
 
-            All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda`
-            if :py:func:`torch.cuda.is_available` was :py:data:`True` on
-            initialisation.
+        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda`
+        if :py:func:`torch.cuda.is_available` was :py:data:`True` on
+        initialisation.
 
         Args:
             x: A Tuple ``(x[0], x[1])``. ``x[0]`` can take two forms: either it
@@ -151,9 +152,10 @@ class RNN(torch.nn.Module):
         Returns:
             A Tuple ``(res[0], res[1])``. ``res[0]`` will take the same form as
                 ``x[0]``: either a tuple ``res[0] = (out, hid)`` or a
-                :py:class:`torch.Tensor`` torch tensor ``res[0] = out``. ``out``
-                is is the result after applying the RNN to ``inp``. It will
-                have size ``[seq_len, batch, out_features]``. ``hid`` is the
+                :py:class:`torch.Tensor`` torch tensor
+                ``res[0] = out``. ``out`` is is the result after applying the
+                RNN to ``inp``. It will have size
+                ``[seq_len, batch, out_features]``. ``hid`` is the
                 returned RNN hidden state which is either a length 2 Tuple of
                 :py:class:`torch.Tensor`s or a single :py:class:`torch.Tensor`
                 depending on the ``RNNType`` (see :py:class:`torch.nn`
@@ -186,7 +188,8 @@ class RNN(torch.nn.Module):
                     hid = hid.cuda()
                 else:
                     raise ValueError(
-                        "hid must be an instance of class in [torch.Tensor, tuple]"
+                        "hid must be an instance of class in \
+                        [torch.Tensor, tuple]"
                     )
 
         # Record sequence length to enable DataParallel

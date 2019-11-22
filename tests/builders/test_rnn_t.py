@@ -27,4 +27,4 @@ def test_build_rnn_t_does_not_fail(
 
     Delete this? Same functionality is tested in `tests/model/test_rnn_t.py`"""
 
-    actual = build_rnn_t(rnn_t_cfg, input_features, input_channels, vocab_size)
+    build_rnn_t(rnn_t_cfg, input_features, input_channels, vocab_size)
