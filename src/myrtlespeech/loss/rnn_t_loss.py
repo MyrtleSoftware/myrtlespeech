@@ -23,13 +23,13 @@ class RNNTLoss(torch.nn.Module):
                 Sum all losses in a batch.
 
     Attributes:
-
         rnnt_loss: A :py:class:`warprnnt_pytorch.RNNTLoss` instance.
+        use_cuda: If true, loss is evaluated on GPU.
     """
 
     def __init__(self, blank: int, reduction: str = "mean"):
         super().__init__()
-        self.rnnt_loss = WarpRNNTLoss(blank=blank)
+        self.rnnt_loss = WarpRNNTLoss(blank=blank, reduction=reduction)
         self.use_cuda = torch.cuda.is_available()
 
     def forward(
