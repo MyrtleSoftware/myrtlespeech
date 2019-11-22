@@ -99,6 +99,7 @@ def _spec_augments(
         return spec_augment
     return spec_augment, kwargs
 
+
 @st.composite
 def _lmfbs(
     draw, return_kwargs: bool = False

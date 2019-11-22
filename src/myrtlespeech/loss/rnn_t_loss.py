@@ -1,4 +1,3 @@
-import warnings
 from typing import Tuple
 
 import torch
@@ -49,15 +48,15 @@ class RNNTLoss(torch.nn.Module):
                 :py:class:`torch.Tensor` outputs of size ``[batch, max_seq_len,
                 max_output_seq_len + 1, vocab_size + 1)``. The second element
                 is a Tuple of two :py:class:`torch.Tensor`s both of
-                size ``[batch]`` that contain the lengths of a) the audio features
-                logits and b) the target sequence logits.
+                size ``[batch]`` that contain the lengths of a) the audio
+                features logits and b) the target sequence logits.
 
             targets: A tuple where the first element is a
                 :py:class:`torch.Tensor` such that each entry in the target
                 sequence is a class index. Target indices cannot be the blank
-                index. It must have size ``[batch, max_seq_len]``. In the former
-                form each target sequence is padded to the length of the longest
-                sequence and stacked.
+                index. It must have size ``[batch, max_seq_len]``. In the
+                former form each target sequence is padded to the length of
+                the longest sequence and stacked.
 
                 The second element is a :py:class:`torch.Tensor` that gives
                 the lengths of the targets. Lengths are specified for each
@@ -70,9 +69,7 @@ class RNNTLoss(torch.nn.Module):
 
         # cast to required types
         if logits.dtype != torch.float:
-            logits_orig = logits
             logits = logits.float()
-            del logits_orig  # save memory *before* computing the loss
 
         if y.dtype != torch.int32:
             y = y.int()

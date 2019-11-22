@@ -164,11 +164,14 @@ class ReportDecoderBase(Callback):
                 )
             else:
                 warnings.warn(
-                    "Total length of input sequences == 0. Cannot calculate WER/CER"
+                    "Total length of input sequences == 0. \
+                    Cannot calculate WER/CER"
                 )
                 err = -1  # return infeasible value
 
-            kwargs["reports"][self.decoder.__class__.__name__][error_rate] = err
+            kwargs["reports"][self.decoder.__class__.__name__][
+                error_rate
+            ] = err
 
 
 class ReportCTCDecoder(ReportDecoderBase):
@@ -236,8 +239,8 @@ class TensorBoardLogger(ModelCallback):
     r"""Enables TensorBoard logging.
 
     .. note::
-        If :py:class:`MixedPrecision` is used then this should appear earlier in
-        the list of callbacks (i.e. have a lower index) as the
+        If :py:class:`MixedPrecision` is used then this should appear earlier
+        in the list of callbacks (i.e. have a lower index) as the
         :py:class:`MixedPrecision` callback shold rescale the losses *after*
         logging.
 

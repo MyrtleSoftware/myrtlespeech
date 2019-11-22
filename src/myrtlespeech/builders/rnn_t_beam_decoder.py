@@ -9,11 +9,12 @@ def build(
     """Returns a :py:class:`RNNTBeamDecoder` based on the config.
 
     Args:
-        rnn_t_beam_decoder_cfg: A ``RNNTBeamDecoder`` protobuf object containing
-            the config for the desired :py:class:`RNNTBeamDecoder`.
+        rnn_t_beam_decoder_cfg: A ``RNNTBeamDecoder`` protobuf object
+            containing the config for the desired :py:class:`RNNTBeamDecoder`.
 
-        model: A :py:class:`myrtlespeech.model.rnn_t.RNNT` model to use during decoding
-            See the py:class:`myrtlespeech.model.rnn_t.RNNT` docstring for more information.
+        model: A :py:class:`myrtlespeech.model.rnn_t.RNNT` model to use during
+            decoding. See the py:class:`myrtlespeech.model.rnn_t.RNNT`
+            docstring for more information.
 
 
     Returns:
@@ -28,7 +29,8 @@ def build(
         max_symbols_per_step = rnn_t_beam_decoder_cfg.max_symbols_per_step
         if max_symbols_per_step < 1:
             raise ValueError(
-                f"rnn_t_beam_decoder_cfg.max_symbols_per_step = {max_symbols_per_step} but this must be >= 1"
+                f"rnn_t_beam_decoder_cfg.max_symbols_per_step \
+                = {max_symbols_per_step} but this must be >= 1"
             )
     else:
         max_symbols_per_step = None

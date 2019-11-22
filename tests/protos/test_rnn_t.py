@@ -1,12 +1,8 @@
 from typing import Dict
-from typing import List
 from typing import Tuple
 from typing import Union
 
 import hypothesis.strategies as st
-from google.protobuf import empty_pb2
-from myrtlespeech.protos import conv_layer_pb2
-from myrtlespeech.protos import lookahead_pb2
 from myrtlespeech.protos import rnn_t_pb2
 
 from tests.protos.test_fully_connected import fully_connecteds

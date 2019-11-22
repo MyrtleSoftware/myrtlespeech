@@ -2,7 +2,9 @@ from typing import Optional
 from typing import Tuple
 
 import torch
-from myrtlespeech.builders.fully_connected import build as build_fully_connected
+from myrtlespeech.builders.fully_connected import (
+    build as build_fully_connected,
+)
 from myrtlespeech.builders.rnn import build as build_rnn
 from myrtlespeech.data.stack import StackTime
 from myrtlespeech.model.rnn_t import RNNT
@@ -275,7 +277,8 @@ def build_rnnt_enc(
 
         assert (
             time_reduction_factor > 1
-        ), "time_reduction_factor must be an integer > 1 but is = {time_reduction_factor}"
+        ), "time_reduction_factor must be an integer > 1 but \
+        equals {time_reduction_factor}"
 
         reduction = rnn_t_enc.time_reduction_factor
 

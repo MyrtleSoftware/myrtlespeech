@@ -31,7 +31,8 @@ class RNNT(torch.nn.Module):
 
         embedding: A :py:class:`torch.nn.Module` which is an embedding lookup
             for targets (eg graphemes, wordpieces) which accepts a
-            :py:`torch.Tensor` as input of size ``[batch, max_output_seq_len]``.
+            :py:`torch.Tensor` as input of size
+            ``[batch, max_output_seq_len]``.
 
         dec_rnn: A :py:class:`torch.nn.Module` containing the recurrent part of
             the RNN-T prediction.
@@ -102,7 +103,8 @@ class RNNT(torch.nn.Module):
     def forward(
         self,
         x: Tuple[
-            Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]
+            Tuple[torch.Tensor, torch.Tensor],
+            Tuple[torch.Tensor, torch.Tensor],
         ],
     ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         r"""Returns the result of applying the RNN-T network to `x`.
@@ -112,9 +114,9 @@ class RNNT(torch.nn.Module):
         initialisation.
 
         Args:
-            x: A Tuple ``(x[0], x[1])``. ``x[0]`` is input to the network and is
-                a Tuple ``x[0] = (x[0][0], x[0][1])`` where both elements are
-                :py:class:`torch.Tensor`s. ``x[0][0]`` is the audio feature
+            x: A Tuple ``(x[0], x[1])``. ``x[0]`` is input to the network and
+                is a Tuple ``x[0] = (x[0][0], x[0][1])`` where both elements
+                are :py:class:`torch.Tensor`s. ``x[0][0]`` is the audio feature
                 input with  size ``[batch, channels, features,
                 max_input_seq_len]`` while ``x[0][1]`` is the target label
                 tensor of size ``[batch, max_label_length]``.
@@ -125,8 +127,8 @@ class RNNT(torch.nn.Module):
                 ``x[1][1]``.
 
         Returns:
-            A Tuple where the first element is the output of the RNNT network: a
-                :py:class:`torch.Tensor` with size ``[batch, max_seq_len,
+            A Tuple where the first element is the output of the RNNT network:
+                a :py:class:`torch.Tensor` with size ``[batch, max_seq_len,
                 max_label_length + 1, vocab_size + 1]``, and the second element
                 is a Tuple of two :py:class:`torch.Tensor`s both of
                 size ``[batch]`` that contain the *output* lengths of a) the
@@ -154,12 +156,12 @@ class RNNT(torch.nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Returns the result of applying the RNN-T prediction network.
 
-        This function is only appropriate during training (when the ground-truth
-        labels are available).
+        This function is only appropriate during training when the
+        ground-truth labels are available.
 
         .. note:: The length of the sequence is increased by one as the
-        start-of-sequence embedded state (all zeros) is appended to the start of
-        label sequence. Note that this change *is not* reflected in the
+        start-of-sequence embedded state (all zeros) is prepended to the start
+        of the label sequence. Note that this change *is not* reflected in the
         output lengths as the :py:class:`RNNTLoss` requires the true label
         lengths.
 
@@ -178,7 +180,7 @@ class RNNT(torch.nn.Module):
         """
 
         y = self.embedding(y)
-        y = self._append_SOS(y)
+        y = self._prepend_SOS(y)
         # Update the lengths with +1 for input to the dec_rnn
         y = (y[0], y[1] + 1)
         out = self.dec_rnn(y)
@@ -223,8 +225,8 @@ class RNNT(torch.nn.Module):
         return out
 
     @staticmethod
-    def _append_SOS(y):
-        r"""Appends the SOS token (all zeros) to the start of the target tensor.
+    def _prepend_SOS(y):
+        r"""Prepends the SOS embedding (all zeros) to the target tensor.
         """
         y_0, y_1 = y
 
@@ -241,14 +243,15 @@ class RNNT(torch.nn.Module):
     def joint(
         self,
         x: Tuple[
-            Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]
+            Tuple[torch.Tensor, torch.Tensor],
+            Tuple[torch.Tensor, torch.Tensor],
         ],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Returns the result of applying the RNN-T joint network.
 
         Args:
-            x: A Tuple ``(x[0], x[1])``. ``x[0][0]`` is the first element of the
-                encoder network output (i.e. `.encode(...)[0]` - see
+            x: A Tuple ``(x[0], x[1])``. ``x[0][0]`` is the first element of
+                the encoder network output (i.e. `.encode(...)[0]` - see
                 :py:class:`.RNNTEncoder` docstring). ``x[0][1]`` is the first
                 element of the prediction network output (i.e.
                 `.prediction(...)[0]` - see prediction docstring).
@@ -278,7 +281,9 @@ class RNNT(torch.nn.Module):
         g = g.unsqueeze(dim=1)  # (B, 1, U_, H)
         g = g.expand((B1, T, U_, H2)).contiguous()
 
-        joint_inp = torch.cat([f, g], dim=3).contiguous()  # (B, T, U_, H1 + H2)
+        joint_inp = torch.cat(
+            [f, g], dim=3
+        ).contiguous()  # (B, T, U_, H1 + H2)
 
         del g, f, x
 
@@ -297,7 +302,8 @@ class RNNT(torch.nn.Module):
         except ValueError:
             raise ValueError(
                 "Unable to unpack inputs to RNNT. Are you using the \
-            `RNNTTraining()` callback found in `myrtlespeech.run.callbacks.rnn_t_training`?"
+            `RNNTTraining()` callback \
+            found in `myrtlespeech.run.callbacks.rnn_t_training`?"
             )
         B1, C, I, T = x.shape
         B2, U = y.shape
@@ -319,13 +325,7 @@ class RNNT(torch.nn.Module):
             )
 
         del x, y, x_lens, y_lens, inp
-        return (
-            B1,
-            C,
-            I,
-            T,
-            U,
-        )  # return (batch, channel, audio_feat_input, max_seq_len, max_output_len)
+        return (B1, C, I, T, U)  # return dimensions
 
     @staticmethod
     def _prepare_inputs_forward(inp, use_cuda):
@@ -410,7 +410,8 @@ class RNNTEncoder(torch.nn.Module):
         time_reducer: An Optional ``Callable`` that reduces the number of
             timesteps into ``rnn2`` by stacking adjacent frames in the
             frequency dimension as employed in `Streaming End-to-end Speech
-            Recognition For Mobile Devices <https://arxiv.org/pdf/1811.06621.pdf>`_.
+            Recognition For Mobile Devices
+            <https://arxiv.org/pdf/1811.06621.pdf>`_.
 
             This Callable takes two arguments: a Tuple of ``rnn1`` output and
             the *input* sequence lengths of size ``[batch]``,
@@ -423,10 +424,10 @@ class RNNTEncoder(torch.nn.Module):
             tuple must be a :py:class:`torch.Tensor` of size ``[batch]``
             that contains the new length of the corresponding sequence.
 
-        time_reduction_factor: An Optional ``int`` with default value 1 (i.e. no
-            reduction). If ``time_reducer`` is not None, this is the ratio by
-            which the time dimension is reduced. If ``time_reducer`` _is_ None,
-            this must be 1.
+        time_reduction_factor: An Optional ``int`` with default value 1
+            (i.e. no reduction). If ``time_reducer`` is not None, this is the
+            ratio by which the time dimension is reduced. If ``time_reducer``
+             _is_ None, this must be 1.
 
         rnn2: An Optional :py:class:`torch.nn.Module` containing the second
             recurrent part of the RNN-T encoder. This must be None unless
@@ -448,8 +449,8 @@ class RNNTEncoder(torch.nn.Module):
             length of the corresponding *output* sequence. These may be
             different than the input sequence lengths due to downsampling.
 
-        fc2: An Optional :py:class:`torch.nn.Module` containing the second fully
-            connected part of the RNN-T encoder.
+        fc2: An Optional :py:class:`torch.nn.Module` containing the second
+            fully connected part of the RNN-T encoder.
 
             Must accept as input a tuple where the first element is the network
             input (a :py`torch.Tensor`) with size ``[max_downsampled_seq_len,
@@ -469,10 +470,11 @@ class RNNTEncoder(torch.nn.Module):
 
     Returns:
         A Tuple where the first element is the  output of ``fc2`` if it is not
-            None, else the output of ``rnn2`` if it is not None, else the output
-            of `rnn1` and the second element is a :py:class:`torch.Tensor` of
-            size ``[batch]`` where each entry represents the sequence length of
-            the corresponding *output* sequence to the encoder.
+            None, else the output of ``rnn2`` if it is not None, else the
+            output of `rnn1` and the second element is a
+            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+            represents the sequence length of the corresponding *output*
+            sequence to the encoder.
     """
 
     def __init__(
@@ -491,12 +493,14 @@ class RNNTEncoder(torch.nn.Module):
             ), "Do not pass rnn2 without a time_reducer Callable"
             assert (
                 time_reduction_factor == 1
-            ), f"if `time_reducer` is None, must have time_reduction_factor == 1 \
+            ), f"if `time_reducer` is None, must have \
+                time_reduction_factor == 1 \
                 but it is = {time_reduction_factor}"
         else:
             assert (
                 time_reduction_factor > 1
-            ), f"time_reduction_factor must be > 1 but = {time_reduction_factor}"
+            ), f"time_reduction_factor must be > 1 \
+                but = {time_reduction_factor}"
 
         assert rnn1.rnn.batch_first is False
         if rnn2:
@@ -525,7 +529,7 @@ class RNNTEncoder(torch.nn.Module):
             if fc2 is not None:
                 self.fc2 = self.fc2.cuda()
 
-        ### add extra hard tahn
+        # add extra hard tahn
         tanh = torch.nn.Hardtanh(min_val=0.0, max_val=20.0)
         self.hardtanh = lambda x: (tanh(x[0]), x[1])
 
@@ -547,17 +551,17 @@ class RNNTEncoder(torch.nn.Module):
                 features, max_input_seq_len]`` and the second element is a
                 :py:class:`torch.Tensor` of size ``[batch]`` where each entry
                 represents the sequence length of the corresponding *input*
-                sequence to the rnn. The channel dimension contains context frames
-                and is immediately flattened into the `features` dimension. This
-                reshaping operation is not dealt with in preprocessing so that:
-                a) this model and `myrtlespeech.model.deep_speech_2` can
-                share the same preprocessing and b) because future edits to
+                sequence to the rnn. The channel dimension contains context
+                frames and is immediately flattened into the `features`
+                dimension. This reshaping operation is not dealt with in
+                preprocessing so that: a) this model conforms to existing
+                pre-processing pipeline, and b) because future edits to
                 `myrtlespeech.model.rnn_t.RNNTEncoder` may add convolutions
-                before input to `fc1`/`rnn1` as in `awni-speech<https://github.com/awni/speech>`_
+                before input to the first layer `fc1`/`rnn1`.
 
         Returns:
             Output from `fc2`` if present else output from `rnn2`` if present,
-            else output from ``rnn1``. See initialisation docstring.
+                else output from ``rnn1``. See initialisation docstring.
         """
 
         self._certify_inputs_encode(x)
