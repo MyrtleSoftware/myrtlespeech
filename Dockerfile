@@ -15,7 +15,6 @@ RUN echo "deb  http://deb.debian.org/debian  stretch main" >> /etc/apt/sources.l
     echo "deb-src  http://deb.debian.org/debian  stretch main" >> /etc/apt/sources.list && \
     apt update
 RUN apt-get install gcc-6 g++-6 -y
-ENV CXX=/usr/bin/gcc-6
 
 # create non-root user
 RUN useradd --create-home --shell /bin/bash user
@@ -43,13 +42,16 @@ RUN git clone https://github.com/NVIDIA/apex && \
     cd .. && \
     rm -rf apex
 
+# Install warp-transducer
+ENV CXX=/usr/bin/g++-6
+ENV CC=/usr/bin/gcc-6
 RUN git clone https://github.com/HawkAaron/warp-transducer.git && \
     cd /home/user/myrtlespeech/warp-transducer && \
     git checkout c6d12f9e1562833c2b4e7ad84cb22aa4ba31d18c && \
     mkdir build && \
     cd build && \
     export WARP_RNNT_PATH=`pwd` && \
-    cmake ..
+    cmake -D CMAKE_C_COMPILER=gcc-6 -D CMAKE_CXX_COMPILER=g++-6 ..
 RUN cd /home/user/myrtlespeech/warp-transducer/build && \
     make CC=gcc-6 CPP=g++-6 CXX=g++-6 LD=g++-6
 RUN cd /home/user/myrtlespeech/warp-transducer/build && \
