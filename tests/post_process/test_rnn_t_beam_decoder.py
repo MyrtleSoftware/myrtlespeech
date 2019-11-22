@@ -110,9 +110,12 @@ class RNNTBeamDecoderDummy(RNNTBeamDecoder):
         super().__init__(**kwargs)
 
     def _joint_step(self, enc, pred):
-        """Overrride _joint_step() as it performs a log on outputs.
+        """Overrride _joint_step().
 
-        TODO: remove this class and perform an exp on inputs instead? """
+        This is necessary as :RNNTDecoderBase._joint_step() performs a
+        log_softmax on outputs which causes problems for this worked
+        example.
+        """
 
         f, f_lens = enc
         g, g_lens = pred
