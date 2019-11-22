@@ -7,8 +7,9 @@ RUN chown -R 1000:1000 /opt/conda/
 # https://github.com/psf/black/issues/1112
 RUN apt update && apt install -y build-essential python3-dev
 
-# install cmake and make for warp-transducer build
-RUN apt-get install cmake make -y
+# install cmake and make and ggc-6 for warp-transducer build
+RUN apt-get install cmake make gcc-6 g++-6 -y
+ENV DCMAKE_C_COMPILER '/usr/bin/gcc-6'
 
 # create non-root user
 RUN useradd --create-home --shell /bin/bash user
