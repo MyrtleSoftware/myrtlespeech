@@ -8,7 +8,8 @@ RUN chown -R 1000:1000 /opt/conda/
 RUN apt update && apt install -y build-essential python3-dev
 
 # install cmake and make and ggc-6 for warp-transducer build
-RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
+RUN apt-get install software-properties-common -y && apt-get update && \
+    add-apt-repository ppa:ubuntu-toolchain-r/test && \
     apt-get update && apt-get install cmake make gcc-6 g++-6 -y
 ENV DCMAKE_C_COMPILER '/usr/bin/gcc-6'
 
