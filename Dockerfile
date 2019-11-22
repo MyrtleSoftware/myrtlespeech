@@ -8,10 +8,10 @@ RUN chown -R 1000:1000 /opt/conda/
 RUN apt update && apt install -y build-essential python3-dev
 
 # install cmake and make and ggc-6 for warp-transducer build
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 1E9377A2BA9EF27F && \
-    apt-get install software-properties-common -y && apt-get update && \
-    add-apt-repository ppa:ubuntu-toolchain-r/test && \
-    apt-get update && apt-get install cmake make gcc-snapshot gcc-6 g++-6 -y
+RUN apt-get update && apt-get install cmake make -y
+RUN apt-get install software-properties-common build-essential -y && \
+    apt-get update
+RUN apt-get install gcc-6 g++-6 -y
 ENV DCMAKE_C_COMPILER '/usr/bin/gcc-6'
 
 # create non-root user
@@ -59,4 +59,4 @@ ENV HYPOTHESIS_PROFILE ci
 
 ENTRYPOINT ["/bin/bash", "--login", "-c"]
 
-CMD ["pytest tests"]
+CMD ["pytest tests src"]
