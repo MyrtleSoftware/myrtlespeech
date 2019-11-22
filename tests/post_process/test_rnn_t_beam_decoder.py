@@ -62,7 +62,7 @@ class DecRNN:
             return out, lengths
 
 
-class DummyModel(torch.nn.Module):
+class DummyRNNTModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.use_cuda = False
@@ -82,7 +82,7 @@ class DummyModel(torch.nn.Module):
 
         assert (
             C == 1
-        ), f"In DummyModel(), input channels must == 1 but C == {C}"
+        ), f"In DummyRNNTModel(), input channels must == 1 but C == {C}"
         h = h.squeeze(1)  # B, H, T
         h = h.permute(2, 0, 1)
 
@@ -135,7 +135,7 @@ class RNNTBeamDecoderDummy(RNNTBeamDecoder):
 def get_fixed_decoder(max_symbols_per_step=100):
     # alphabet = ["_", "a", "b"]
     blank_index = 0
-    model = DummyModel()
+    model = DummyRNNTModel()
     length_norm = False
     return RNNTBeamDecoderDummy(
         blank_index=blank_index,
