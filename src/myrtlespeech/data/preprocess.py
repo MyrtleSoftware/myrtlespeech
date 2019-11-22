@@ -199,7 +199,7 @@ class Downsample:
             A :py:class:`torch.Tensor` with size ``(channels, features,
                 seq_len // self.subsample)``.
         """
-        x = x.transpose(0, 2)  #
+        x = x.transpose(0, 2)
 
         assert (
             x.shape[0] >= self.subsample
