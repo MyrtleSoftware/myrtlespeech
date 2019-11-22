@@ -11,7 +11,7 @@ RUN apt update && apt install -y build-essential python3-dev
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 1E9377A2BA9EF27F && \
     apt-get install software-properties-common -y && apt-get update && \
     add-apt-repository ppa:ubuntu-toolchain-r/test && \
-    apt-get update && apt-get install cmake make gcc-6 g++-6 -y
+    apt-get update && apt-get install cmake make gcc-snapshot gcc-6 g++-6 -y
 ENV DCMAKE_C_COMPILER '/usr/bin/gcc-6'
 
 # create non-root user
