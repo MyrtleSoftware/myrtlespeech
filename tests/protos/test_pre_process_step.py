@@ -44,6 +44,8 @@ def pre_process_steps(
         kwargs["standardize"] = draw(_standardizes())
     elif step_type_str == "context_frames":
         kwargs["context_frames"] = draw(_context_frames())
+    elif step_type_str == "downsample":
+        kwargs["downsample"] = draw(_downsample())
     else:
         raise ValueError(f"unknown pre_process_step type {step_type_str}")
 
@@ -158,3 +160,23 @@ def _context_frames(
     if not return_kwargs:
         return cf
     return cf, kwargs
+
+
+@st.composite
+def _downsample(
+    draw, return_kwargs: bool = False
+) -> Union[
+    st.SearchStrategy[pre_process_step_pb2.Downsample],
+    st.SearchStrategy[Tuple[pre_process_step_pb2.Downsample, Dict]],
+]:
+    """Returns a SearchStrategy for Downsample plus maybe the kwargs."""
+    kwargs: Dict = {}
+
+    kwargs["subsample"] = draw(st.integers(2, 3))
+
+    # initialise and return
+    all_fields_set(pre_process_step_pb2.Downsample, kwargs)
+    downsample = pre_process_step_pb2.Downsample(**kwargs)  # type: ignore
+    if not return_kwargs:
+        return downsample
+    return downsample, kwargs

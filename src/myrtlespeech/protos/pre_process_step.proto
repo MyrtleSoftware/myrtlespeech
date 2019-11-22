@@ -15,6 +15,7 @@ message PreProcessStep {
     Standardize standardize = 3;
     ContextFrames context_frames = 4;
     SpecAugment spec_augment = 5;
+    Downsample downsample = 7;
   }
 }
 
@@ -68,4 +69,9 @@ message Standardize {
 message ContextFrames {
   // Number of context frames (channels) to add.
   uint32 n_context = 1;
+}
+
+message Downsample {
+  // Rate at which to downsample input
+  uint32 subsample = 1;
 }
