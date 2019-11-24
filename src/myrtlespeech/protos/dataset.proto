@@ -55,7 +55,7 @@ message Dataset {
     // Path to directory that contains the CommonVoice directory.
     string root = 1;
 
-    // Which LibriSpeech subset(s) to use.
+    // Which CommonVoice subset(s) to use.
     repeated SUBSET subset = 2;
 
     // All samples greater than this length will be dropped.
