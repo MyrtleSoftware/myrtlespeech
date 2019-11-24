@@ -6,6 +6,7 @@
     :maxdepth: 1
     :caption: Supported Datasets:
 
+    commonvoice
     fake
     librispeech
 
