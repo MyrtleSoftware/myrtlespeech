@@ -6,8 +6,7 @@ from typing import Union
 import torch
 from myrtlespeech.data.batch import collate_label_list
 from myrtlespeech.model.rnn_t import RNNT
-
-SOS = -1  # Start of sequence
+from myrtlespeech.utils.device import get_device
 
 
 class RNNTDecoderBase(torch.nn.Module):
@@ -24,7 +23,7 @@ class RNNTDecoderBase(torch.nn.Module):
             networks (i.e. input and output of RNN-T) but this condition is not
             enforced here.
 
-        model: A :py:class:`myrtlespeech.model.rnn_t.RNNT` model to use during
+        model: An :py:class:`myrtlespeech.model.rnn_t.RNNT` model to use during
             decoding. See the py:class:`myrtlespeech.model.rnn_t.RNNT`
             docstring for more information.
 
@@ -34,6 +33,13 @@ class RNNTDecoderBase(torch.nn.Module):
             infinite loop that could occur with no limit).
 
     Properties:
+        _SOS: Start of sequence symbol
+        model: See Args.
+        max_symbols_per_step: See Args.
+        blank_index: See Args.
+        device: Device to which inputs will be sent. String.
+
+    Methods:
         _pred_step(label, hidden): performs a single step of prediction
             network.
         _joint_step(enc, pred): performs a single step of the joint network.
@@ -60,9 +66,8 @@ class RNNTDecoderBase(torch.nn.Module):
         self.blank_index = blank_index
         self.model = model
         self.max_symbols_per_step = max_symbols_per_step
-
-        # TODO: update this to support arbitrary cuda device idx:
-        self.device = "cuda:0" if self.model.use_cuda else "cpu"
+        self._SOS = -1  # Start of sequence
+        self.device = get_device()
 
     @torch.no_grad()
     def forward(
@@ -152,7 +157,7 @@ class RNNTDecoderBase(torch.nn.Module):
     def _pred_step(self, label, hidden):
         b"""Performs a step of the model prediction network during inference.
         """
-        if label == SOS:
+        if label == self._SOS:
             label_embedding = torch.zeros(
                 (1, 1, self.model.dec_rnn.rnn.hidden_size), device=self.device
             )
@@ -190,7 +195,7 @@ class RNNTDecoderBase(torch.nn.Module):
 
     def _get_last_idx(self, labels):
         b"""Returns the final index of a list of labels."""
-        return SOS if labels == [] else labels[-1]
+        return self._SOS if labels == [] else labels[-1]
 
     def __repr__(self):
         string = self._get_name() + "("
