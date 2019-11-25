@@ -62,4 +62,4 @@ ENV HYPOTHESIS_PROFILE ci
 
 ENTRYPOINT ["/bin/bash", "--login", "-c"]
 
-CMD ["pytest tests src"]
+CMD ["pytest"]
