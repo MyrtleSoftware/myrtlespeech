@@ -308,8 +308,8 @@ class RNNT(torch.nn.Module):
         B1, C, I, T = x.shape
         B2, U = y.shape
 
-        B3, = x_lens.shape
-        B4, = y_lens.shape
+        (B3,) = x_lens.shape
+        (B4,) = y_lens.shape
         assert (
             B1 == B2 and B1 == B3 and B1 == B4
         ), "Batch size must be the same for inputs and targets"
@@ -598,7 +598,7 @@ class RNNTEncoder(torch.nn.Module):
 
         (x, x_lens) = inp
         B1, C, I, T = x.shape
-        B2, = x_lens.shape
+        (B2,) = x_lens.shape
         assert B1 == B2, "Batch size must be the same for inputs and targets"
         del x, x_lens, inp
 
