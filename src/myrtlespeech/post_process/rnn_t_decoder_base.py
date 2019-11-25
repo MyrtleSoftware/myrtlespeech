@@ -67,7 +67,7 @@ class RNNTDecoderBase(torch.nn.Module):
         self.model = model
         self.max_symbols_per_step = max_symbols_per_step
         self._SOS = -1  # Start of sequence
-        self.device = get_device()
+        self.device = get_device(use_cuda=self.model.use_cuda)
 
     @torch.no_grad()
     def forward(
