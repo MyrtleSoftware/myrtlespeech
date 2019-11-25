@@ -128,7 +128,7 @@ def build(
         )
     else:
         raise ValueError(
-            f"unsupported learning rate scheduler " f"{lr_scheduler_str}"
+            f"unsupported learning rate scheduler {lr_scheduler_str}"
         )
 
     seq_to_seq.lr_scheduler = lr_scheduler
