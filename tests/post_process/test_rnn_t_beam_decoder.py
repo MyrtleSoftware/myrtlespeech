@@ -6,6 +6,49 @@ from myrtlespeech.post_process.rnn_t_beam_decoder import RNNTBeamDecoder
 
 
 # Fixtures and Strategies -----------------------------------------------------
+
+
+class DummyRNNTModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.use_cuda = False
+        self.dec_rnn = DecRNN(3)
+
+    def forward(self):
+        raise NotImplementedError
+
+    def encode(
+        self, x: Tuple[torch.Tensor, torch.Tensor]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        ``[B, C, H, T]`` -> ``[T, B, H_out]`` """
+
+        h = x[0]  # B, C, H, T
+        B, C, F, T = h.shape
+
+        assert (
+            C == 1
+        ), f"In DummyRNNTModel(), input channels must == 1 but C == {C}"
+        h = h.squeeze(1)  # B, H, T
+        h = h.permute(2, 0, 1)
+
+        return h, x[1]
+
+    def embedding(self, x):
+        res = torch.tensor([1, x[0].item() + 1]).unsqueeze(0).unsqueeze(0)
+        x = res, x[1]
+
+        return x
+
+    @staticmethod
+    def _certify_inputs_forward(*args):
+        return RNNT._certify_inputs_forward(*args)
+
+    @staticmethod
+    def _prepare_inputs_forward(*args):
+        return RNNT._prepare_inputs_forward(*args)
+
+
 class RNN:
     def __init__(self, hidden_size=3):
         self.hidden_size = hidden_size
@@ -60,47 +103,6 @@ class DecRNN:
             return (out, hid), lengths
         else:
             return out, lengths
-
-
-class DummyRNNTModel(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.use_cuda = False
-        self.dec_rnn = DecRNN(3)
-
-    def forward(self):
-        raise NotImplementedError
-
-    def encode(
-        self, x: Tuple[torch.Tensor, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        ``[B, C, H, T]`` -> ``[T, B, H_out]`` """
-
-        h = x[0]  # B, C, H, T
-        B, C, F, T = h.shape
-
-        assert (
-            C == 1
-        ), f"In DummyRNNTModel(), input channels must == 1 but C == {C}"
-        h = h.squeeze(1)  # B, H, T
-        h = h.permute(2, 0, 1)
-
-        return h, x[1]
-
-    def embedding(self, x):
-        res = torch.tensor([1, x[0].item() + 1]).unsqueeze(0).unsqueeze(0)
-        x = res, x[1]
-
-        return x
-
-    @staticmethod
-    def _certify_inputs_forward(*args):
-        return RNNT._certify_inputs_forward(*args)
-
-    @staticmethod
-    def _prepare_inputs_forward(*args):
-        return RNNT._prepare_inputs_forward(*args)
 
 
 class RNNTBeamDecoderDummy(RNNTBeamDecoder):
