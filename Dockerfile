@@ -57,6 +57,11 @@ RUN git clone https://github.com/HawkAaron/warp-transducer.git && \
     cd .. && rm -rf pytorch_binding/test tensorflow_binding && \
     echo "export WARP_RNNT_PATH=$WARP_RNNT_PATH" >> ~/.bashrc
 
+# Fix pre-commit (uninstall and re-install w. pip)
+RUN conda uninstall pre_commit -y && \
+    pip install pre-commit==1.17.0 --user
+ENV PATH=$PATH:/home/user/.local/bin
+RUN pre-commit install
 
 # use CI Hypothesis profile, see ``tests/__init__.py``
 ENV HYPOTHESIS_PROFILE ci
