@@ -173,7 +173,7 @@ def test_beam_search_multi_step(decoder=get_fixed_decoder()):
 
 
 def test_beam_search_limit_symbols_per_step(
-    decoder=get_fixed_decoder(max_symbols_per_step=1)
+    decoder=get_fixed_decoder(max_symbols_per_step=1),
 ):
     indata = torch.tensor(
         [[[[0.3, 0.6, 0.1], [0.3, 0.6, 0.1]]]]
