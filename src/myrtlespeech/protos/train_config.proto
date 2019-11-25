@@ -3,8 +3,8 @@ syntax = "proto3";
 package myrtlespeech.protos;
 
 import "myrtlespeech/protos/dataset.proto";
-import "myrtlespeech/protos/optimizer.proto";
 import "myrtlespeech/protos/lr_scheduler.proto";
+import "myrtlespeech/protos/optimizer.proto";
 
 
 // Configuration for training.
@@ -21,7 +21,7 @@ message TrainConfig {
   }
 
   oneof supported_lr_scheduler {
-    FixedLR fixed_lr = 5;
+    ConstantLR constant_lr = 5;
     StepLR step_lr = 6;
     ExponentialLR exponential_lr = 7;
     CosineAnnealingLR cosine_annealing_lr = 8;

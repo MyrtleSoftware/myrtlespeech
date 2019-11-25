@@ -95,7 +95,7 @@ def build(
     lr_scheduler_str = task_config.train_config.WhichOneof(
         "supported_lr_scheduler"
     )
-    if lr_scheduler_str == "fixed_lr":
+    if lr_scheduler_str == "constant_lr":
         lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
             optimizer=seq_to_seq.optim, lr_lambda=lambda epoch: 1.0
         )

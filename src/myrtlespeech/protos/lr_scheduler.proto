@@ -6,7 +6,7 @@ import "google/protobuf/wrappers.proto";
 
 
 // Constant learning rate.
-message FixedLR {
+message ConstantLR {
 }
 
 

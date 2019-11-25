@@ -13,21 +13,21 @@ from tests.protos.utils import all_fields_set
 
 
 @st.composite
-def fixed_lrs(
+def constant_lrs(
     draw, return_kwargs: bool = False
 ) -> Union[
-    st.SearchStrategy[lr_scheduler_pb2.FixedLR],
-    st.SearchStrategy[Tuple[lr_scheduler_pb2.FixedLR, Dict]],
+    st.SearchStrategy[lr_scheduler_pb2.ConstantLR],
+    st.SearchStrategy[Tuple[lr_scheduler_pb2.ConstantLR, Dict]],
 ]:
-    """Returns a SearchStrategy for an FixedLR plus maybe the kwargs."""
+    """Returns a SearchStrategy for an ConstantLR plus maybe the kwargs."""
     kwargs: Dict = {}
 
     # initialise and return
-    all_fields_set(lr_scheduler_pb2.FixedLR, kwargs)
-    fixed_lr = lr_scheduler_pb2.FixedLR(**kwargs)
+    all_fields_set(lr_scheduler_pb2.ConstantLR, kwargs)
+    constant_lr = lr_scheduler_pb2.ConstantLR(**kwargs)
     if not return_kwargs:
-        return fixed_lr
-    return fixed_lr, kwargs
+        return constant_lr
+    return constant_lr, kwargs
 
 
 @st.composite

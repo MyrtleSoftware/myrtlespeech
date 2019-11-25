@@ -6,9 +6,9 @@ import hypothesis.strategies as st
 from myrtlespeech.protos import train_config_pb2
 
 from tests.protos.test_dataset import datasets
+from tests.protos.test_lr_scheduler import constant_lrs
 from tests.protos.test_lr_scheduler import cosine_annealing_lrs
 from tests.protos.test_lr_scheduler import exponential_lrs
-from tests.protos.test_lr_scheduler import fixed_lrs
 from tests.protos.test_lr_scheduler import step_lrs
 from tests.protos.test_optimizer import adams
 from tests.protos.test_optimizer import sgds
@@ -59,8 +59,8 @@ def train_configs(
             ]
         )
     )
-    if lr_scheduler_str == "fixed_lr":
-        kwargs[lr_scheduler_str] = draw(fixed_lrs())
+    if lr_scheduler_str == "constant_lr":
+        kwargs[lr_scheduler_str] = draw(constant_lrs())
     elif lr_scheduler_str == "step_lr":
         kwargs[lr_scheduler_str] = draw(step_lrs())
     elif lr_scheduler_str == "exponential_lr":
