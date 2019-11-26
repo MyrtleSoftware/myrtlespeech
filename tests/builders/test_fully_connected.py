@@ -37,7 +37,7 @@ def fully_connected_module_match_cfg(
     # configuration of each layer in Sequential depends on whether activation
     # is present
     act_fn_is_none = fully_connected_cfg.activation.HasField("identity")
-    dropout_is_used = fully_connected_cfg.dropout > 1e-8
+    dropout_is_used = fully_connected_cfg.HasField("dropout")
     if act_fn_is_none:
         expected_len = fully_connected_cfg.num_hidden_layers + 1
     else:
@@ -88,7 +88,7 @@ def fully_connected_module_match_cfg(
             activation_match_cfg(module, fully_connected_cfg.activation)
         elif module_idx % total_types == dropout_idx:
             assert isinstance(module, torch.nn.Dropout)
-            assert abs(module.p - fully_connected_cfg.dropout) < 1e-8
+            assert abs(module.p - fully_connected_cfg.dropout.value) < 1e-8
         else:
             raise NotImplementedError(
                 "Issue with implementation. This branch \

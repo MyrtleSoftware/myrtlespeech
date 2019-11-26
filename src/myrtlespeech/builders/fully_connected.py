@@ -54,9 +54,9 @@ def build(
     if fully_connected_cfg.hidden_size > 0:
         hidden_size = fully_connected_cfg.hidden_size
 
-    dropout = 0
-    if fully_connected_cfg.dropout > 1e-8:
-        dropout = fully_connected_cfg.dropout
+    dropout = None
+    if fully_connected_cfg.HasField("dropout"):
+        dropout = fully_connected_cfg.dropout.value
 
     return FullyConnected(
         in_features=input_features,

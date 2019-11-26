@@ -27,7 +27,7 @@ class FullyConnected(torch.nn.Module):
             layer, if any.
 
         dropout: The dropout probability to be applied between hidden layers. A
-            float in [0., 1.]. Defualts to 0.
+            float in [0., 1.]. Defualts to None.
 
     Attributes:
         fully_connected: A :py:class:`torch.nn.Module` that implements the
@@ -63,12 +63,12 @@ class FullyConnected(torch.nn.Module):
         num_hidden_layers: int,
         hidden_size: Optional[int],
         hidden_activation_fn: Optional[torch.nn.Module],
-        dropout: float = 0,
+        dropout: Optional[float] = None,
     ):
         if num_hidden_layers < 0:
             raise ValueError("num_hidden_layers must be >= 0")
 
-        if dropout < 0 or dropout > 1:
+        if dropout and (dropout < 0 or dropout > 1):
             raise ValueError("dropout must be >= 0 and <= 1")
 
         if num_hidden_layers == 0:
@@ -80,8 +80,10 @@ class FullyConnected(torch.nn.Module):
                 raise ValueError(
                     "num_hidden_layers==0 but hidden_activation_fn is not None"
                 )
-            if dropout > 1e-8:
-                raise ValueError("num_hidden_layers==0 but dropout!=0.")
+            if dropout:
+                raise ValueError(
+                    "num_hidden_layers==0 so dropout must be None."
+                )
 
         super().__init__()
         self.in_features = in_features
@@ -107,14 +109,14 @@ class FullyConnected(torch.nn.Module):
         num_hidden_layers: int,
         hidden_size: Optional[int],
         hidden_activation_fn: Optional[torch.nn.Module],
-        dropout: float = 0,
+        dropout: Optional[float] = None,
     ) -> Union[torch.nn.Linear, torch.nn.Sequential]:
         hidden_layers = []
         for _ in range(num_hidden_layers):
             hidden_layers.append(torch.nn.Linear(in_features, hidden_size))
             if hidden_activation_fn:
                 hidden_layers.append(hidden_activation_fn)
-            if dropout > 1e-8:
+            if dropout:
                 hidden_layers.append(torch.nn.Dropout(p=dropout))
             assert hidden_size is not None
             in_features = hidden_size
