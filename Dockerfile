@@ -44,16 +44,7 @@ RUN git clone https://github.com/NVIDIA/apex && \
 # install warp-transducer
 ENV CXX=/usr/bin/g++-6
 ENV CC=/usr/bin/gcc-6
-RUN git clone https://github.com/HawkAaron/warp-transducer.git deps/warp-transducer && \
-    cd deps/warp-transducer && \
-    git checkout c6d12f9e1562833c2b4e7ad84cb22aa4ba31d18c && \
-    mkdir build && \
-    cd build && \
-    cmake .. && \
-    make && \
-    cd ../pytorch_binding && \
-    python3 setup.py install --user && \
-    cd .. && rm -rf pytorch_binding/test tensorflow_binding
+RUN make deps/warp-transducer
 
 # use CI Hypothesis profile, see ``tests/__init__.py``
 ENV HYPOTHESIS_PROFILE ci
