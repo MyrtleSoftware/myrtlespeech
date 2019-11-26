@@ -128,13 +128,13 @@ class RNNT(torch.nn.Module):
 
         Returns:
             A Tuple where the first element is the output of the RNNT network:
-                a :py:class:`torch.Tensor` with size ``[batch, max_seq_len,
-                max_label_length + 1, vocab_size + 1]``, and the second element
-                is a Tuple of two :py:class:`torch.Tensor`s both of
-                size ``[batch]`` that contain the *output* lengths of a) the
-                audio features inputs and b) the target sequences. These may be
-                of different lengths than the inputs as a result of
-                downsampling.
+            a :py:class:`torch.Tensor` with size ``[batch, max_seq_len,
+            max_label_length + 1, vocab_size + 1]``, and the second element
+            is a Tuple of two :py:class:`torch.Tensor`s both of
+            size ``[batch]`` that contain the *output* lengths of a) the
+            audio features inputs and b) the target sequences. These may be
+            of different lengths than the inputs as a result of
+            downsampling.
             """
 
         self._certify_inputs_forward(x)
@@ -207,10 +207,10 @@ class RNNT(torch.nn.Module):
 
         Returns:
             A Tuple where the first element is the embedded label tensor of
-                size ``[batch, max_label_length, hidden_size]`` and the second
-                is a :py:class:`torch.Tensor` of size ``[batch]`` that contains
-                the *output* lengths of these target label sequences. These
-                lengths will be the same as the input lengths.
+            size ``[batch, max_label_length, hidden_size]`` and the second
+            is a :py:class:`torch.Tensor` of size ``[batch]`` that contains
+            the *output* lengths of these target label sequences. These
+            lengths will be the same as the input lengths.
         """
 
         y_0, y_1 = y
@@ -263,7 +263,7 @@ class RNNT(torch.nn.Module):
 
         Returns:
             The output of the :py:class:`.RNNT` network. See initialisation
-                docstring.
+            docstring.
         """
         (f, g), seq_lengths = x
 
@@ -470,11 +470,11 @@ class RNNTEncoder(torch.nn.Module):
 
     Returns:
         A Tuple where the first element is the  output of ``fc2`` if it is not
-            None, else the output of ``rnn2`` if it is not None, else the
-            output of `rnn1` and the second element is a
-            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-            represents the sequence length of the corresponding *output*
-            sequence to the encoder.
+        None, else the output of ``rnn2`` if it is not None, else the
+        output of `rnn1` and the second element is a
+        :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+        represents the sequence length of the corresponding *output*
+        sequence to the encoder.
     """
 
     def __init__(
@@ -561,7 +561,7 @@ class RNNTEncoder(torch.nn.Module):
 
         Returns:
             Output from `fc2`` if present else output from `rnn2`` if present,
-                else output from ``rnn1``. See initialisation docstring.
+            else output from ``rnn1``. See initialisation docstring.
         """
 
         self._certify_inputs_encode(x)
