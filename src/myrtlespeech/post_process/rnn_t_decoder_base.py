@@ -6,7 +6,6 @@ from typing import Union
 import torch
 from myrtlespeech.data.batch import collate_label_list
 from myrtlespeech.model.rnn_t import RNNT
-from myrtlespeech.utils.device import get_device
 
 
 class RNNTDecoderBase(torch.nn.Module):
@@ -67,7 +66,7 @@ class RNNTDecoderBase(torch.nn.Module):
         self.model = model
         self.max_symbols_per_step = max_symbols_per_step
         self._SOS = -1  # Start of sequence
-        self.device = get_device(use_cuda=self.model.use_cuda)
+        self.device = "cuda:0" if self.model.use_cuda else "cpu"
 
     @torch.no_grad()
     def forward(
@@ -100,7 +99,7 @@ class RNNTDecoderBase(torch.nn.Module):
 
         Returns:
             A List of Lists where each sublist contains the index predictions
-                of the decoder.
+            of the decoder.
         """
         training_state = self.model.training
         self.model.eval()
