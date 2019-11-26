@@ -5,15 +5,15 @@ RUN chown -R 1000:1000 /opt/conda/
 
 # install headers to build regex as part of Black
 # https://github.com/psf/black/issues/1112
-RUN apt update && apt install -y build-essential python3-dev
-
-# install cmake and make and ggc-6 for warp-transducer build
-RUN apt-get update && apt-get install cmake make -y && \
-    apt-get install software-properties-common -y && \
-    apt-get update && \
+# and also install required components for
+# warp-transducer build (make, cmake gcc-6)
+RUN apt-get update && apt-get install \
+    build-essential  \
+    python3-dev cmake make \
+    software-properties-common -y && \
     echo "deb  http://deb.debian.org/debian  stretch main" >> /etc/apt/sources.list && \
-    echo "deb-src  http://deb.debian.org/debian  stretch main" >> /etc/apt/sources.list && \
-    apt update && apt-get install gcc-6 g++-6 -y
+    apt-get update && \
+    apt-get install gcc-6 g++-6 -y
 
 # create non-root user
 RUN useradd --create-home --shell /bin/bash user
@@ -41,11 +41,11 @@ RUN git clone https://github.com/NVIDIA/apex && \
     cd .. && \
     rm -rf apex
 
-# Install warp-transducer
+# install warp-transducer
 ENV CXX=/usr/bin/g++-6
 ENV CC=/usr/bin/gcc-6
-RUN git clone https://github.com/HawkAaron/warp-transducer.git && \
-    cd /home/user/myrtlespeech/warp-transducer && \
+RUN git clone https://github.com/HawkAaron/warp-transducer.git deps/warp-transducer && \
+    cd deps/warp-transducer && \
     git checkout c6d12f9e1562833c2b4e7ad84cb22aa4ba31d18c && \
     mkdir build && \
     cd build && \

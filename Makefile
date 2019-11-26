@@ -7,7 +7,7 @@ deps/apex:
 	git checkout 880ab925bce9f817a93988b021e12db5f67f7787 && \
 	pip install -v --no-cache-dir --global-option="--cpp_ext" \
 			--global-option="--cuda_ext" ./ && \
-	cd .. && rm -rf apex && cd ..
+	cd .. && rm -rf apex
 
 deps/warp-transducer:
 	git clone https://github.com/HawkAaron/warp-transducer deps/warp-transducer && \
@@ -24,5 +24,4 @@ deps/warp-transducer:
 	export CFLAGS="-I$CUDA_HOME/include $CFLAGS" && \
 	cd ../pytorch_binding && \
 	python3 setup.py install --user && \
-	rm -rf ../tests test ../tensorflow_binding && \
-	cd ../../..
+	rm -rf ../tests test ../tensorflow_binding
