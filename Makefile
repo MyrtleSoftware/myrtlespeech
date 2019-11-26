@@ -10,18 +10,14 @@ deps/apex:
 	cd .. && rm -rf apex
 
 deps/warp-transducer:
+	export CFLAGS="-I$(CUDA_HOME)/include $(CFLAGS)" && \
 	git clone https://github.com/HawkAaron/warp-transducer deps/warp-transducer && \
 	cd deps/warp-transducer && \
+	git checkout c6d12f9e1562833c2b4e7ad84cb22aa4ba31d18c && \
 	mkdir build && \
 	cd build && \
 	cmake .. && \
-	make VERBOSE=1 && \
-	export WARP_RNNT_PATH=`pwd` && \
-	export CUDA_TOOLKIT_ROOT_DIR=$CUDA_HOME && \
-	export LD_LIBRARY_PATH="$CUDA_HOME/extras/CUPTI/lib64:$LD_LIBRARY_PATH" && \
-	export LIBRARY_PATH=$CUDA_HOME/lib64:$LIBRARY_PATH && \
-	export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH && \
-	export CFLAGS="-I$CUDA_HOME/include $CFLAGS" && \
+	make && \
 	cd ../pytorch_binding && \
 	python3 setup.py install --user && \
 	rm -rf ../tests test ../tensorflow_binding
