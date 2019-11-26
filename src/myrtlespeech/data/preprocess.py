@@ -172,13 +172,31 @@ class AddContextFrames:
 
 
 class Downsample:
-    r"""Downsamples input sequence.
+    r"""Downsamples input sequence by dropping timesteps.
 
     Args:
-        subsample: The integer rate of subsampling.
+        subsample: The integer rate at which subsampling is performed.
 
     Raises:
-        :py:class:`ValueError`: if `subsample < 2`.
+        :py:class:`ValueError`: if `subsample is less than 2`.
+
+    Example:
+        >>> features = 3
+        >>> seq_len = 5
+        >>> x = torch.arange(features*seq_len).reshape(features, seq_len)
+        >>> x = x.unsqueeze(0)  # add in channel=1 dimension
+        >>> x
+        tensor([[[ 0,  1,  2,  3,  4],
+                 [ 5,  6,  7,  8,  9],
+                 [10, 11, 12, 13, 14]]])
+        >>> downsampler = Downsample(subsample=2)
+        >>> downsampler
+        Downsample(subsample=2)
+        >>> downsampler(x)
+        tensor([[[ 0,  2,  4],
+                 [ 5,  7,  9],
+                 [10, 12, 14]]])
+
     """
 
     def __init__(self, subsample: int):
@@ -214,6 +232,9 @@ class Downsample:
         subsampled_tensor = torch.cat(subsampled_signal, dim=0)
 
         return subsampled_tensor.transpose(0, 2).contiguous()
+
+    def __repr__(self) -> str:
+        return self.__class__.__name__ + f"(subsample={self.subsample})"
 
 
 class SpecAugment:
