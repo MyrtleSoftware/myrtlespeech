@@ -9,16 +9,17 @@ from torchaudio.transforms import MelSpectrogram
 
 
 class LogMelFB:
-    r"""Computes the log Mel-feature-bank of audiodata.
+    r"""Computes the log Mel-filterbanks of audiodata.
 
-    Wrapper on `torchaudio.transforms.MelSpectrogram` that applies log.
+    Wrapper on :py:class:`torchaudio.transforms.MelSpectrogram` that applies
+    log.
 
     Args:
-        See `torchaudio.transforms.MelSpectrogram`
+        kwargs: See :py:class:`torchaudio.transforms.MelSpectrogram`.
 
     Returns:
-        See `torchaudio.transforms.MelSpectrogram`. Returns natural log of
-            this quantity.
+        See :py:class:`torchaudio.transforms.MelSpectrogram`. Returns natural
+        log of this quantity.
     """
 
     def __init__(self, **kwargs):
@@ -28,7 +29,7 @@ class LogMelFB:
         r"""See initization docstring."""
         feat = self.MelSpectrogram(waveform)
 
-        # Numerical stability:
+        # avoid log(0) by setting 0 values to small constant
         feat = torch.where(
             feat == 0, torch.tensor(torch.finfo(waveform.dtype).eps), feat
         )
@@ -177,19 +178,19 @@ class Downsample:
         subsample: The integer rate of subsampling.
 
     Raises:
-        :py:class:`ValueError` if ``subsample < 2
+        :py:class:`ValueError`: if `subsample < 2`.
     """
 
     def __init__(self, subsample: int):
         if subsample < 2:
             raise ValueError(
-                f"Downsampling can only occur with subsample < 2 "
+                f"Downsampling can only occur with subsample >= 2 "
                 f"but subsample ={subsample}"
             )
         self.subsample = subsample
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
-        """Returns the :py:class:`torch.Tensor` after adding downsampling.
+        """Returns the :py:class:`torch.Tensor` after downsampling in time.
 
         Args:
             x: :py:class:`torch.Tensor` with size ``(channels, features,
@@ -197,7 +198,7 @@ class Downsample:
 
         Returns:
             A :py:class:`torch.Tensor` with size ``(channels, features,
-                seq_len // self.subsample)``.
+            seq_len // self.subsample)``.
         """
         x = x.transpose(0, 2)
 
