@@ -41,7 +41,9 @@ def fully_connecteds(
             )
         )
 
-    all_fields_set(fully_connected_pb2.FullyConnected, kwargs)
+    all_fields_set(
+        fully_connected_pb2.FullyConnected, kwargs, to_ignore=to_ignore
+    )
     fc = fully_connected_pb2.FullyConnected(**kwargs)
     if not return_kwargs:
         return fc

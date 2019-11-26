@@ -5,7 +5,7 @@ package myrtlespeech.protos;
 import "google/protobuf/wrappers.proto";
 
 import "myrtlespeech/protos/activation.proto";
-
+import "google/protobuf/wrappers.proto";
 
 // Configuration for a fully connected decoder.
 message FullyConnected {
