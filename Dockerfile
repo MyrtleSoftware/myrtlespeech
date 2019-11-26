@@ -49,13 +49,11 @@ RUN git clone https://github.com/HawkAaron/warp-transducer.git deps/warp-transdu
     git checkout c6d12f9e1562833c2b4e7ad84cb22aa4ba31d18c && \
     mkdir build && \
     cd build && \
-    export WARP_RNNT_PATH=`pwd` && \
     cmake -D CMAKE_C_COMPILER=gcc-6 -D CMAKE_CXX_COMPILER=g++-6 .. && \
     make CC=gcc-6 CPP=g++-6 CXX=g++-6 LD=g++-6 && \
     cd ../pytorch_binding && \
     python3 setup.py install --user && \
-    cd .. && rm -rf pytorch_binding/test tensorflow_binding && \
-    echo "export WARP_RNNT_PATH=$WARP_RNNT_PATH" >> ~/.bashrc
+    cd .. && rm -rf pytorch_binding/test tensorflow_binding
 
 # use CI Hypothesis profile, see ``tests/__init__.py``
 ENV HYPOTHESIS_PROFILE ci
