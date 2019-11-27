@@ -6,8 +6,8 @@ import hypothesis.strategies as st
 from myrtlespeech.protos import transducer_pb2
 
 from tests.protos.test_fully_connected import fully_connecteds
-from tests.protos.test_rnn import rnns
 from tests.protos.test_transducer_encoder import transducer_encoder
+from tests.protos.test_transducer_predict_net import transducer_predict_net
 from tests.protos.utils import all_fields_set
 
 
@@ -27,8 +27,8 @@ def transducer(
     kwargs["transducer_encoder"], enc_kwargs = draw(
         transducer_encoder(return_kwargs=True)
     )
-    kwargs["dec_rnn"], dec_kwargs = draw(
-        rnns(batch_first=True, return_kwargs=True)
+    kwargs["transducer_predict_net"], dec_kwargs = draw(
+        transducer_predict_net(return_kwargs=True)
     )
     kwargs["fully_connected"], fc_kwargs = draw(
         fully_connecteds(valid_only=True, return_kwargs=True)

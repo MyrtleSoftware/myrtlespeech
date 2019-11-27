@@ -8,8 +8,10 @@ from myrtlespeech.builders.fully_connected import (
 from myrtlespeech.builders.rnn import build as build_rnn
 from myrtlespeech.model.transducer import Transducer
 from myrtlespeech.model.transducer import TransducerEncoder
+from myrtlespeech.model.transducer import TransducerPredictNet
 from myrtlespeech.protos import transducer_encoder_pb2
 from myrtlespeech.protos import transducer_pb2
+from myrtlespeech.protos import transducer_predict_net_pb2
 from torch import nn
 
 
@@ -67,15 +69,18 @@ def build(
         ...           }
         ...         }
         ...     }
-        ... dec_rnn {
-        ...     rnn_type: LSTM;
-        ...     hidden_size: 256;
-        ...     num_layers: 2;
-        ...     bias: true;
-        ...     bidirectional: false;
-        ...     batch_first: true;
+        ... transducer_predict_net {
+        ...   pred_nn {
+        ...     rnn {
+        ...       rnn_type: LSTM;
+        ...       hidden_size: 256;
+        ...       num_layers: 2;
+        ...       bias: true;
+        ...       bidirectional: false;
+        ...       batch_first: true;
+        ...     }
         ...    }
-        ...
+        ... }
         ... fully_connected {
         ...     num_hidden_layers: 1;
         ...     hidden_size: 512;
@@ -112,11 +117,11 @@ def build(
               )
             )
           )
-          (predict_net): ModuleDict(
-            (dec_rnn): RNN(
+          (predict_net): TransducerPredictNet(
+            (embedding): Embedding(28, 256)
+            (pred_nn): RNN(
               (rnn): LSTM(256, 256, num_layers=2, batch_first=True)
             )
-            (embed): Embedding(28, 256)
           )
           (joint_net): ModuleDict(
             (fully_connected): FullyConnected(
@@ -130,7 +135,7 @@ def build(
         )
 
     """
-    # encoder output size is only required for build_transducer_enc if fc2
+    # encoder output size is only required for build_transducer_enc_cfg if fc2
     # layer is present
     # (else it is necessarily specified by the encoder's rnn hidden size).
     # If fc2 layer *is* present, output size will be equal to joint
@@ -141,7 +146,7 @@ def build(
         and transducer_cfg.fully_connected.hidden_size > 0
     ):
         out_enc_size = transducer_cfg.fully_connected.hidden_size
-    encoder, encoder_out = build_transducer_enc(
+    encoder, encoder_out = build_transducer_enc_cfg(
         transducer_cfg.transducer_encoder,
         input_features * input_channels,
         output_features=out_enc_size,
@@ -149,40 +154,40 @@ def build(
     if out_enc_size is not None:
         assert encoder_out == out_enc_size
 
-    # can get embedding dimension from the dec_rnn config
-    embedding = nn.Embedding(
-        vocab_size, embedding_dim=transducer_cfg.dec_rnn.hidden_size
-    )
-    dec_rnn, prediction_out = build_rnn(
-        transducer_cfg.dec_rnn, transducer_cfg.dec_rnn.hidden_size
+    predict_net, predict_net_out = build_transducer_predict_net(
+        transducer_cfg.transducer_predict_net, vocab_size
     )
 
-    joint_in_dim = encoder_out + prediction_out  # features are concatenated
+    joint_in_dim = encoder_out + predict_net_out  # features are concatenated
 
     fully_connected = build_fully_connected(
         transducer_cfg.fully_connected,
         input_features=joint_in_dim,
         output_features=vocab_size + 1,
     )
-    return Transducer(encoder, embedding, dec_rnn, fully_connected)
+    return Transducer(
+        encoder=encoder,
+        predict_net=predict_net,
+        fully_connected=fully_connected,
+    )
 
 
-def build_transducer_enc(
-    transducer_enc: transducer_encoder_pb2.TransducerEncoder,
+def build_transducer_enc_cfg(
+    transducer_enc_cfg: transducer_encoder_pb2.TransducerEncoder,
     input_features: int,
     output_features: Optional[int] = None,
 ) -> Tuple[TransducerEncoder, int]:
     """Returns a :py:class:`.TransducerEncoder` based on the config.
 
     Args:
-        transducer_enc: An ``TransducerEncoder`` protobuf object containing
+        transducer_enc_cfg: An ``TransducerEncoder`` protobuf object containing
             the config for the desired :py:class:`torch.nn.Module`.
 
         input_features: The number of features for the input.
 
         output_features: The number of output features of the encoder if
-            transducer_enc.HasField("fc2"). Otherwise the output size will be
-            equal to the hidden size of `rnn2` if present else `rnn1`.
+            transducer_enc_cfg.HasField("fc2"). Otherwise the output size will
+            be equal to the hidden size of `rnn2` if present else `rnn1`.
 
     Returns:
         A Tuple where the first element is an :py:class:`TransducerEncoder`
@@ -226,7 +231,7 @@ def build_transducer_enc(
         ...             cfg_text,
         ...             transducer_encoder_pb2.TransducerEncoder()
         ... )
-        >>> encoder, out = build_transducer_enc(cfg, input_features=400)
+        >>> encoder, out = build_transducer_enc_cfg(cfg, input_features=400)
         >>> encoder
         TransducerEncoder(
           (fc1): FullyConnected(
@@ -250,7 +255,7 @@ def build_transducer_enc(
         >>> out
         576
     """
-    if not transducer_enc.HasField("fc2"):
+    if not transducer_enc_cfg.HasField("fc2"):
         assert output_features is None
     elif output_features is not None:
         assert (
@@ -261,26 +266,26 @@ def build_transducer_enc(
     # maybe add fc1:
     fc1: Optional[torch.nn.Module] = None
 
-    if transducer_enc.HasField("fc1"):
-        out_fc1 = transducer_enc.rnn1.hidden_size
+    if transducer_enc_cfg.HasField("fc1"):
+        out_fc1 = transducer_enc_cfg.rnn1.hidden_size
         fc1 = build_fully_connected(
-            transducer_enc.fc1,
+            transducer_enc_cfg.fc1,
             input_features=input_features,
             output_features=out_fc1,
         )
         input_features = out_fc1
 
-    rnn1, rnn_out_features = build_rnn(transducer_enc.rnn1, input_features)
+    rnn1, rnn_out_features = build_rnn(transducer_enc_cfg.rnn1, input_features)
     # maybe add fc2:
     fc2: Optional[torch.nn.Module] = None
-    if transducer_enc.HasField("fc2"):
+    if transducer_enc_cfg.HasField("fc2"):
         if output_features is None:
             # Halves feature size if possible:
             output_features = rnn_out_features // 2
             output_features = output_features if output_features > 0 else 1
 
         fc2 = build_fully_connected(
-            transducer_enc.fc2,
+            transducer_enc_cfg.fc2,
             input_features=rnn_out_features,
             output_features=output_features,
         )
@@ -290,3 +295,41 @@ def build_transducer_enc(
     encoder = TransducerEncoder(rnn1=rnn1, fc1=fc1, fc2=fc2)
 
     return encoder, output_features
+
+
+def build_transducer_predict_net(
+    predict_net_cfg: transducer_predict_net_pb2.TransducerPredictNet,
+    input_features: int,
+) -> Tuple[TransducerEncoder, int]:
+    """Returns a :py:class:`TransducerPredictNet` based on the config.
+
+    Currently only supports prediction network variant where pred_nn is
+    an RNN.
+
+    Args:
+        predict_net_cfg: A ``TransducerPredictNet`` protobuf object
+            containing the config for the desired :py:class:`torch.nn.Module`.
+
+        input_features: The input feature size.
+
+    Returns:
+        A Tuple where the first element is an :py:class:`TransducerEncoder`
+        based on the config and the second element is the encoder output
+        feature size. See :py:class:`TransducerEncoder` docstrings for more
+        information.
+    """
+    if not predict_net_cfg.pred_nn.HasField("rnn"):
+        raise NotImplementedError(
+            "Non rnn-based prediction network not supported."
+        )
+    # can get embedding dimension from the pred_nn config
+    hidden_size = predict_net_cfg.pred_nn.rnn.hidden_size
+    embedding = nn.Embedding(input_features, embedding_dim=hidden_size)
+
+    pred_nn, predict_net_out = build_rnn(
+        predict_net_cfg.pred_nn.rnn, hidden_size
+    )
+    # Set hidden_size attribute
+    pred_nn.hidden_size = hidden_size
+    predict_net = TransducerPredictNet(embedding=embedding, pred_nn=pred_nn)
+    return predict_net, predict_net_out
