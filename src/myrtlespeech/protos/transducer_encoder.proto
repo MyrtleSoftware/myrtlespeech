@@ -5,7 +5,8 @@ package myrtlespeech.protos;
 import "myrtlespeech/protos/rnn.proto";
 import "myrtlespeech/protos/fully_connected.proto";
 
-// Transducer Encoder configuration
+// Configuration for Transducer Encoder Network
+// https://arxiv.org/pdf/1211.3711.pdf
 message TransducerEncoder {
 
   FullyConnected fc1 = 2;

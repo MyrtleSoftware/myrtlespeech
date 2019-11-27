@@ -12,9 +12,9 @@ from tests.protos.test_transducer import transducer
 
 @given(
     transducer_cfg=transducer(),
-    input_features=st.integers(min_value=2, max_value=32),
+    input_features=st.integers(min_value=2, max_value=16),
     input_channels=st.integers(min_value=1, max_value=5),
-    vocab_size=st.integers(min_value=1, max_value=32),
+    vocab_size=st.integers(min_value=1, max_value=8),
 )
 @settings(deadline=3000)
 def test_build_transducer_does_not_fail(

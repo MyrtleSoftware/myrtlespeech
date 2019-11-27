@@ -1,5 +1,6 @@
 from typing import Optional
 from typing import Tuple
+from typing import Union
 
 import torch
 
@@ -29,36 +30,33 @@ class Transducer(torch.nn.Module):
             It is possible *but not necessary* to use an initialized
             :py:class:`TransducerEncoder` class as the `encoder`.
 
-        embedding: A :py:class:`torch.nn.Module` which is an embedding lookup
-            for targets (eg graphemes, wordpieces) which accepts a
-            :py:`torch.Tensor` as input of size
-            ``[batch, max_output_seq_len]``.
-
-        dec_rnn: A :py:class:`torch.nn.Module` containing the recurrent part of
-            the Transducer prediction.
-
-            Must accept as input a tuple where the first element is the
-            prediction network input (a :py:`torch.Tensor`) with size ``[batch,
-            max_output_seq_len + 1, in_features]`` and the second element is a
-            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-            represent the sequence length of the corresponding *input*
-            sequence to the rnn. *Note: this must be a `batch_first` rnn.*
+        predict_net: A :py:class:`torch.nn.Module` to use as the prediction
+            network. `predict_net` must accept as input a Tuple where the
+            first element is the target label tensor of size ``[batch,
+            max_label_length]`` and the second is a :py:class:`torch.Tensor`
+            of size ``[batch]`` that contains the *input* lengths of these
+            target label sequences.
 
             It must return a tuple where the first element is the result after
-            applying the module to the input. It must have size ``[batch,
-            max_output_seq_len + 1, in_features]``. The second element of
-            the tuple return value is a :py:class:`torch.Tensor` with size
+            applying the module to the input and it must have size ``[batch,
+            max_output_seq_len + 1, in_features]``. Note that the dimension at
+            index 1 is `max_label_seq_len + 1` since the start-of-sequence
+            token is prepended to the label sequence. The second element of
+            the Tuple return value is a :py:class:`torch.Tensor` with size
             ``[batch]`` where each entry represents the sequence length of the
-            corresponding *output* sequence.
+            corresponding *output* label sequence.
+
+            It is possible *but not necessary* to use an initialized
+            :py:class:`TransducerPredictNet` class as the `predict_net`.
 
         fully_connected: A :py:class:`torch.nn.Module` containing the fully
             connected part of the Transducer joint network.
 
             Must accept as input a tuple where the first element is
             a :py:class:`torch.Tensor` with size ``[batch,
-            encoder_out_seq_len, dec_rnn_out_seq_len, hidden_dim]`` where
+            encoder_out_seq_len, pred_nn_out_seq_len, hidden_dim]`` where
             `hidden_dim` is the the concatenation of the `encoder` and
-            `dec_rnn` outputs along the hidden dimension axis. The second
+            `pred_nn` outputs along the hidden dimension axis. The second
             element is and the input (a :py:class:`torch.Tensor`) with size
             ``[batch, max_fc_in_seq_len, max_fc_in_features]`` and the second
             element is a :py:class:`torch.Tensor` of size ``[batch]``
@@ -74,16 +72,12 @@ class Transducer(torch.nn.Module):
 
     """
 
-    def __init__(self, encoder, embedding, dec_rnn, fully_connected):
+    def __init__(self, encoder, predict_net, fully_connected):
         super().__init__()
-
-        assert (
-            dec_rnn.batch_first is True
-        ), "dec_rnn should be a batch_first rnn"
 
         self.encode = encoder
 
-        self.predict_net = self._predict_net(embedding, dec_rnn)
+        self.predict_net = predict_net
 
         self.joint_net = self._joint_net(fully_connected)
 
@@ -91,10 +85,6 @@ class Transducer(torch.nn.Module):
 
         if self.use_cuda:
             self.cuda()
-
-    @staticmethod
-    def _predict_net(embedding, dec_rnn):
-        return torch.nn.ModuleDict({"embed": embedding, "dec_rnn": dec_rnn})
 
     @staticmethod
     def _joint_net(fully_connected):
@@ -149,7 +139,7 @@ class Transducer(torch.nn.Module):
         audio_data, label_data = self._prepare_inputs_forward(x, self.use_cuda)
 
         f = self.encode(audio_data)  # f[0] = (T, B, H1)
-        g = self.prediction(label_data)  # g[0] = (U, B, H2)
+        g = self.predict_net(label_data)  # g[0] = (U, B, H2)
 
         joint_inp = self._enc_pred_to_joint(f, g)
         out = self.joint(joint_inp)
@@ -157,94 +147,6 @@ class Transducer(torch.nn.Module):
         del f, g, audio_data, label_data, x, joint_inp
 
         return out
-
-    def prediction(
-        self, y: Tuple[torch.Tensor, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        r"""Returns the result of applying the Transducer prediction network.
-
-        This function is only appropriate during training when the
-        ground-truth labels are available.
-
-        .. note:: The length of the sequence is increased by one as the
-        start-of-sequence embedded state (all zeros) is prepended to the start
-        of the label sequence. Note that this change *is not* reflected in the
-        output lengths as the :py:class:`TransducerLoss` requires the true
-        label lengths.
-
-        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
-        :py:func:`torch.cuda.is_available` was :py:data:`True` on
-        initialisation.
-
-        Args:
-            y: A Tuple where the first element is the target label tensor of
-                size ``[batch, max_label_length]`` and the second is a
-                :py:class:`torch.Tensor` of size ``[batch]`` that contains the
-                *input* lengths of these target label sequences.
-
-        Returns:
-            Output from ``dec_rnn``. See initialisation docstring.
-        """
-
-        y = self.embedding(y)
-        y = self._prepend_SOS(y)
-        # Update the lengths with +1 for input to the dec_rnn
-        y = (y[0], y[1] + 1)
-        out = self.dec_rnn(y)
-        # Revert the lengths to 'true' values (i.e. not including SOS)
-        out = (out[0], out[1] - 1)
-
-        del y
-
-        return out
-
-    def embedding(
-        self, y: Tuple[torch.Tensor, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        r"""Wrapper function on `self._embedding`.
-
-        Casts inputs to int64 if necessary before applying embedding.
-
-        Args:
-            y: A Tuple where the first element is the target label tensor of
-                size ``[batch, max_label_length]`` and the second is a
-                :py:class:`torch.Tensor` of size ``[batch]`` that contains the
-                *input* lengths of these target label sequences.
-
-        Returns:
-            A Tuple where the first element is the embedded label tensor of
-            size ``[batch, max_label_length, hidden_size]`` and the second
-            is a :py:class:`torch.Tensor` of size ``[batch]`` that contains
-            the *output* lengths of these target label sequences. These
-            lengths will be the same as the input lengths.
-        """
-
-        y_0, y_1 = y
-
-        if y_0.dtype != torch.long:
-            y_0 = y_0.long()
-
-        out = (self.predict_net["embed"](y_0), y_1)
-
-        del y, y_0, y_1
-
-        return out
-
-    @staticmethod
-    def _prepend_SOS(y):
-        r"""Prepends the SOS embedding (all zeros) to the target tensor.
-        """
-        y_0, y_1 = y
-
-        B, _, H = y_0.shape
-        # preprend blank
-        start = torch.zeros((B, 1, H)).type(y_0.dtype).to(y_0.device)
-        y_0 = torch.cat([start, y_0], dim=1)  # (B, U + 1, H)
-        y_0 = y_0.contiguous()
-
-        del start, y
-
-        return (y_0, y_1)
 
     def joint(
         self,
@@ -354,11 +256,6 @@ class Transducer(torch.nn.Module):
         seq_lengths = (f[1], g[1])  # (time_lens, label_lens)
         del f, g
         return ((f_inp, g_inp), seq_lengths)
-
-    @property
-    def dec_rnn(self):
-        r"""Decoder RNN (in prediction network)."""
-        return self.predict_net["dec_rnn"]
 
 
 class TransducerEncoder(torch.nn.Module):
@@ -558,3 +455,184 @@ class TransducerEncoder(torch.nn.Module):
             x = x.view(B, 1, C * I, T).contiguous()
         del inp
         return (x, x_lens)
+
+
+class TransducerPredictNet(torch.nn.Module):
+    r"""`Transducer <https://arxiv.org/pdf/1211.3711.pdf>`_ prediction network.
+
+    Args:
+        embedding: A :py:class:`torch.nn.Module` which is an embedding lookup
+            for targets (eg graphemes, wordpieces) that accepts a
+            :py:`torch.Tensor` as input of size
+            ``[batch, max_output_seq_len]``.
+
+        pred_nn: A :py:class:`torch.nn.Module` containing the non-embedding
+            module the Transducer prediction.
+
+            `pred_nn` can be *any* :py:class:`torch.nn.Module` that
+            has the same input and return arguments as a
+            :py:class:`myrtlespeech.model.rnn.RNN` with `batch_first=True` as
+            well as the integer attribute `hidden_size`.
+
+    """
+
+    def __init__(self, embedding: torch.nn.Module, pred_nn: torch.nn.Module):
+        assert hasattr(
+            pred_nn, "hidden_size"
+        ), "pred_nn must have attribute `hidden_size`"
+        super().__init__()
+        self.embedding = embedding
+        self.pred_nn = pred_nn
+        self.hidden_size = pred_nn.hidden_size
+
+    def forward(
+        self, y: Tuple[torch.Tensor, torch.Tensor]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        r"""Returns the result of applying the Transducer prediction network.
+
+        .. note:: This function is only appropriate *during training* when the
+        ground-truth labels are available. The :py:meth:`predict`
+        should be used for inference with `training=False`.
+
+        .. note:: The length of the sequence is increased by one as the
+        start-of-sequence embedded state (all zeros) is prepended to the start
+        of the label sequence. Note that this change *is not* reflected in the
+        output lengths as the :py:class:`TransducerLoss` requires the true
+        label lengths.
+
+        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
+        :py:func:`torch.cuda.is_available` was :py:data:`True` on
+        initialisation.
+
+        Args:
+            y: A Tuple where the first element is the target label tensor of
+                size ``[batch, max_label_length]`` and the second is a
+                :py:class:`torch.Tensor` of size ``[batch]`` that contains the
+                *input* lengths of these target label sequences.
+
+        Returns:
+            Output from ``pred_nn``. See initialisation docstring.
+        """
+        return self.predict(y, hidden_state=None, training=True)
+
+    def predict(
+        self,
+        y: Optional[Tuple[torch.Tensor, torch.Tensor]],
+        hidden_state: Optional[
+            Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]
+        ],
+        training: bool,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        r"""Excecutes :py:class:`TransducerPredictNet`.
+
+        The behavior is different depending on whether system is training or
+        performing inference.
+
+        Args:
+            y: A Optional Tuple where the first element is the target label
+                tensor of size ``[batch, max_label_length]`` and the second is
+                a :py:class:`torch.Tensor` of size ``[batch]`` that contains
+                the *input* lengths of these target label sequences. `y` can
+                be None iff `training`=False.
+
+            hidden_state: The Optional hidden state of `pred_nn` which is
+                either a length 2 Tuple of :py:class:`torch.Tensor`s or
+                a single :py:class:`torch.Tensor` depending on the ``RNNType``
+                (see :py:class:`torch.nn` documentation for more information).
+
+                `hidden_state` must be None when `training`=True.
+
+            training: A boolean. If True then training is being performed and
+                if False, inference is being performed. When `training`=False,
+                the hidden_state is passed to `self.dec_pred` and the output
+                of this function will include the returned :py:class:`RNN`,
+                hidden state (see :py:class:`RNN` for more details.)
+
+        Returns:
+            This will return the output of 'pred_nn' where a hidden state is
+            present iff `training = False` See :py:class:`RNN` for more
+            information.
+        """
+        assert self.training == training, (
+            f"Attempting to use TransducerPredictNet predict method with arg "
+            f"training={training} but self.training={self.training}"
+        )
+
+        if training:
+            assert (
+                hidden_state is None
+            ), "Do not pass hidden_state during training"
+            assert y is not None, f"y must be None during training"
+
+        if y is None:  # then performing inference and at start-of-sequence
+            B = 1 if hidden_state is None else hidden_state[0].size(1)
+            y = torch.zeros((1, B, self.hidden_size)), torch.IntTensor([1])
+        else:
+            assert (
+                isinstance(y, tuple) and len(y) == 2
+            ), f"y must be a tuple of length 2"
+            y = self.embed(y)
+
+        if training:
+            pred_inp = self._prepend_SOS(y)
+            # Update the lengths by adding one before inputing to the pred_nn
+            pred_inp = (pred_inp[0], pred_inp[1] + 1)
+        else:
+            pred_inp = (y[0], hidden_state), y[1]
+
+        out = self.pred_nn(pred_inp)
+
+        if training:
+            # Revert the lengths to 'true' values (i.e. not including SOS)
+            # by subtracting one
+            out = (out[0], out[1] - 1)
+
+        return out
+
+    def embed(
+        self, y: Tuple[torch.Tensor, torch.Tensor]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        r"""Wrapper function on `self.embedding`.
+
+        Casts inputs to int64 if necessary before applying `self.embedding`.
+
+        Args:
+            y: A Tuple where the first element is the target label tensor of
+                size ``[batch, max_label_length]`` and the second is a
+                :py:class:`torch.Tensor` of size ``[batch]`` that contains the
+                *input* lengths of these target label sequences.
+
+        Returns:
+            A Tuple where the first element is the embedded label tensor of
+            size ``[batch, max_label_length, hidden_size]`` and the second
+            is a :py:class:`torch.Tensor` of size ``[batch]`` that contains
+            the *output* lengths of these target label sequences. These
+            lengths will be the same as the input lengths.
+        """
+
+        y_0, y_1 = y
+
+        if y_0.dtype != torch.long:
+            y_0 = y_0.long()
+
+        out = (self.embedding(y_0), y_1)
+
+        del y, y_0, y_1
+
+        return out
+
+    @staticmethod
+    def _prepend_SOS(y):
+        r"""Prepends the SOS embedding (all zeros) to the target tensor.
+        """
+        y_0, y_1 = y
+
+        B, _, H = y_0.shape
+        # preprend blank
+        start = torch.zeros((B, 1, H)).type(y_0.dtype).to(y_0.device)
+        y_0 = torch.cat([start, y_0], dim=1)  # (B, U + 1, H)
+        y_0 = y_0.contiguous()
+
+        del start, y
+
+        return (y_0, y_1)
