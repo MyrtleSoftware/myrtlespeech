@@ -3,11 +3,11 @@ from typing import Tuple
 from typing import Union
 
 import hypothesis.strategies as st
-from myrtlespeech.protos import rnn_t_pb2
+from myrtlespeech.protos import transducer_pb2
 
 from tests.protos.test_fully_connected import fully_connecteds
 from tests.protos.test_rnn import rnns
-from tests.protos.test_rnn_t_encoder import rnn_t_encoder
+from tests.protos.test_transducer_encoder import transducer_encoder
 from tests.protos.utils import all_fields_set
 
 
@@ -15,17 +15,17 @@ from tests.protos.utils import all_fields_set
 
 
 @st.composite
-def rnn_t(
+def transducer(
     draw, return_kwargs: bool = False
 ) -> Union[
-    st.SearchStrategy[rnn_t_pb2.RNNT],
-    st.SearchStrategy[Tuple[rnn_t_pb2.RNNT, Dict]],
+    st.SearchStrategy[transducer_pb2.Transducer],
+    st.SearchStrategy[Tuple[transducer_pb2.Transducer, Dict]],
 ]:
-    """Returns a SearchStrategy for RNNT plus maybe the kwargs."""
+    """Returns a SearchStrategy for Transducer plus maybe the kwargs."""
     kwargs: Dict = {}
 
-    kwargs["rnn_t_encoder"], enc_kwargs = draw(
-        rnn_t_encoder(return_kwargs=True)
+    kwargs["transducer_encoder"], enc_kwargs = draw(
+        transducer_encoder(return_kwargs=True)
     )
     kwargs["dec_rnn"], dec_kwargs = draw(
         rnns(batch_first=True, return_kwargs=True)
@@ -35,9 +35,9 @@ def rnn_t(
     )
 
     # initialise and return
-    all_fields_set(rnn_t_pb2.RNNT, kwargs)
-    rnn_t = rnn_t_pb2.RNNT(**kwargs)  # type: ignore
+    all_fields_set(transducer_pb2.Transducer, kwargs)
+    transducer = transducer_pb2.Transducer(**kwargs)  # type: ignore
 
     if not return_kwargs:
-        return rnn_t
-    return rnn_t, kwargs
+        return transducer
+    return transducer, kwargs

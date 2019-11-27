@@ -1,11 +1,11 @@
-from myrtlespeech.model.rnn_t import RNNT
+from myrtlespeech.model.transducer import Transducer
 from myrtlespeech.post_process.rnn_t_greedy_decoder import RNNTGreedyDecoder
 from myrtlespeech.protos import rnn_t_greedy_decoder_pb2
 
 
 def build(
     rnn_t_greedy_decoder_cfg: rnn_t_greedy_decoder_pb2.RNNTGreedyDecoder,
-    model: RNNT,
+    model: Transducer,
 ) -> RNNTGreedyDecoder:
     r"""Returns a :py:class:`RNNTGreedyDecoder` based on the config.
 
@@ -15,8 +15,9 @@ def build(
             :py:class:`RNNTGreedyDecoder`.
 
 
-        model: A :py:class:`myrtlespeech.model.rnn_t.RNNT` model to use during
-            decoding. See the py:class:`myrtlespeech.model.rnn_t.RNNT`
+        model: A :py:class:`myrtlespeech.model.transducer.Transducer` model to
+            use during decoding. See the
+            :py:class:`myrtlespeech.model.transducer.Transducer`
             docstring for more information.
 
     Returns:

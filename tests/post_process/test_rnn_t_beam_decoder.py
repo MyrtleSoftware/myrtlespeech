@@ -1,14 +1,14 @@
 from typing import Tuple
 
 import torch
-from myrtlespeech.model.rnn_t import RNNT
+from myrtlespeech.model.transducer import Transducer
 from myrtlespeech.post_process.rnn_t_beam_decoder import RNNTBeamDecoder
 
 
 # Fixtures and Strategies -----------------------------------------------------
 
 
-class DummyRNNTModel(torch.nn.Module):
+class DummyTransducerModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.use_cuda = False
@@ -28,7 +28,7 @@ class DummyRNNTModel(torch.nn.Module):
 
         assert (
             C == 1
-        ), f"In DummyRNNTModel(), input channels must == 1 but C == {C}"
+        ), f"In DummyTransducerModel(), input channels must == 1 but C == {C}"
         h = h.squeeze(1)  # B, H, T
         h = h.permute(2, 0, 1)
 
@@ -42,11 +42,11 @@ class DummyRNNTModel(torch.nn.Module):
 
     @staticmethod
     def _certify_inputs_forward(*args):
-        return RNNT._certify_inputs_forward(*args)
+        return Transducer._certify_inputs_forward(*args)
 
     @staticmethod
     def _prepare_inputs_forward(*args):
-        return RNNT._prepare_inputs_forward(*args)
+        return Transducer._prepare_inputs_forward(*args)
 
 
 class RNN:
@@ -140,7 +140,7 @@ class RNNTBeamDecoderDummy(RNNTBeamDecoder):
 def get_fixed_decoder(max_symbols_per_step=100):
     # alphabet = ["_", "a", "b"]
     blank_index = 0
-    model = DummyRNNTModel()
+    model = DummyTransducerModel()
     length_norm = False
     return RNNTBeamDecoderDummy(
         blank_index=blank_index,

@@ -16,9 +16,9 @@ from tests.protos.test_ctc_loss import ctc_losses
 from tests.protos.test_deep_speech_1 import deep_speech_1s
 from tests.protos.test_deep_speech_2 import deep_speech_2s
 from tests.protos.test_pre_process_step import pre_process_steps
-from tests.protos.test_rnn_t import rnn_t
 from tests.protos.test_rnn_t_decoders import rnn_t_beam_decoder
 from tests.protos.test_rnn_t_decoders import rnn_t_greedy_decoder
+from tests.protos.test_transducer import transducer
 from tests.protos.test_transducer_loss import transducer_losses
 from tests.protos.utils import all_fields_set
 
@@ -65,14 +65,14 @@ def speech_to_texts(
             "TODO: fix hack that assumes input_features>200 for deep_speech_2"
         )
         assume(input_features > 200)
-    elif model_str == "rnn_t":
-        kwargs[model_str] = draw(rnn_t())
+    elif model_str == "transducer":
+        kwargs[model_str] = draw(transducer())
     else:
         raise ValueError(f"unknown model type {model_str}")
 
     # choice of two paths:
     # 1) ds2/ds1 -> `ctc`
-    # 2) rnn_t -> `rnnt`
+    # 2) transducer -> `rnnt`
 
     # record blank index to share between CTC components
     blank_index: Optional[int] = None

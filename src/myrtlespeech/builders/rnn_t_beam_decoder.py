@@ -1,10 +1,11 @@
-from myrtlespeech.model.rnn_t import RNNT
+from myrtlespeech.model.transducer import Transducer
 from myrtlespeech.post_process.rnn_t_beam_decoder import RNNTBeamDecoder
 from myrtlespeech.protos import rnn_t_beam_decoder_pb2
 
 
 def build(
-    rnn_t_beam_decoder_cfg: rnn_t_beam_decoder_pb2.RNNTBeamDecoder, model: RNNT
+    rnn_t_beam_decoder_cfg: rnn_t_beam_decoder_pb2.RNNTBeamDecoder,
+    model: Transducer,
 ) -> RNNTBeamDecoder:
     """Returns a :py:class:`RNNTBeamDecoder` based on the config.
 
@@ -12,8 +13,9 @@ def build(
         rnn_t_beam_decoder_cfg: A ``RNNTBeamDecoder`` protobuf object
             containing the config for the desired :py:class:`RNNTBeamDecoder`.
 
-        model: A :py:class:`myrtlespeech.model.rnn_t.RNNT` model to use during
-            decoding. See the py:class:`myrtlespeech.model.rnn_t.RNNT`
+        model: A :py:class:`myrtlespeech.model.transducer.Transducer` model
+            to use during decoding. See the
+            :py:class:`myrtlespeech.model.transducer.Transducer`
             docstring for more information.
 
     Returns:

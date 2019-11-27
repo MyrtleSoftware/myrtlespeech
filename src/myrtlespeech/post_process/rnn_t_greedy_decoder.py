@@ -4,12 +4,12 @@ from typing import Tuple
 from typing import Union
 
 import torch
-from myrtlespeech.model.rnn_t import RNNT
+from myrtlespeech.model.transducer import Transducer
 from myrtlespeech.post_process.rnn_t_decoder_base import RNNTDecoderBase
 
 
 class RNNTGreedyDecoder(RNNTDecoderBase):
-    """Decodes RNNT output using a greedy strategy.
+    """Decodes Transducer output using a greedy strategy.
 
     Args:
         See :py:class:`RNNTDecoderBase`.
@@ -18,7 +18,7 @@ class RNNTGreedyDecoder(RNNTDecoderBase):
     def __init__(
         self,
         blank_index: int,
-        model: RNNT,
+        model: Transducer,
         max_symbols_per_step: Optional[Union[int, None]] = None,
     ):
 
@@ -29,7 +29,7 @@ class RNNTGreedyDecoder(RNNTDecoderBase):
         )
 
     def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
-        """Greedy RNNT decode method.
+        """Greedy Transducer decode method.
 
         See :py:class:`RNNTDecoderBase` for args"""
 

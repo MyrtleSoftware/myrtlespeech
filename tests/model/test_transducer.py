@@ -2,10 +2,10 @@ import hypothesis.strategies as st
 import torch
 from hypothesis import given
 from hypothesis import settings
-from myrtlespeech.builders.rnn_t import build as build_rnn_t
-from myrtlespeech.protos import rnn_t_pb2
+from myrtlespeech.builders.transducer import build as build_transducer
+from myrtlespeech.protos import transducer_pb2
 
-from tests.protos.test_rnn_t import rnn_t
+from tests.protos.test_transducer import transducer
 
 
 # Tests -----------------------------------------------------------------------
@@ -13,7 +13,7 @@ from tests.protos.test_rnn_t import rnn_t
 
 @given(
     data=st.data(),
-    rnn_t_cfg=rnn_t(),
+    transducer_cfg=transducer(),
     input_features=st.integers(min_value=2, max_value=12),
     input_channels=st.integers(min_value=1, max_value=5),
     vocab_size=st.integers(min_value=2, max_value=32),
@@ -21,14 +21,16 @@ from tests.protos.test_rnn_t import rnn_t
 @settings(deadline=5000)
 def test_all_gradients_computed_for_all_model_parameters(
     data,
-    rnn_t_cfg: rnn_t_pb2.RNNT,
+    transducer_cfg: transducer_pb2.Transducer,
     input_features: int,
     input_channels: int,
     vocab_size: int,
 ) -> None:
 
     # create network
-    rnnt = build_rnn_t(rnn_t_cfg, input_features, input_channels, vocab_size)
+    transducer = build_transducer(
+        transducer_cfg, input_features, input_channels, vocab_size
+    )
 
     # generate random input
     batch = data.draw(st.integers(1, 4))
@@ -61,12 +63,12 @@ def test_all_gradients_computed_for_all_model_parameters(
         input = ((x, y), (seq_lens, label_seq_lens))
 
     # forward pass
-    out = rnnt(input)
+    out = transducer(input)
 
     # backward pass using mean as proxy for an actual loss function
     loss = out[0].mean()
     loss.backward()
 
     # check all parameters have gradient
-    for name, p in rnnt.named_parameters():
+    for name, p in transducer.named_parameters():
         assert p.grad is not None, f"{name} has no gradient"

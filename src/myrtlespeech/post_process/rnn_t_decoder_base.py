@@ -5,11 +5,11 @@ from typing import Union
 
 import torch
 from myrtlespeech.data.batch import collate_label_list
-from myrtlespeech.model.rnn_t import RNNT
+from myrtlespeech.model.transducer import Transducer
 
 
 class RNNTDecoderBase(torch.nn.Module):
-    r"""Base RNNT decoder class.
+    r"""Base Transducer decoder class.
 
     *This should not be instantiated directly.* Instead use specific
     decoders (e.g. :py:class:`RNNTGreedyDecoder` or
@@ -19,11 +19,12 @@ class RNNTDecoderBase(torch.nn.Module):
         blank_index: Index of the "blank" symbol. It is advised that the blank
             symbol is placed at the end of the alphabet in order to avoid
             different symbol index conventions in the prediction and joint
-            networks (i.e. input and output of RNN-T) but this condition is not
-            enforced here.
+            networks (i.e. input and output of Transducer) but this condition
+            is not enforced here.
 
-        model: An :py:class:`myrtlespeech.model.rnn_t.RNNT` model to use during
-            decoding. See the py:class:`myrtlespeech.model.rnn_t.RNNT`
+        model: An :py:class:`myrtlespeech.model.transducer.Transducer` model
+            to use during decoding. See the
+            :py:class:`myrtlespeech.model.transducer.Transducer`
             docstring for more information.
 
         max_symbols_per_step: The maximum number of symbols that can be added
@@ -48,7 +49,7 @@ class RNNTDecoderBase(torch.nn.Module):
     def __init__(
         self,
         blank_index: int,
-        model: RNNT,
+        model: Transducer,
         max_symbols_per_step: Optional[Union[int, None]] = None,
     ):
         if blank_index < 0:
@@ -74,12 +75,12 @@ class RNNTDecoderBase(torch.nn.Module):
         inputs: Tuple[torch.Tensor, torch.Tensor],
         lengths: Tuple[torch.Tensor, torch.Tensor],
     ) -> List[List[int]]:
-        r"""Decodes RNN-T output.
+        r"""Decodes Transducer output.
 
-        Note that the input args are the same as the :py:class:`.RNNT` args but
-        here the tuple of args is unpacked with `.forward(*args)` while
-        for the :py:class:`.RNNT` network they are passed as is:
-        `.forward(args)`.
+        Note that the input args are the same as the
+        :py:class:`.Transducer` args but here the tuple of args is unpacked
+        with :py:meth:`forward(*args)` while for the :py:class:`.Transducer`
+        network they are passed as is: :py:meth:`forward(args)`.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
@@ -141,7 +142,7 @@ class RNNTDecoderBase(torch.nn.Module):
                 :py:class:`torch.Tensor` of size ``[batch]`` where each entry
                 represents the sequence length of the corresponding *input*
                 sequence to the rnn.  Note that `inp` is passed straight to
-                :py:class:`myrtlespeech.model.rnn_t.RNNTEncoder`.
+                :py:class:`myrtlespeech.model.transducer.TransducerEncoder`.
 
         Returns:
             A List of length `[batch]` where each element is a List of indexes.
