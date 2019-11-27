@@ -12,5 +12,5 @@ import "myrtlespeech/protos/transducer_predict_net.proto";
 message Transducer {
   TransducerEncoder transducer_encoder = 1;
   TransducerPredictNet transducer_predict_net = 2;
-  FullyConnected fully_connected = 4;
+  FullyConnected joint_net = 4;
 }

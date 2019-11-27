@@ -30,7 +30,7 @@ def transducer(
     kwargs["transducer_predict_net"], dec_kwargs = draw(
         transducer_predict_net(return_kwargs=True)
     )
-    kwargs["fully_connected"], fc_kwargs = draw(
+    kwargs["joint_net"], fc_kwargs = draw(
         fully_connecteds(valid_only=True, return_kwargs=True)
     )
 
