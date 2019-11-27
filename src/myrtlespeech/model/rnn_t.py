@@ -7,9 +7,6 @@ import torch
 class RNNT(torch.nn.Module):
     r"""`RNN-T <https://arxiv.org/pdf/1211.3711.pdf>`_ Network.
 
-    Architecture loosely  based on `Streaming End-to-end Speech Recognition
-    For Mobile Devices <https://arxiv.org/pdf/1811.06621.pdf>`_.
-
     Args:
         encoder: A :py:class:`RNNTEncoder` with initialised RNN-T encoder.
 
@@ -370,10 +367,6 @@ class RNNTEncoder(torch.nn.Module):
 
     .. note:: If present, the modules are applied in the following order:
         ``fc1`` -> ``rnn1`` -> ``fc2``
-
-    Architecture based on `Streaming End-to-end Speech Recognition For Mobile
-    Devices <https://arxiv.org/pdf/1811.06621.pdf>`_ with addition of Optional
-    fully connected layers at the start and end of the encoder.
 
     Args:
         rnn1: A :py:class:`torch.nn.Module` containing the first recurrent part
