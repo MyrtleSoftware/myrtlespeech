@@ -88,9 +88,7 @@ def test_transducer_loss_small_worked_example_1() -> None:
     loss_values = []
     eps_values = [1e-6, 1e-4, 1e-2, 0.1, 0.2, 0.4, 0.49]
     for eps in eps_values:
-        log_probs, log_lens = _get_log_probs_helper(eps)
-
-        inputs = (log_probs, (log_lens, targets[1]))
+        inputs = _get_log_probs_helper(eps)
         loss_value = transducer_loss(inputs, targets)
 
         assert isinstance(loss_value, torch.Tensor)
@@ -130,10 +128,10 @@ def test_transducer_loss_small_worked_example_2() -> None:
     probs = torch.ones((1, 2, 2, 2)) * 0.5
     log_probs = probs.log()
     log_lens = torch.IntTensor([2])
+    inputs = (log_probs, log_lens)
 
     targets = _label_collate_helper([torch.IntTensor([0])])
 
-    inputs = (log_probs, (log_lens, targets[1]))
     loss_value = transducer_loss(inputs, targets).cpu()
 
     expected_loss = -torch.log(torch.tensor([1 / 4.0]))
