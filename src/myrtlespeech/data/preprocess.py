@@ -203,12 +203,14 @@ class Downsample:
         if subsample < 2:
             raise ValueError(
                 f"Downsampling can only occur with subsample >= 2 "
-                f"but subsample ={subsample}"
+                f"but subsample={subsample} "
             )
         self.subsample = subsample
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
-        """Returns the :py:class:`torch.Tensor` after downsampling in time.
+        """Returns the downsampled :py:class:`torch.Tensor`.
+
+        In other words, this returns x[:, :, ::self.subsample].
 
         Args:
             x: :py:class:`torch.Tensor` with size ``(channels, features,
@@ -218,20 +220,12 @@ class Downsample:
             A :py:class:`torch.Tensor` with size ``(channels, features,
             seq_len // self.subsample)``.
         """
-        x = x.transpose(0, 2)
 
         assert (
-            x.shape[0] >= self.subsample
+            x.shape[2] >= self.subsample
         ), f"Downsampling not possible since seq_len < self.subsample"
 
-        subsampled_signal = [
-            x_row.unsqueeze(0)
-            for i, x_row in enumerate(x)
-            if i % self.subsample == 0
-        ]
-        subsampled_tensor = torch.cat(subsampled_signal, dim=0)
-
-        return subsampled_tensor.transpose(0, 2).contiguous()
+        return x[:, :, :: self.subsample].contiguous()
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + f"(subsample={self.subsample})"
