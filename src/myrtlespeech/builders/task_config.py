@@ -1,5 +1,6 @@
 import multiprocessing
 from typing import Tuple
+from typing import Union
 
 import torch
 from myrtlespeech.builders.dataset import build as build_dataset
@@ -111,32 +112,31 @@ def build(
     )
 
     shuffle = task_config.train_config.shuffle_batches_before_every_epoch
+    batch_sampler: Union[SortaGrad, SequentialRandomSampler]
     if task_config.train_config.sortagrad:
-        train_loader = torch.utils.data.DataLoader(
-            dataset=train_dataset,
-            batch_sampler=SortaGrad(
-                indices=range(len(train_dataset)),
-                batch_size=task_config.train_config.batch_size,
-                shuffle=shuffle,
-                drop_last=False,
-            ),
-            num_workers=num_workers,
-            collate_fn=lambda batch: seq_to_seq_collate_fn(batch, sort=True),
-            pin_memory=torch.cuda.is_available(),
+        batch_sampler = SortaGrad(
+            indices=range(len(train_dataset)),
+            batch_size=task_config.train_config.batch_size,
+            shuffle=shuffle,
+            drop_last=False,
         )
+        sort = True
     else:
-        train_loader = torch.utils.data.DataLoader(
-            dataset=train_dataset,
-            batch_sampler=SequentialRandomSampler(
-                indices=range(len(train_dataset)),
-                batch_size=task_config.train_config.batch_size,
-                shuffle=shuffle,
-                drop_last=False,
-            ),
-            num_workers=num_workers,
-            collate_fn=lambda batch: seq_to_seq_collate_fn(batch, sort=False),
-            pin_memory=torch.cuda.is_available(),
+        batch_sampler = SequentialRandomSampler(
+            indices=range(len(train_dataset)),
+            batch_size=task_config.train_config.batch_size,
+            shuffle=shuffle,
+            drop_last=False,
         )
+        sort = False
+
+    train_loader = torch.utils.data.DataLoader(
+        dataset=train_dataset,
+        batch_sampler=batch_sampler,
+        num_workers=num_workers,
+        collate_fn=lambda batch: seq_to_seq_collate_fn(batch, sort=sort),
+        pin_memory=torch.cuda.is_available(),
+    )
 
     # eval
     eval_dataset = build_dataset(
