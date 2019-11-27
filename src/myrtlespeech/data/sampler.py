@@ -11,7 +11,14 @@ class SequentialRandomSampler:
     sequential iterator is returned if the current count is in `sequential`.
 
     Args:
-        batches: A list of batches.
+        indices: data with which batches are created.
+        batch_size: Batch dimension.
+        shuffle: Set to True to have the data reshuffled at every epoch if a
+            random iterator is used.
+        drop_last: (optional, bool): Set to True to drop the last incomplete
+            batch, if the dataset size is not divisible by the batch size. If
+            False and the size of dataset is not divisible by the batch size,
+            then the last batch will be smaller.
         n_iterators (optional, int): Number of iterators returned so far.
         sequential (optional, set of int): Counts at which to return a
             sequential iterator.
@@ -80,7 +87,16 @@ class SortaGrad(SequentialRandomSampler):
     https://arxiv.org/abs/1512.02595
 
     Args:
-        batches: A list of batches.
+        indices: data with which batches are created.
+        batch_size: Batch dimension.
+        shuffle: Set to True to have the data reshuffled at every epoch if a
+            random iterator is used.
+        drop_last: (optional, bool): Set to True to drop the last incomplete
+            batch, if the dataset size is not divisible by the batch size. If
+            False and the size of dataset is not divisible by the batch size,
+            then the last batch will be smaller.
+        start_epoch (optional, int): Number of iterators returned so far by the
+            sampler.
 
     Yields:
         Batches from `batches`.
