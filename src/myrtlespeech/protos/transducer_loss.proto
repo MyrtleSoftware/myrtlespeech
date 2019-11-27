@@ -3,7 +3,7 @@ syntax = "proto3";
 package myrtlespeech.protos;
 
 
-message RNNTLoss {
+message TransducerLoss {
   enum REDUCTION {
     // No reduction will be applied.
     NONE = 0;

@@ -1,10 +1,10 @@
 from typing import Tuple
 
 import torch
-from warprnnt_pytorch import RNNTLoss as WarpRNNTLoss
+from warprnnt_pytorch import RNNTLoss as WarpTransducerLoss
 
 
-class RNNTLoss(torch.nn.Module):
+class TransducerLoss(torch.nn.Module):
     """Wrapped :py:class:`warprnnt_pytorch.RNNTLoss`.
 
     Args:
@@ -23,13 +23,15 @@ class RNNTLoss(torch.nn.Module):
                 Sum all losses in a batch.
 
     Attributes:
-        rnnt_loss: A :py:class:`warprnnt_pytorch.RNNTLoss` instance.
+        transducer_loss: A :py:class:`warprnnt_pytorch.RNNTLoss` instance.
         use_cuda: If true, loss is evaluated on GPU.
     """
 
     def __init__(self, blank: int, reduction: str = "mean"):
         super().__init__()
-        self.rnnt_loss = WarpRNNTLoss(blank=blank, reduction=reduction)
+        self.transducer_loss = WarpTransducerLoss(
+            blank=blank, reduction=reduction
+        )
         self.use_cuda = torch.cuda.is_available()
 
     def forward(
@@ -37,7 +39,7 @@ class RNNTLoss(torch.nn.Module):
         inputs: Tuple[torch.Tensor, torch.Tensor],
         targets: Tuple[torch.Tensor, torch.Tensor],
     ) -> torch.Tensor:
-        """Computes RNNT loss.
+        """Computes Transducer loss.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
@@ -87,7 +89,7 @@ class RNNTLoss(torch.nn.Module):
             y = y.cuda()
             y_lens = y_lens.cuda()
 
-        loss = self.rnnt_loss(
+        loss = self.transducer_loss(
             acts=logits, labels=y, act_lens=logit_lens, label_lens=y_lens
         )
 

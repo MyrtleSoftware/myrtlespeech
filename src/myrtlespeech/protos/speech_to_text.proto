@@ -9,7 +9,7 @@ import "myrtlespeech/protos/deep_speech_1.proto";
 import "myrtlespeech/protos/deep_speech_2.proto";
 import "myrtlespeech/protos/pre_process_step.proto";
 import "myrtlespeech/protos/rnn_t.proto";
-import "myrtlespeech/protos/rnn_t_loss.proto";
+import "myrtlespeech/protos/transducer_loss.proto";
 import "myrtlespeech/protos/rnn_t_greedy_decoder.proto";
 import "myrtlespeech/protos/rnn_t_beam_decoder.proto";
 
@@ -29,7 +29,7 @@ message SpeechToText {
   // Supported loss functions.
   oneof supported_losses {
     CTCLoss ctc_loss = 5;
-    RNNTLoss rnn_t_loss = 9;
+    TransducerLoss transducer_loss = 9;
   }
 
   // Supported post processing of network output.
