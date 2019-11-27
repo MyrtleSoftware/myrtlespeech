@@ -102,8 +102,7 @@ def test_pad_sequences_returns_tensor_with_correct_values(
 
 
 def test_seq_to_seq_collate_fn() -> None:
-    """Unit test to ensure seq_to_seq_collate_fn returns correct values when
-    sort=False."""
+    """Ensure seq_to_seq_collate_fn returns correct values when sort=False."""
     inputs = [rand([1, 2, 3]), rand([1, 2, 5])]
     seq_lens = tensor([3, 5])
 
@@ -131,8 +130,7 @@ def test_seq_to_seq_collate_fn() -> None:
 
 
 def test_seq_to_seq_collate_fn_sorted() -> None:
-    """Unit test to ensure seq_to_seq_collate_fn returns correct values when
-    sort=True."""
+    """Ensure seq_to_seq_collate_fn returns correct values when sort=True."""
     inputs = [rand([1, 2, 3]), rand([1, 2, 5])]
     seq_lens = tensor([3, 5])
 

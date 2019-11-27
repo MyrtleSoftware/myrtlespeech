@@ -3,16 +3,19 @@ import random
 
 class SequentialRandomSampler:
     """A sequential or random iterable over batches.
+
     The iterator used each time this iterable is iterated over will yield
     batches either sequentially (i.e. in-order) or randomly (uniform without
     replacement) from `batches`.
     This iterable records the number of times it has returned an iterator. A
     sequential iterator is returned if the current count is in `sequential`.
+
     Args:
         batches: A list of batches.
         n_iterators (optional, int): Number of iterators returned so far.
         sequential (optional, set of int): Counts at which to return a
             sequential iterator.
+
     Yields:
         Batches from `batches`.
     """
@@ -70,11 +73,15 @@ class SequentialRandomSampler:
 
 class SortaGrad(SequentialRandomSampler):
     """An iterable over batch indices according to the SortaGrad strategy.
+
     The SortaGrad curriculum learning strategy iterates over batches from the
     batched dataset sequentially for the first pass and then randomly for all
-    other passes.
+    other passes. See Deep Speech 2 paper for more information on this:
+    https://arxiv.org/abs/1512.02595
+
     Args:
         batches: A list of batches.
+
     Yields:
         Batches from `batches`.
     """
