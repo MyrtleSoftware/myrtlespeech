@@ -302,7 +302,7 @@ def build_transducer_predict_net(
     an RNN.
 
     Args:
-        predict_net_cfg: A ``TransducerPredictNet`` protobuf object
+        predict_net_cfg: a ``TransducerPredictNet`` protobuf object
             containing the config for the desired :py:class:`torch.nn.Module`.
 
         input_features: The input feature size.
