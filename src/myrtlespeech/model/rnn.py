@@ -143,7 +143,7 @@ class RNN(torch.nn.Module):
                 The return type `res[0]` will be the same as the `x[0]` type so
                 you should pass `hid = None` if you would like the hidden state
                 returned and it is the start-of-sequence. In this case, the
-                hidden state(s) will be initialised to zero in Pytorch.
+                hidden state(s) will be initialised to zero in PyTorch.
 
                 ``x[1]`` is a :py:class:`torch.Tensor` where each entry
                 represents the sequence length of the corresponding network
@@ -151,20 +151,19 @@ class RNN(torch.nn.Module):
 
         Returns:
             A Tuple ``(res[0], res[1])``. ``res[0]`` will take the same form as
-                ``x[0]``: either a tuple ``res[0] = (out, hid)`` or a
-                :py:class:`torch.Tensor`` torch tensor
-                ``res[0] = out``. ``out`` is is the result after applying the
-                RNN to ``inp``. It will have size
-                ``[seq_len, batch, out_features]``. ``hid`` is the
-                returned RNN hidden state which is either a length 2 Tuple of
-                :py:class:`torch.Tensor`s or a single :py:class:`torch.Tensor`
-                depending on the ``RNNType`` (see :py:class:`torch.nn`
-                documentation for more information).
+            ``x[0]``: either a tuple ``res[0] = (out, hid)`` or a
+            :py:class:`torch.Tensor``. ``res[0] = out``. ``out`` is the
+            result after applying the RNN to ``inp``. It will have size
+            ``[seq_len, batch, out_features]``. ``hid`` is the
+            returned RNN hidden state which is either a length 2 Tuple of
+            :py:class:`torch.Tensor`s or a single :py:class:`torch.Tensor`
+            depending on the ``RNNType`` (see :py:class:`torch.nn`
+            documentation for more information).
 
-                ``res[1]`` is a :py:class:`torch.Tensor` where each entry
-                represents the sequence length of the corresponding network
-                *output* sequence. This will be equal to ``x[1]`` as this layer
-                does not change sequence length.
+            ``res[1]`` is a :py:class:`torch.Tensor` where each entry
+            represents the sequence length of the corresponding network
+            *output* sequence. This will be equal to ``x[1]`` as this layer
+            does not change sequence length.
         """
 
         if isinstance(x[0], torch.Tensor):
