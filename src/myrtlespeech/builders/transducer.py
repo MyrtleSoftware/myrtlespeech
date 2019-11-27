@@ -81,7 +81,7 @@ def build(
         ...     }
         ...    }
         ... }
-        ... fully_connected {
+        ... joint_net {
         ...     num_hidden_layers: 1;
         ...     hidden_size: 512;
         ...     activation {
@@ -123,17 +123,14 @@ def build(
               (rnn): LSTM(256, 256, num_layers=2, batch_first=True)
             )
           )
-          (joint_net): ModuleDict(
-            (fully_connected): FullyConnected(
-              (fully_connected): Sequential(
-                (0): Linear(in_features=768, out_features=512, bias=True)
-                (1): Hardtanh(min_val=0.0, max_val=20.0)
-                (2): Linear(in_features=512, out_features=29, bias=True)
-              )
+          (joint_net): FullyConnected(
+            (fully_connected): Sequential(
+              (0): Linear(in_features=768, out_features=512, bias=True)
+              (1): Hardtanh(min_val=0.0, max_val=20.0)
+              (2): Linear(in_features=512, out_features=29, bias=True)
             )
           )
         )
-
     """
     # encoder output size is only required for build_transducer_enc_cfg if fc2
     # layer is present
@@ -143,9 +140,9 @@ def build(
     out_enc_size = None
     if (
         transducer_cfg.transducer_encoder.HasField("fc2")
-        and transducer_cfg.fully_connected.hidden_size > 0
+        and transducer_cfg.joint_net.hidden_size > 0
     ):
-        out_enc_size = transducer_cfg.fully_connected.hidden_size
+        out_enc_size = transducer_cfg.joint_net.hidden_size
     encoder, encoder_out = build_transducer_enc_cfg(
         transducer_cfg.transducer_encoder,
         input_features * input_channels,
@@ -160,15 +157,13 @@ def build(
 
     joint_in_dim = encoder_out + predict_net_out  # features are concatenated
 
-    fully_connected = build_fully_connected(
-        transducer_cfg.fully_connected,
+    joint_net_fc = build_fully_connected(
+        transducer_cfg.joint_net,
         input_features=joint_in_dim,
         output_features=vocab_size + 1,
     )
     return Transducer(
-        encoder=encoder,
-        predict_net=predict_net,
-        fully_connected=fully_connected,
+        encoder=encoder, predict_net=predict_net, joint_net=joint_net_fc
     )
 
 
