@@ -311,7 +311,7 @@ class RNNT(torch.nn.Module):
         (B3,) = x_lens.shape
         (B4,) = y_lens.shape
         assert (
-            B1 == B2 and B1 == B3 and B1 == B4
+            B1 == B2 == B3 == B4
         ), "Batch size must be the same for inputs and targets"
 
         if not (x_lens <= T).all():
@@ -324,7 +324,6 @@ class RNNT(torch.nn.Module):
                 symbols but {y_lens.max()} > {U}"
             )
 
-        del x, y, x_lens, y_lens, inp
         return (B1, C, I, T, U)  # return dimensions
 
     @staticmethod
