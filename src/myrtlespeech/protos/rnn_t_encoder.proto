@@ -12,10 +12,6 @@ message RNNTEncoder {
 
   RNN rnn1 = 1;
 
-  uint32 time_reduction_factor = 3;
-
-  RNN rnn2 = 4;
-
   FullyConnected fc2 = 5;
 
 }
