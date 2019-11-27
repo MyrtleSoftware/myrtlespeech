@@ -106,7 +106,7 @@ class RNNT(torch.nn.Module):
             Tuple[torch.Tensor, torch.Tensor],
             Tuple[torch.Tensor, torch.Tensor],
         ],
-    ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Returns the result of applying the RNN-T network to `x`.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
@@ -127,14 +127,21 @@ class RNNT(torch.nn.Module):
                 ``x[1][1]``.
 
         Returns:
-            A Tuple where the first element is the output of the RNNT network:
-            a :py:class:`torch.Tensor` with size ``[batch, max_seq_len,
-            max_label_length + 1, vocab_size + 1]``, and the second element
-            is a Tuple of two :py:class:`torch.Tensor`s both of
-            size ``[batch]`` that contain the *output* lengths of a) the
-            audio features inputs and b) the target sequences. These may be
-            of different lengths than the inputs as a result of
-            downsampling.
+            A Tuple where the first element is the unnormalized output of the
+            :py:class`Transducer` network: a :py:class:`torch.Tensor` with
+            size ``[batch, max_seq_len, max_label_length + 1,
+            vocab_size + 1]``. `max_seq_len` is the
+            length of the longest sequence in the batch output from the
+            Encoder network whereas `max_label_seq_len` is the length of
+            the longest *label* sequence in the batch output from the
+            :py:class:`Prediction` network. Note that the dimension at
+            index 2 is `max_label_seq_len + 1` since the
+            start-of-sequence label is prepended to the label sequence and
+            the dimension at index 3 is `vocab_size + 1` because the blank
+            symbol can be optput.
+
+            The second element is a :py:class:`torch.Tensor` of size
+            ``[batch]`` that contains the Encoder sequence output lengths.
             """
 
         self._certify_inputs_forward(x)
@@ -262,8 +269,8 @@ class RNNT(torch.nn.Module):
                 ``x[1][1]``.
 
         Returns:
-            The output of the :py:class:`.RNNT` network. See initialisation
-            docstring.
+            The output of the :py:class:`.RNNT` network. See
+            :py:class:`.RNNT`'s :py:meth:`forward` docstring.
         """
         (f, g), seq_lengths = x
 
@@ -287,13 +294,12 @@ class RNNT(torch.nn.Module):
 
         del g, f, x
 
-        # fully_connected expects a single length (not a tuple of lengths)
-        # So pass seq_lengths[0] and ignore output:
-        out, _ = self.joint_net["fully_connected"]((joint_inp, seq_lengths[0]))
+        # drop label_seq_lens (see :py:class:`RNNT` forward docstring)
+        h = self.joint_net["fully_connected"]((joint_inp, seq_lengths[0]))
 
         del joint_inp
 
-        return out, seq_lengths
+        return h
 
     @staticmethod
     def _certify_inputs_forward(inp):
@@ -404,7 +410,7 @@ class RNNTEncoder(torch.nn.Module):
             the tuple return value is a :py:class:`torch.Tensor` with size
             ``[batch]`` where each entry represents the sequence length of the
             corresponding *output* sequence (which will be identical to the
-            input lenghts).
+            input lengths).
 
         fc2: An Optional :py:class:`torch.nn.Module` containing the second
             fully connected part of the RNN-T encoder.
