@@ -11,13 +11,13 @@ from myrtlespeech.builders.deep_speech_2 import build as build_deep_speech_2
 from myrtlespeech.builders.pre_process_step import (
     build as build_pre_process_step,
 )
-from myrtlespeech.builders.rnn_t import build as build_rnn_t
 from myrtlespeech.builders.rnn_t_beam_decoder import (
     build as build_rnn_t_beam_decoder,
 )
 from myrtlespeech.builders.rnn_t_greedy_decoder import (
     build as build_rnn_t_greedy_decoder,
 )
+from myrtlespeech.builders.transducer import build as build_transducer
 from myrtlespeech.builders.transducer_loss import (
     build as build_transducer_loss,
 )
@@ -187,9 +187,9 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
             input_channels=input_channels,
             output_features=len(alphabet),
         )
-    elif model_type == "rnn_t":
-        model = build_rnn_t(
-            rnn_t_cfg=stt_cfg.rnn_t,
+    elif model_type == "transducer":
+        model = build_transducer(
+            transducer_cfg=stt_cfg.transducer,
             input_features=input_features,
             input_channels=input_channels,
             vocab_size=len(alphabet) - 1,  # i.e. excluding the blank symbol

@@ -2,14 +2,14 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
-import "myrtlespeech/protos/rnn_t_encoder.proto";
+import "myrtlespeech/protos/transducer_encoder.proto";
 import "myrtlespeech/protos/fully_connected.proto";
 import "myrtlespeech/protos/rnn.proto";
 
-// Configuration for RNN-T model:
+// Configuration for Transducer model:
 // https://arxiv.org/pdf/1211.3711.pdf
-message RNNT {
-  RNNTEncoder rnn_t_encoder = 1;
+message Transducer {
+  TransducerEncoder transducer_encoder = 1;
   RNN dec_rnn = 2;
   FullyConnected fully_connected = 4;
 }

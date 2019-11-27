@@ -3,7 +3,7 @@ from myrtlespeech.builders.rnn_t_greedy_decoder import build
 from myrtlespeech.post_process.rnn_t_greedy_decoder import RNNTGreedyDecoder
 from myrtlespeech.protos import rnn_t_greedy_decoder_pb2
 
-from tests.post_process.test_rnn_t_beam_decoder import DummyRNNTModel
+from tests.post_process.test_rnn_t_beam_decoder import DummyTransducerModel
 from tests.protos.test_rnn_t_decoders import rnn_t_greedy_decoder
 
 # Utilities -------------------------------------------------------------------
@@ -28,6 +28,6 @@ def test_build_returns_correct_rnn_t_greedy_decoder_with_valid_params(
     rnn_t_cfg: rnn_t_greedy_decoder_pb2.RNNTGreedyDecoder,
 ) -> None:
     """Test that build returns correct RNNTGreedyDecoder with valid params."""
-    rnn_t = DummyRNNTModel()
+    rnn_t = DummyTransducerModel()
     rnn_t_decoder = build(rnn_t_cfg, rnn_t)
     rnn_t_greedy_decoder_module_match_cfg(rnn_t_decoder, rnn_t_cfg)

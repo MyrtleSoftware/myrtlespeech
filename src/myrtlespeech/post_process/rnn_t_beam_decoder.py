@@ -4,7 +4,7 @@ from typing import Optional
 from typing import Tuple
 
 import torch
-from myrtlespeech.model.rnn_t import RNNT
+from myrtlespeech.model.transducer import Transducer
 from myrtlespeech.post_process.rnn_t_decoder_base import RNNTDecoderBase
 
 
@@ -41,7 +41,7 @@ class RNNTBeamDecoder(RNNTDecoderBase):
     def __init__(
         self,
         blank_index: int,
-        model: RNNT,
+        model: Transducer,
         beam_width: Optional[int] = 4,
         length_norm: Optional[bool] = False,
         max_symbols_per_step: Optional[int] = None,

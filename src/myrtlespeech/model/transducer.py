@@ -4,14 +4,15 @@ from typing import Tuple
 import torch
 
 
-class RNNT(torch.nn.Module):
-    r"""`RNN-T <https://arxiv.org/pdf/1211.3711.pdf>`_ Network.
+class Transducer(torch.nn.Module):
+    r"""`Transducer <https://arxiv.org/pdf/1211.3711.pdf>`_ Network.
 
     Args:
-        encoder: A :py:class:`RNNTEncoder` with initialised RNN-T encoder.
-
-            Must accept as input a tuple where the first element is the network
-            input (a :py:`torch.Tensor`) with size ``[batch, channels,
+        encoder: A :py:class:`torch.nn.Module` to use as the encoder. Note
+            that this network is also referred to as the Transcription Network
+            in the literature. The `encoder` must accept as input a tuple
+            where the first element is the network input: a
+            :py:`torch.Tensor`) with size ``[batch, channels,
             features, max_input_seq_len]`` and the second element is a
             :py:class:`torch.Tensor` of size ``[batch]`` where each entry
             represents the sequence length of the corresponding *input*
@@ -19,12 +20,14 @@ class RNNT(torch.nn.Module):
 
             It must return a tuple where the first element is the result after
             applying the module to the input. It must have size
-            ``[max_out_seq_len, batch, rnn_features]``. The second element of
-            the tuple return value is a :py:class:`torch.Tensor` with size
+            ``[max_out_seq_len, batch, output_features]``. The second element
+            of the tuple return value is a :py:class:`torch.Tensor` with size
             ``[batch]`` where each entry represents the sequence length of the
             corresponding *output* sequence. These may be different than the
-            input sequence lengths due to downsampling in the encoder.
+            input sequence lengths due to downsampling in `encoder`.
 
+            It is possible *but not necessary* to use an initialized
+            :py:class:`TransducerEncoder` class as the `encoder`.
 
         embedding: A :py:class:`torch.nn.Module` which is an embedding lookup
             for targets (eg graphemes, wordpieces) which accepts a
@@ -32,7 +35,7 @@ class RNNT(torch.nn.Module):
             ``[batch, max_output_seq_len]``.
 
         dec_rnn: A :py:class:`torch.nn.Module` containing the recurrent part of
-            the RNN-T prediction.
+            the Transducer prediction.
 
             Must accept as input a tuple where the first element is the
             prediction network input (a :py:`torch.Tensor`) with size ``[batch,
@@ -49,7 +52,7 @@ class RNNT(torch.nn.Module):
             corresponding *output* sequence.
 
         fully_connected: A :py:class:`torch.nn.Module` containing the fully
-            connected part of the RNNT joint network.
+            connected part of the Transducer joint network.
 
             Must accept as input a tuple where the first element is
             a :py:class:`torch.Tensor` with size ``[batch,
@@ -104,7 +107,7 @@ class RNNT(torch.nn.Module):
             Tuple[torch.Tensor, torch.Tensor],
         ],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        r"""Returns the result of applying the RNN-T network to `x`.
+        r"""Returns the result of applying the Transducer network to `x`.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
@@ -158,7 +161,7 @@ class RNNT(torch.nn.Module):
     def prediction(
         self, y: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        r"""Returns the result of applying the RNN-T prediction network.
+        r"""Returns the result of applying the Transducer prediction network.
 
         This function is only appropriate during training when the
         ground-truth labels are available.
@@ -166,8 +169,8 @@ class RNNT(torch.nn.Module):
         .. note:: The length of the sequence is increased by one as the
         start-of-sequence embedded state (all zeros) is prepended to the start
         of the label sequence. Note that this change *is not* reflected in the
-        output lengths as the :py:class:`RNNTLoss` requires the true label
-        lengths.
+        output lengths as the :py:class:`TransducerLoss` requires the true
+        label lengths.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
@@ -188,8 +191,7 @@ class RNNT(torch.nn.Module):
         # Update the lengths with +1 for input to the dec_rnn
         y = (y[0], y[1] + 1)
         out = self.dec_rnn(y)
-        # Revert the lengths with -1 so the true lengths are provided to the
-        # :py:class:`RNNTLoss`
+        # Revert the lengths to 'true' values (i.e. not including SOS)
         out = (out[0], out[1] - 1)
 
         del y
@@ -251,13 +253,13 @@ class RNNT(torch.nn.Module):
             Tuple[torch.Tensor, torch.Tensor],
         ],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        r"""Returns the result of applying the RNN-T joint network.
+        r"""Returns the result of applying the Transducer joint network.
 
         Args:
             x: A Tuple ``(x[0], x[1])``. ``x[0][0]`` is the first element of
-                the encoder network output (i.e. `.encode(...)[0]` - see
-                :py:class:`.RNNTEncoder` docstring). ``x[0][1]`` is the first
-                element of the prediction network output (i.e.
+                the `encoder` output (i.e. `.encode(...)[0]` - see
+                :py:class:`.TransducerEncoder` docstring). ``x[0][1]`` is the
+                first element of the prediction network output (i.e.
                 `.prediction(...)[0]` - see prediction docstring).
 
                 ``x[1]`` is a Tuple of two :py:class:`torch.Tensor`s both of
@@ -266,8 +268,8 @@ class RNNT(torch.nn.Module):
                 ``x[1][1]``.
 
         Returns:
-            The output of the :py:class:`.RNNT` network. See
-            :py:class:`.RNNT`'s :py:meth:`forward` docstring.
+            The output of the :py:class:`.Transducer` network. See
+            :py:class:`.Transducer`'s :py:meth:`forward` docstring.
         """
         (f, g), seq_lengths = x
 
@@ -291,7 +293,7 @@ class RNNT(torch.nn.Module):
 
         del g, f, x
 
-        # drop label_seq_lens (see :py:class:`RNNT` forward docstring)
+        # drop label_seq_lens (see :py:class:`Transducer` forward docstring)
         h = self.joint_net["fully_connected"]((joint_inp, seq_lengths[0]))
 
         del joint_inp
@@ -304,8 +306,8 @@ class RNNT(torch.nn.Module):
             ((x, y), (x_lens, y_lens)) = inp
         except ValueError:
             raise ValueError(
-                "Unable to unpack inputs to RNNT. Are you using the \
-            `RNNTTraining()` callback \
+                "Unable to unpack inputs to Transducer. Are you using the \
+            `TransducerTraining()` callback \
             found in `myrtlespeech.run.callbacks.rnn_t_training`?"
             )
         B1, C, I, T = x.shape
@@ -359,18 +361,18 @@ class RNNT(torch.nn.Module):
         return self.predict_net["dec_rnn"]
 
 
-class RNNTEncoder(torch.nn.Module):
-    r"""`RNN-T <https://arxiv.org/pdf/1211.3711.pdf>`_ encoder.
+class TransducerEncoder(torch.nn.Module):
+    r"""`Transducer <https://arxiv.org/pdf/1211.3711.pdf>`_ encoder.
 
-    The RNN-T Transcription Network. All of the submodules other than ``rnn1``
-    are Optional.
+    Alternatively referred to as Transducer transcription network. All of the
+    submodules other than ``rnn1` are Optional.
 
     .. note:: If present, the modules are applied in the following order:
         ``fc1`` -> ``rnn1`` -> ``fc2``
 
     Args:
         rnn1: A :py:class:`torch.nn.Module` containing the first recurrent part
-            of the RNN-T encoder.
+            of the Transducer encoder.
 
             Must accept as input a tuple where the first element is the network
             input (a :py:`torch.Tensor`) with size ``[max_seq_len, batch,
@@ -387,7 +389,7 @@ class RNNTEncoder(torch.nn.Module):
             corresponding *output* sequence.
 
         fc1: An Optional :py:class:`torch.nn.Module` containing the first fully
-            connected part of the RNN-T encoder.
+            connected part of the Transducer encoder.
 
             Must accept as input a tuple where the first element is the network
             input (a :py`torch.Tensor`) with size ``[max_seq_len, batch,
@@ -406,7 +408,7 @@ class RNNTEncoder(torch.nn.Module):
             input lengths).
 
         fc2: An Optional :py:class:`torch.nn.Module` containing the second
-            fully connected part of the RNN-T encoder.
+            fully connected part of the Transducer encoder.
 
             Must accept as input a tuple where the first element is the network
             input (a :py`torch.Tensor`) with size ``[max_downsampled_seq_len,
@@ -465,14 +467,14 @@ class RNNTEncoder(torch.nn.Module):
     def forward(
         self, x: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        r"""Returns result of applying the RNN-T encoder to the audio features.
+        r"""Returns result of applying the encoder to the audio features.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
         initialisation.
 
-        See :py:class:`.RNNTEncoder` for detailed information about the input
-        and output of each module.
+        See :py:class:`.TransducerEncoder` for detailed information about the
+        input and output of each module.
 
         Args:
             x: Tuple where the first element is the encoder
@@ -485,8 +487,8 @@ class RNNTEncoder(torch.nn.Module):
                 dimension. This reshaping operation is not dealt with in
                 preprocessing so that: a) this model conforms to existing
                 pre-processing pipeline, and b) because future edits to
-                `myrtlespeech.model.rnn_t.RNNTEncoder` may add convolutions
-                before input to the first layer `fc1`/`rnn1`.
+                `myrtlespeech.model.rnn_t.TransducerEncoder` may add
+                convolutions before input to the first layer `fc1`/`rnn1`.
 
         Returns:
             Output from `fc2`` if present else output from ``rnn1``. See
