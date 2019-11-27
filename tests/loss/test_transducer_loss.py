@@ -1,13 +1,13 @@
 import numpy as np
 import torch
-from myrtlespeech.loss.rnn_t_loss import RNNTLoss
+from myrtlespeech.loss.transducer_loss import TransducerLoss
 
 
 def _get_log_probs_helper(eps):
     """Helper to return log probs.
 
     These probabilities are in the form described in
-    `test_rnn_t_worked_example_1` docstring
+    `test_transducer_worked_example_1` docstring
     """
     probs_t1 = torch.tensor([[1.0, 0, 0], [0, 0, 1], [0, 0, 1]])
     probs_t2 = torch.tensor([[0.0, 0, 1], [0, 1, 0], [0, 0, 1]])
@@ -47,8 +47,8 @@ def _label_collate_helper(labels):
 # Tests -----------------------------------------------------------------------
 
 
-def test_rnn_t_loss_small_worked_example_1() -> None:
-    """Ensures RNNTLoss matches simple worked example.
+def test_transducer_loss_small_worked_example_1() -> None:
+    """Ensures TransducerLoss matches simple worked example.
 
     Consider three timesteps with perfectly trained model and exact alignments
     such that correct output should be:
@@ -77,12 +77,12 @@ def test_rnn_t_loss_small_worked_example_1() -> None:
     log_probs has shape: ``[batch = 1, max_seq_len = 3,
         max_output_seq_len + 1 = 3, vocab_size + 1 = 3)``
 
-    Note that :py:class`RNNTLoss` typically takes *logits* as inputs rather
-    than log_probs (*and this is the recommended usage*) but the
+    Note that :py:class`TransducerLoss` typically takes *logits* as inputs
+    rathee than log_probs (*and this is the recommended usage*) but the
     implementation of ``warprnnt_pytorch`` assumes the input is log_probs
     iff all values in the input are negative.
     """
-    rnn_t_loss = RNNTLoss(blank=2, reduction="mean")
+    transducer_loss = TransducerLoss(blank=2, reduction="mean")
     targets = _label_collate_helper([torch.IntTensor([0, 1])])
 
     loss_values = []
@@ -91,7 +91,7 @@ def test_rnn_t_loss_small_worked_example_1() -> None:
         log_probs, log_lens = _get_log_probs_helper(eps)
 
         inputs = (log_probs, (log_lens, targets[1]))
-        loss_value = rnn_t_loss(inputs, targets)
+        loss_value = transducer_loss(inputs, targets)
 
         assert isinstance(loss_value, torch.Tensor)
         loss_values.append(loss_value.item())
@@ -102,8 +102,8 @@ def test_rnn_t_loss_small_worked_example_1() -> None:
     assert loss_values == loss_values_expected
 
 
-def test_rnn_t_loss_small_worked_example_2() -> None:
-    """Ensures RNNTLoss matches simple worked example.
+def test_transducer_loss_small_worked_example_2() -> None:
+    """Ensures TransducerLoss matches simple worked example.
 
     Consider untrained model (all probabilities equally likely) and the
     following conditions:
@@ -121,12 +121,12 @@ def test_rnn_t_loss_small_worked_example_2() -> None:
     log_probs has shape: ``[batch = 1, max_seq_len = 2,
         max_output_seq_len + 1 = 2, vocab_size + 1 = 2)``
 
-    Note that :py:class`RNNTLoss` typically takes *logits* as inputs rather
-    than log_probs (*and this is the recommended usage*) but the
+    Note that :py:class`TransducerLoss` typically takes *logits* as inputs
+    rather than log_probs (*and this is the recommended usage*) but the
     implementation of ``warprnnt_pytorch`` assumes the input is log_probs
     iff all values in the input are negative.
     """
-    rnn_t_loss = RNNTLoss(blank=1, reduction="mean")
+    transducer_loss = TransducerLoss(blank=1, reduction="mean")
     probs = torch.ones((1, 2, 2, 2)) * 0.5
     log_probs = probs.log()
     log_lens = torch.IntTensor([2])
@@ -134,7 +134,7 @@ def test_rnn_t_loss_small_worked_example_2() -> None:
     targets = _label_collate_helper([torch.IntTensor([0])])
 
     inputs = (log_probs, (log_lens, targets[1]))
-    loss_value = rnn_t_loss(inputs, targets).cpu()
+    loss_value = transducer_loss(inputs, targets).cpu()
 
     expected_loss = -torch.log(torch.tensor([1 / 4.0]))
 
