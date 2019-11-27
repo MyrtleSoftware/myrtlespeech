@@ -18,7 +18,9 @@ from myrtlespeech.builders.rnn_t_beam_decoder import (
 from myrtlespeech.builders.rnn_t_greedy_decoder import (
     build as build_rnn_t_greedy_decoder,
 )
-from myrtlespeech.builders.rnn_t_loss import build as build_rnn_t_loss
+from myrtlespeech.builders.transducer_loss import (
+    build as build_transducer_loss,
+)
 from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.data.preprocess import AddContextFrames
 from myrtlespeech.data.preprocess import Downsample
@@ -210,16 +212,16 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
                 f"{loss_type}.blank_index={blank_index} must be in "
                 f"[0, {max(0, len(alphabet) - 1)}]"
             )
-    elif loss_type == "rnn_t_loss":
-        loss = build_rnn_t_loss(stt_cfg.rnn_t_loss)
-        blank_index = stt_cfg.rnn_t_loss.blank_index
+    elif loss_type == "transducer_loss":
+        loss = build_transducer_loss(stt_cfg.transducer_loss)
+        blank_index = stt_cfg.transducer_loss.blank_index
         blank_indices.append(blank_index)
         if not (blank_index == max(0, len(alphabet) - 1)):
             raise ValueError(
                 f"{loss_type}.blank_index={blank_index} must be final element \
                 in stt_cfg.alphabet in order to use the same \
                 graphene/characters indexes in the prediction and \
-                joint rnnt networks"
+                joint transducer networks"
             )
     else:
         raise ValueError(f"loss={loss_type} not supported")
@@ -281,7 +283,7 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
                 f"{loss_type}.blank_index={blank_index} must be final element"
                 f"in stt_cfg.alphabet in order to use the same"
                 f"graphene/characters indexes in the prediction and"
-                f"joint rnnt networks."
+                f"joint transducer networks."
             )
     else:
         raise ValueError(f"post_process={post_process_type} not supported")

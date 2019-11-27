@@ -4,7 +4,7 @@ from typing import Tuple
 from typing import Union
 
 import hypothesis.strategies as st
-from myrtlespeech.protos import rnn_t_loss_pb2
+from myrtlespeech.protos import transducer_loss_pb2
 
 from tests.protos.utils import all_fields_set
 
@@ -13,13 +13,13 @@ from tests.protos.utils import all_fields_set
 
 
 @st.composite
-def rnn_t_losses(
+def transducer_losses(
     draw, return_kwargs: bool = False, alphabet_len: Optional[int] = None
 ) -> Union[
-    st.SearchStrategy[rnn_t_loss_pb2.RNNTLoss],
-    st.SearchStrategy[Tuple[rnn_t_loss_pb2.RNNTLoss, Dict]],
+    st.SearchStrategy[transducer_loss_pb2.TransducerLoss],
+    st.SearchStrategy[Tuple[transducer_loss_pb2.TransducerLoss, Dict]],
 ]:
-    """Returns a SearchStrategy for RNNTLoss plus maybe the kwargs."""
+    """Returns a SearchStrategy for TransducerLoss plus maybe the kwargs."""
 
     kwargs = {}
 
@@ -29,11 +29,11 @@ def rnn_t_losses(
     kwargs["blank_index"] = end
 
     kwargs["reduction"] = draw(
-        st.sampled_from(rnn_t_loss_pb2.RNNTLoss.REDUCTION.values())
+        st.sampled_from(transducer_loss_pb2.TransducerLoss.REDUCTION.values())
     )
 
-    all_fields_set(rnn_t_loss_pb2.RNNTLoss, kwargs)
-    rnn_t_loss = rnn_t_loss_pb2.RNNTLoss(**kwargs)
+    all_fields_set(transducer_loss_pb2.TransducerLoss, kwargs)
+    transducer_loss = transducer_loss_pb2.TransducerLoss(**kwargs)
     if not return_kwargs:
-        return rnn_t_loss
-    return rnn_t_loss, kwargs
+        return transducer_loss
+    return transducer_loss, kwargs

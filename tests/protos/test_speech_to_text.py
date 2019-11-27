@@ -19,7 +19,7 @@ from tests.protos.test_pre_process_step import pre_process_steps
 from tests.protos.test_rnn_t import rnn_t
 from tests.protos.test_rnn_t_decoders import rnn_t_beam_decoder
 from tests.protos.test_rnn_t_decoders import rnn_t_greedy_decoder
-from tests.protos.test_rnn_t_loss import rnn_t_losses
+from tests.protos.test_transducer_loss import transducer_losses
 from tests.protos.utils import all_fields_set
 
 # Fixtures and Strategies -----------------------------------------------------
@@ -91,11 +91,11 @@ def speech_to_texts(
             ctc_losses(alphabet_len=len(kwargs["alphabet"]))
         )
         blank_index = kwargs["ctc_loss"].blank_index
-    elif loss_str == "rnn_t_loss":
-        kwargs["rnn_t_loss"] = draw(
-            rnn_t_losses(alphabet_len=len(kwargs["alphabet"]))
+    elif loss_str == "transducer_loss":
+        kwargs["transducer_loss"] = draw(
+            transducer_losses(alphabet_len=len(kwargs["alphabet"]))
         )
-        blank_index = kwargs["rnn_t_loss"].blank_index
+        blank_index = kwargs["transducer_loss"].blank_index
     else:
         raise ValueError(f"unknown loss type {loss_str}")
 
@@ -146,7 +146,7 @@ def speech_to_texts(
         speech_to_text = None
         warnings.warn(
             "This test has (effectively) been disabled. TODO: prevent networks"
-            f"that are trained with rnnt being built with"
+            f"that are trained with transducer being built with"
             f"ctc-loss and vice versa"
         )
 
