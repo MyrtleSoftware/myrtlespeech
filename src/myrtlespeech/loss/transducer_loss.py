@@ -46,12 +46,21 @@ class TransducerLoss(torch.nn.Module):
         initialisation.
 
         Args:
-            inputs: A tuple where the first element is the unnormalized network
-                :py:class:`torch.Tensor` outputs of size ``[batch, max_seq_len,
-                max_output_seq_len + 1, vocab_size + 1)``. The second element
-                is a Tuple of two :py:class:`torch.Tensor`s both of
-                size ``[batch]`` that contain the lengths of a) the audio
-                features logits and b) the target sequence logits.
+            inputs: A Tuple where the first element is the unnormalized output
+                of the :py:class`Transducer` network: a
+                :py:class:`torch.Tensor` with size ``[batch, max_seq_len,
+                max_label_length + 1, vocab_size + 1]``. `max_seq_len` is the
+                length of the longest sequence in the batch output from the
+                Encoder network whereas `max_label_seq_len` is the length of
+                the longest *label* sequence in the batch output from the
+                :py:class:`Prediction` network. Note that the dimension at
+                index 2 is `max_label_seq_len + 1` since the
+                start-of-sequence label is prepended to the label sequence and
+                the dimension at index 3 is `vocab_size + 1` because the blank
+                symbol can be optput.
+
+                The second element is a :py:class:`torch.Tensor` of size
+                ``[batch]`` that contains the Encoder sequence output lengths.
 
             targets: A tuple where the first element is a
                 :py:class:`torch.Tensor` such that each entry in the target
@@ -66,7 +75,7 @@ class TransducerLoss(torch.nn.Module):
                 are padded to equal lengths.
         """
 
-        logits, (logit_lens, _) = inputs
+        logits, logit_lens = inputs
         y, y_lens = targets
 
         # cast to required types
