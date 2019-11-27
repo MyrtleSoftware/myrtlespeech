@@ -5,7 +5,6 @@ import torch
 from myrtlespeech.builders.dataset import build as build_dataset
 from myrtlespeech.builders.speech_to_text import build as build_stt
 from myrtlespeech.data.batch import seq_to_seq_collate_fn
-from myrtlespeech.data.batch import seq_to_seq_collate_fn_sorted
 from myrtlespeech.data.sampler import SequentialRandomSampler
 from myrtlespeech.data.sampler import SortaGrad
 from myrtlespeech.model.seq_to_seq import SeqToSeq
@@ -122,7 +121,7 @@ def build(
                 drop_last=False,
             ),
             num_workers=num_workers,
-            collate_fn=seq_to_seq_collate_fn_sorted,
+            collate_fn=lambda batch: seq_to_seq_collate_fn(batch, sort=True),
             pin_memory=torch.cuda.is_available(),
         )
     else:
@@ -135,7 +134,7 @@ def build(
                 drop_last=False,
             ),
             num_workers=num_workers,
-            collate_fn=seq_to_seq_collate_fn,
+            collate_fn=lambda batch: seq_to_seq_collate_fn(batch, sort=False),
             pin_memory=torch.cuda.is_available(),
         )
 

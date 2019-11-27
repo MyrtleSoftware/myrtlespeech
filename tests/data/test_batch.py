@@ -102,7 +102,8 @@ def test_pad_sequences_returns_tensor_with_correct_values(
 
 
 def test_seq_to_seq_collate_fn() -> None:
-    """Unit test to ensure seq_to_seq_collate_fn returns correct values."""
+    """Unit test to ensure seq_to_seq_collate_fn returns correct values when
+    sort=False."""
     inputs = [rand([1, 2, 3]), rand([1, 2, 5])]
     seq_lens = tensor([3, 5])
 
@@ -114,7 +115,7 @@ def test_seq_to_seq_collate_fn() -> None:
         ((inputs[1], seq_lens[1]), (targets[1], target_lengths[1])),
     ]
 
-    x, y = seq_to_seq_collate_fn(batch)
+    x, y = seq_to_seq_collate_fn(batch, sort=False)
 
     assert isinstance(x, tuple)
     assert len(x) == 2
@@ -130,8 +131,8 @@ def test_seq_to_seq_collate_fn() -> None:
 
 
 def test_seq_to_seq_collate_fn_sorted() -> None:
-    """Unit test to ensure seq_to_seq_collate_fn_sorted returns correct
-    values."""
+    """Unit test to ensure seq_to_seq_collate_fn returns correct values when
+    sort=True."""
     inputs = [rand([1, 2, 3]), rand([1, 2, 5])]
     seq_lens = tensor([3, 5])
 
@@ -143,7 +144,7 @@ def test_seq_to_seq_collate_fn_sorted() -> None:
         ((inputs[1], seq_lens[1]), (targets[1], target_lengths[1])),
     ]
 
-    x, y = seq_to_seq_collate_fn(batch)
+    x, y = seq_to_seq_collate_fn(batch, sort=True)
 
     assert isinstance(x, tuple)
     assert len(x) == 2
