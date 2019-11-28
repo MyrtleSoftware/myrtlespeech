@@ -87,10 +87,14 @@ def run_stage(seq_to_seq, cb_handler, loader, is_training):
 
                     if not cb_handler.on_step_end():
                         seq_to_seq.optim.zero_grad()
+
             if cb_handler.on_batch_end():
                 break
 
             del x, y, out, loss, loss_out, loss_y
+
+        if is_training and seq_to_seq.lr_scheduler is not None:
+            seq_to_seq.lr_scheduler.step()
 
     return cb_handler.on_epoch_end()
 
