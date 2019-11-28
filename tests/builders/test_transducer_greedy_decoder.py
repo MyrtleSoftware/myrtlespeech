@@ -18,13 +18,13 @@ def transducer_greedy_module_match_cfg(
     transducer_cfg: transducer_greedy_decoder_pb2.TransducerGreedyDecoder,
 ) -> None:
     """Ensures TransducerGreedyDecoder matches protobuf configuration."""
-    assert transducer.blank_index == transducer_cfg.blank_index
+    assert transducer._blank_index == transducer_cfg.blank_index
     if transducer_cfg.max_symbols_per_step != 0:  # default value
         assert (
-            transducer.max_symbols_per_step
+            transducer._max_symbols_per_step
             == transducer_cfg.max_symbols_per_step
         )
-    assert hasattr(transducer, "model")
+    assert hasattr(transducer, "_model")
 
 
 # Tests -----------------------------------------------------------------------

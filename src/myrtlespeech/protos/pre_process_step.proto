@@ -11,7 +11,7 @@ message PreProcessStep {
 
   oneof pre_process_step {
     MFCC mfcc = 2;
-    LogMelFB lmfb = 6;
+    LogMelFB log_mel_filter_bank = 6;
     Standardize standardize = 3;
     ContextFrames context_frames = 4;
     SpecAugment spec_augment = 5;
@@ -41,7 +41,6 @@ message LogMelFB {
 
   // Step between successive windows in number of frames.
   uint32 hop_length = 3;
-
 }
 
 
@@ -72,6 +71,6 @@ message ContextFrames {
 }
 
 message Downsample {
-  // Rate at which to downsample input
+  // Rate at which to downsample input.
   uint32 subsample = 1;
 }
