@@ -2,9 +2,12 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
+
 message TransducerGreedyDecoder {
   // Index in Alphabet of the blank label.
   uint32 blank_index = 1;
 
-  uint32 max_symbols_per_step = 2; //if this is not provided there is no limit
+  // Maximum number of symbols that can be output per step during decoding.
+  // If this is not provided then it defaults to a large value
+  uint32 max_symbols_per_step = 2;
 }
