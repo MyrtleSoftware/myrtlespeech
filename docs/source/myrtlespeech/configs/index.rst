@@ -10,3 +10,4 @@ A collection of known configurations and their results for various datasets.
 
     deep_speech_1_en
     deep_speech_2_en
+    rnn_t_en

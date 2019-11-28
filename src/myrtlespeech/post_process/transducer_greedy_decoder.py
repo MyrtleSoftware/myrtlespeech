@@ -13,8 +13,7 @@ from myrtlespeech.post_process.transducer_decoder_base import (
 class TransducerGreedyDecoder(TransducerDecoderBase):
     """Decodes Transducer output using a greedy strategy.
 
-    Args:
-        See :py:class:`TransducerDecoderBase`.
+    See :py:class:`TransducerDecoderBase` for args.
     """
 
     def __init__(

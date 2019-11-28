@@ -11,9 +11,9 @@ class Transducer(torch.nn.Module):
     Args:
         encoder: A :py:class:`torch.nn.Module` to use as the encoder. Note
             that this network is also referred to as the Transcription Network
-            in the literature. The `encoder` must accept as input a Tuple
-            where the first element is the `encoder` input: a
-            :py:`torch.Tensor` with size ``[batch, channels,
+            in the literature. The ``encoder`` must accept as input a Tuple
+            where the first element is the ``encoder`` input: a
+            :py:class:`torch.Tensor` with size ``[batch, channels,
             features, max_input_seq_len]`` and the second element is a
             :py:class:`torch.Tensor` of size ``[batch]`` where each entry
             represents the sequence length of the corresponding *input*
@@ -31,7 +31,7 @@ class Transducer(torch.nn.Module):
             :py:class:`TransducerEncoder` class as the `encoder`.
 
         predict_net: A :py:class:`torch.nn.Module` to use as the prediction
-            network. `predict_net` must accept as input a Tuple where the
+            network. ``predict_net`` must accept as input a Tuple where the
             first element is the target label tensor of size ``[batch,
             max_label_length]`` and the second is a :py:class:`torch.Tensor`
             of size ``[batch]`` that contains the *input* lengths of these
@@ -40,7 +40,7 @@ class Transducer(torch.nn.Module):
             It must return a tuple where the first element is the result after
             applying the module to the input and it must have size ``[batch,
             max_output_seq_len + 1, in_features]``. Note that the dimension at
-            index 1 is `max_label_seq_len + 1` since the start-of-sequence
+            index 1 is ``max_label_seq_len + 1`` since the start-of-sequence
             token is prepended to the label sequence. The second element of
             the Tuple return value is a :py:class:`torch.Tensor` with size
             ``[batch]`` where each entry represents the sequence length of the
@@ -54,26 +54,27 @@ class Transducer(torch.nn.Module):
 
             Must accept as input a Tuple where the first element is a
             :py:class:`torch.Tensor` with size ``[batch, encoder_max_seq_len,
-            max_label_length + 1, hidden_dim]`` where `hidden_dim` is equal to
-            the sum of the `encoder` and `predict_net` hidden dimension
+            max_label_length + 1, hidden_dim]`` where ``hidden_dim`` is equal
+            to the sum of the ``encoder`` and ``predict_net`` hidden dimension
             features. The second element is a :py:class:`torch.Tensor` of
             size ``[batch]`` where each entry represents the sequence length
-            of the `encoder` output sequences.
+            of the ``encoder`` output sequences.
 
             It must return a tuple where the first element is the result after
             applying the module to the input. It must have size ``[batch,
             encoder_max_seq_len, max_label_length + 1, vocab_size + 1]``.
-            `encoder_max_seq_len` is the length of the longest sequence in the
-            batch that is output from `encoder` while `max_label_seq_len`
-            is the length of the longest *label* sequence in the batch that is
-            output from `predict_net`. Note that the dimension at index 2 is
-            `max_label_seq_len + 1` since the start-of-sequence label is
-            prepended to the label sequence and the dimension at index 3 is
-            `vocab_size + 1` because the blank symbol can be output.
+            ``encoder_max_seq_len`` is the length of the longest sequence in
+            the batch that is output from ``encoder`` while
+            ``max_label_seq_len`` is the length of the longest *label*
+            sequence in the batch that is output from ``predict_net``. Note
+            that the dimension at index 2 is ``max_label_seq_len + 1`` since
+            the start-of-sequence label is prepended to the label sequence and
+            the dimension at index 3 is ``vocab_size + 1`` because the blank
+            symbol can be output.
 
             The second element is a :py:class:`torch.Tensor` of
             size ``[batch]`` where each entry represents the sequence length
-            of the `encoder` features after `joint_net` has acted on them.
+            of the ``encoder`` features after ``joint_net`` has acted on them.
     """
 
     def __init__(self, encoder, predict_net, joint_net):
@@ -101,11 +102,11 @@ class Transducer(torch.nn.Module):
 
         Args:
             x: A Tuple where the first element is the input to `encoder`
-                and the second element is the input to `predict_net` (see
+                and the second element is the input to ``predict_net`` (see
                 initialisation docstring).
 
         Returns:
-            The output of `joint_net`. See initialization docstring.
+            The output of ``joint_net``. See initialization docstring.
             """
 
         self._certify_inputs_forward(x)
@@ -136,8 +137,8 @@ class Transducer(torch.nn.Module):
         r"""Returns the result of applying the Transducer joint network.
 
         Args:
-            x: A Tuple where the first element is the `encoder` output and the
-                second is the `predict_net` output.
+            x: A Tuple where the first element is the ``encoder`` output and
+                the second is the ``predict_net`` output.
 
         Returns:
             The output of the :py:class:`.Transducer` network. See
@@ -205,19 +206,19 @@ class TransducerEncoder(torch.nn.Module):
     r"""`Transducer <https://arxiv.org/pdf/1211.3711.pdf>`_ encoder.
 
     Alternatively referred to as Transducer transcription network. All of the
-    submodules other than ``rnn1` are Optional.
+    submodules other than ``rnn1`` are Optional.
 
     .. note::
 
         If present, the modules are applied in the following order:
-        ``fc1`` -> ``rnn1`` -> ``fc2``
+        ``fc1 -> rnn1 -> fc2``
 
     Args:
         rnn1: A :py:class:`torch.nn.Module` containing the first recurrent part
             of the Transducer encoder.
 
             Must accept as input a tuple where the first element is the network
-            input (a :py:`torch.Tensor`) with size ``[max_seq_len, batch,
+            input (a :py:class:`torch.Tensor`) with size ``[max_seq_len, batch,
             in_features]`` and the second element is a
             :py:class:`torch.Tensor` of size ``[batch]`` where each entry
             represents the sequence length of the corresponding *input*
@@ -270,7 +271,7 @@ class TransducerEncoder(torch.nn.Module):
 
     Returns:
         A Tuple where the first element is the  output of ``fc2`` if it is not
-        None, else the output of `rnn1` and the second element is a
+        None, else the output of ``rnn1`` and the second element is a
         :py:class:`torch.Tensor` of size ``[batch]`` where each entry
         represents the sequence length of the corresponding *output*
         sequence to the encoder.
@@ -320,20 +321,20 @@ class TransducerEncoder(torch.nn.Module):
 
         Args:
             x: Tuple where the first element is the encoder
-                input (a :py:`torch.Tensor`) with size ``[batch, channels,
-                features, max_input_seq_len]`` and the second element is a
-                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-                represents the sequence length of the corresponding *input*
-                sequence to the rnn. The channel dimension contains context
-                frames and is immediately flattened into the `features`
-                dimension. This reshaping operation is not dealt with in
-                preprocessing so that: a) this model conforms to existing
-                pre-processing pipeline, and b) because future edits to
-                `myrtlespeech.model.rnn_t.TransducerEncoder` may add
-                convolutions before input to the first layer `fc1`/`rnn1`.
+                input (a :py:class:`torch.Tensor`) with size ``[batch,
+                channels, features, max_input_seq_len]`` and the second element
+                is a :py:class:`torch.Tensor` of size ``[batch]`` where each
+                entry represents the sequence length of the corresponding
+                *input* sequence to the rnn. The channel dimension contains
+                context frames and is immediately flattened into the
+                ``features`` dimension. This reshaping operation is not dealt
+                with in preprocessing so that: a) this model conforms to the
+                existing pre-processing pipeline, and b) because future edits
+                to :py:class:`TransducerEncoder` may add convolutions before
+                input to the first layer ``fc1``/``rnn1``.
 
         Returns:
-            Output from `fc2`` if present else output from ``rnn1``. See
+            Output from ``fc2`` if present else output from ``rnn1``. See
             initialisation docstring.
         """
 
@@ -385,7 +386,7 @@ class TransducerEncoder(torch.nn.Module):
 
     @staticmethod
     def _prepare_inputs_fc1(inp):
-        r"""Reshapes inputs to prepare them for `fc1`.
+        r"""Reshapes inputs to prepare them for ``fc1``.
 
         This involves flattening n_context in channel dimension in the hidden
         dimension.
@@ -405,17 +406,17 @@ class TransducerPredictNet(torch.nn.Module):
     Args:
         embedding: A :py:class:`torch.nn.Module` which is an embedding lookup
             for targets (eg graphemes, wordpieces) that must accept a
-            :py:`torch.Tensor` of size ``[batch, max_output_seq_len]`` as
-            input and return a :py:`torch.Tensor` of size ``[batch,
+            :py:class:`torch.Tensor` of size ``[batch, max_output_seq_len]`` as
+            input and return a :py:class:`torch.Tensor` of size ``[batch,
             max_output_seq_len, pred_nn_input_feature_size]`.
 
         pred_nn: A :py:class:`torch.nn.Module` containing the non-embedding
             module the Transducer prediction.
 
-            `pred_nn` can be *any* :py:class:`torch.nn.Module` that
+            ``pred_nn`` can be *any* :py:class:`torch.nn.Module` that
             has the same input and return arguments as a
-            :py:class:`myrtlespeech.model.rnn.RNN` with `batch_first=True` as
-            well as the integer attribute `hidden_size`.
+            :py:class:`myrtlespeech.model.rnn.RNN` with ``batch_first=True`` as
+            well as the integer attribute ``hidden_size``.
 
     """
 
@@ -435,9 +436,9 @@ class TransducerPredictNet(torch.nn.Module):
 
         .. note::
 
-            This function is only appropriate *during training* when the
+            This function is only appropriate when the
             ground-truth labels are available. The :py:meth:`predict`
-            should be used for inference with `training=False`.
+            should be used for inference with ``training=False``.
 
         .. note::
 
@@ -479,28 +480,28 @@ class TransducerPredictNet(torch.nn.Module):
             y: A Optional Tuple where the first element is the target label
                 tensor of size ``[batch, max_label_length]`` and the second is
                 a :py:class:`torch.Tensor` of size ``[batch]`` that contains
-                the *input* lengths of these target label sequences. `y` can
-                be None iff `is_training`=False.
+                the *input* lengths of these target label sequences. ``y`` can
+                be None iff ``is_training=False``.
 
-            hidden_state: The Optional hidden state of `pred_nn` which is
+            hidden_state: The Optional hidden state of ``pred_nn`` which is
                 either a length 2 Tuple of :py:class:`torch.Tensor`s or
                 a single :py:class:`torch.Tensor` depending on the ``RNNType``
                 (see :py:class:`torch.nn` documentation for more information).
 
-                `hidden_state` must be None when `is_training`=True.
+                ``hidden_state`` must be None when ``is_training=True``.
 
-            is_training: A boolean. If True then training is being performed
-                and if False, inference is being performed. When
-                `is_training=False`, the hidden_state is passed to
-                `self.dec_pred` and the output of this function will include
+            is_training: A boolean. If :py:data:`True` then training is being
+                performed and if False, inference is being performed. When
+                ``is_training=False``, the hidden_state is passed to
+                ``pred_nn`` and the output of this function will include
                 the returned :py:class:`RNN`, hidden state. This is the same
                 behaviour as :py:class:`RNN` - consult these docstrings for
                 more details.
 
         Returns:
-            This will return the output of 'pred_nn' where a hidden state is
-            present iff `is_training = False`. See :py:class:`RNN` with
-            `batch_first=True` for API.
+            This will return the output of ``pred_nn`` where a hidden state is
+            present iff ``is_training = False``. See :py:class:`RNN` with
+            ``batch_first=True`` for API.
         """
         if is_training:
             assert (
@@ -536,9 +537,10 @@ class TransducerPredictNet(torch.nn.Module):
     def embed(
         self, y: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        r"""Wrapper function on `self.embedding`.
+        r"""Wrapper function on ``embedding``.
 
-        Casts inputs to int64 if necessary before applying `self.embedding`.
+        Casts inputs to int64 if necessary before applying ``embedding``
+        module.
 
         Args:
             y: A Tuple where the first element is the target label tensor of

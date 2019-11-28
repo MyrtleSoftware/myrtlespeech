@@ -22,15 +22,17 @@ class TransducerBeamDecoder(TransducerDecoderBase):
 
         model: See :py:class:`TransducerDecoderBase`.
 
-        beam_width: An int, default=4. The beam width for the decoding. Must be
-            a positive integer.
+        beam_width: A positive :py:data:`int`, that defaults to 4. The beam
+            width for the decoding.
 
-        length_norm: bool, default=False. If True, normalise log probabilities
-            by length before the returning the "most probable" sequence. This
-            avoids favouring short predictions and was used in the first Graves
-            Transducer paper (2012): https://arxiv.org/pdf/1211.3711.pdf.
-            Default is False since the practice was discontinued by Graves in
-            his subsequent paper (2013): https://arxiv.org/pdf/1303.5778.pdf
+        length_norm: :py:data:`bool`, default=False. If :py:data`True`,
+            normalise log probabilities by length before the returning the
+            "most probable" sequence. This avoids favouring short predictions
+            and was used in the first Graves `Transducer paper (2012)
+            <https://arxiv.org/pdf/1211.3711.pdf>`_.
+            Default is :py:data:`False` since the practice was discontinued
+            by Graves in his subsequent `2013 paper
+            <https://arxiv.org/pdf/1303.5778.pdf>`_.
 
         max_symbols_per_step: See :py:class:`TransducerDecoderBase`.
 
@@ -66,11 +68,9 @@ class TransducerBeamDecoder(TransducerDecoderBase):
     def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
         r"""Beam Transducer decode method.
 
-        Args:
-            See :py:class:`TransducerDecoderBase`.
+        See :py:class:`TransducerDecoderBase` for args.
 
-        Returns:
-            See :py:class:`TransducerDecoderBase`.
+        See :py:class:`TransducerDecoderBase` for args.
         """
 
         fs, fs_lens = self._model.encode(inp)

@@ -7,4 +7,4 @@
     :caption: Contents:
 
     ctc_loss
-    rnn_t_loss
+    transducer_loss
