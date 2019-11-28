@@ -36,8 +36,8 @@ def pre_process_steps(
 
     if step_type_str == "mfcc":
         kwargs["mfcc"] = draw(_mfccs())
-    elif step_type_str == "lmfb":
-        kwargs["lmfb"] = draw(_lmfbs())
+    elif step_type_str == "log_mel_filter_bank":
+        kwargs["log_mel_filter_bank"] = draw(_log_mel_filter_banks())
     elif step_type_str == "spec_augment":
         kwargs["spec_augment"] = draw(_spec_augments())
     elif step_type_str == "standardize":
@@ -103,7 +103,7 @@ def _spec_augments(
 
 
 @st.composite
-def _lmfbs(
+def _log_mel_filter_banks(
     draw, return_kwargs: bool = False
 ) -> Union[
     st.SearchStrategy[pre_process_step_pb2.LogMelFB],

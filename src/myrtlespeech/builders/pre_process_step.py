@@ -40,11 +40,11 @@ def build(
                 "hop_length": pre_process_step_cfg.mfcc.hop_length,
             },
         )
-    elif step_type == "lmfb":
+    elif step_type == "log_mel_filter_bank":
         step = LogMelFB(
-            n_mels=pre_process_step_cfg.lmfb.n_mels,
-            win_length=pre_process_step_cfg.lmfb.win_length,
-            hop_length=pre_process_step_cfg.lmfb.hop_length,
+            n_mels=pre_process_step_cfg.log_mel_filter_bank.n_mels,
+            win_length=pre_process_step_cfg.log_mel_filter_bank.win_length,
+            hop_length=pre_process_step_cfg.log_mel_filter_bank.hop_length,
         )
     elif step_type == "spec_augment":
         spec = pre_process_step_cfg.spec_augment
