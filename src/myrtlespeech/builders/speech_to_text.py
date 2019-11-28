@@ -11,13 +11,13 @@ from myrtlespeech.builders.deep_speech_2 import build as build_deep_speech_2
 from myrtlespeech.builders.pre_process_step import (
     build as build_pre_process_step,
 )
-from myrtlespeech.builders.rnn_t_beam_decoder import (
-    build as build_rnn_t_beam_decoder,
-)
-from myrtlespeech.builders.rnn_t_greedy_decoder import (
-    build as build_rnn_t_greedy_decoder,
-)
 from myrtlespeech.builders.transducer import build as build_transducer
+from myrtlespeech.builders.transducer_beam_decoder import (
+    build as build_transducer_beam_decoder,
+)
+from myrtlespeech.builders.transducer_greedy_decoder import (
+    build as build_transducer_greedy_decoder,
+)
 from myrtlespeech.builders.transducer_loss import (
     build as build_transducer_loss,
 )
@@ -197,7 +197,7 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
     else:
         raise ValueError(f"model={model_type} not supported")
 
-    # capture "blank_index"s in all CTC/RNNT-based components to check
+    # capture "blank_index"s in all CTC/Transducer-based components to check
     # all match
     blank_indices: List[int] = []
 
@@ -259,22 +259,25 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
                 f"{post_process_type}.blank_index={blank_index_pp} must be in "
                 f"[0, {max(0, len(alphabet) - 1)}]"
             )
-    elif post_process_type in ["rnn_t_greedy_decoder", "rnn_t_beam_decoder"]:
-        if post_process_type == "rnn_t_greedy_decoder":
-            blank_index_pp = stt_cfg.rnn_t_greedy_decoder.blank_index
-            post_process = build_rnn_t_greedy_decoder(
-                stt_cfg.rnn_t_greedy_decoder, model=model
+    elif post_process_type in [
+        "transducer_greedy_decoder",
+        "transducer_beam_decoder",
+    ]:
+        if post_process_type == "transducer_greedy_decoder":
+            blank_index_pp = stt_cfg.transducer_greedy_decoder.blank_index
+            post_process = build_transducer_greedy_decoder(
+                stt_cfg.transducer_greedy_decoder, model=model
             )
-        elif post_process_type == "rnn_t_beam_decoder":
-            blank_index_pp = stt_cfg.rnn_t_beam_decoder.blank_index
-            post_process = build_rnn_t_beam_decoder(
-                stt_cfg.rnn_t_beam_decoder, model=model
+        elif post_process_type == "transducer_beam_decoder":
+            blank_index_pp = stt_cfg.transducer_beam_decoder.blank_index
+            post_process = build_transducer_beam_decoder(
+                stt_cfg.transducer_beam_decoder, model=model
             )
         else:
             raise ValueError(
                 f"This path should not execute: post_process_type="
                 f"{post_process_type} is not in "
-                f"['rnn_t_greedy_decoder', 'rnn_t_beam_decoder']"
+                f"['transducer_greedy_decoder', 'transducer_beam_decoder']"
             )
         # check blank:
         blank_indices.append(blank_index_pp)

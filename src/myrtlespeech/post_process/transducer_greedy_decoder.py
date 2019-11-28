@@ -5,14 +5,16 @@ from typing import Union
 
 import torch
 from myrtlespeech.model.transducer import Transducer
-from myrtlespeech.post_process.rnn_t_decoder_base import RNNTDecoderBase
+from myrtlespeech.post_process.transducer_decoder_base import (
+    TransducerDecoderBase,
+)
 
 
-class RNNTGreedyDecoder(RNNTDecoderBase):
+class TransducerGreedyDecoder(TransducerDecoderBase):
     """Decodes Transducer output using a greedy strategy.
 
     Args:
-        See :py:class:`RNNTDecoderBase`.
+        See :py:class:`TransducerDecoderBase`.
     """
 
     def __init__(
@@ -31,7 +33,7 @@ class RNNTGreedyDecoder(RNNTDecoderBase):
     def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
         """Greedy Transducer decode method.
 
-        See :py:class:`RNNTDecoderBase` for args"""
+        See :py:class:`TransducerDecoderBase` for args"""
 
         fs, fs_lens = self._model.encode(inp)
         fs = fs[: fs_lens[0], :, :]  # size: seq_len, batch = 1, rnn_features

@@ -5,20 +5,22 @@ from typing import Tuple
 
 import torch
 from myrtlespeech.model.transducer import Transducer
-from myrtlespeech.post_process.rnn_t_decoder_base import RNNTDecoderBase
+from myrtlespeech.post_process.transducer_decoder_base import (
+    TransducerDecoderBase,
+)
 
 
-class RNNTBeamDecoder(RNNTDecoderBase):
-    """Decodes RNNT output using a beam search strategy.
+class TransducerBeamDecoder(TransducerDecoderBase):
+    """Decodes Transducer output using a beam search strategy.
 
     This is a reference implementation and its performance is *not* guaranteed
     to be useful for a production system. Based on the technique described in
     `Graves 2012 <https://arxiv.org/abs/1211.3711>`_.
 
     Args:
-        blank_index: See :py:class:`RNNTDecoderBase`.
+        blank_index: See :py:class:`TransducerDecoderBase`.
 
-        model: See :py:class:`RNNTDecoderBase`.
+        model: See :py:class:`TransducerDecoderBase`.
 
         beam_width: An int, default=4. The beam width for the decoding. Must be
             a positive integer.
@@ -26,11 +28,11 @@ class RNNTBeamDecoder(RNNTDecoderBase):
         length_norm: bool, default=False. If True, normalise log probabilities
             by length before the returning the "most probable" sequence. This
             avoids favouring short predictions and was used in the first Graves
-            RNN-T paper (2012): https://arxiv.org/pdf/1211.3711.pdf.
+            Transducer paper (2012): https://arxiv.org/pdf/1211.3711.pdf.
             Default is False since the practice was discontinued by Graves in
             his subsequent paper (2013): https://arxiv.org/pdf/1303.5778.pdf
 
-        max_symbols_per_step: See :py:class:`RNNTDecoderBase`.
+        max_symbols_per_step: See :py:class:`TransducerDecoderBase`.
 
         prune_threshold: Affects the list of symbols to consider when extending
             a prefix at each step. A prefix is not extended with a given symbol
@@ -57,18 +59,18 @@ class RNNTBeamDecoder(RNNTDecoderBase):
             max_symbols_per_step=max_symbols_per_step,
         )
 
-        self.beam_width = beam_width
-        self.length_norm = length_norm
-        self.log_prune_threshold = math.log(prune_threshold)
+        self._beam_width = beam_width
+        self._length_norm = length_norm
+        self._log_prune_threshold = math.log(prune_threshold)
 
     def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
-        r"""Beam RNN-T decode method.
+        r"""Beam Transducer decode method.
 
         Args:
-            See :py:class:`RNNTDecoderBase`.
+            See :py:class:`TransducerDecoderBase`.
 
         Returns:
-            See :py:class:`RNNTDecoderBase`.
+            See :py:class:`TransducerDecoderBase`.
         """
 
         fs, fs_lens = self._model.encode(inp)
@@ -107,8 +109,8 @@ class RNNTBeamDecoder(RNNTDecoderBase):
 
             # 2) main beam search
             while len(A) > 0 and (
-                len(B) < self.beam_width
-                or B[self.beam_width - 1].logp < A[0].logp
+                len(B) < self._beam_width
+                or B[self._beam_width - 1].logp < A[0].logp
             ):
                 y_star = max(A, key=lambda a: (a.logp, len(a.labels)))
                 A.remove(y_star)
@@ -119,7 +121,7 @@ class RNNTBeamDecoder(RNNTDecoderBase):
                 logp = self._joint_step(f, pred)
 
                 for k in range(logp.shape[0]):
-                    if logp[k] <= self.log_prune_threshold:
+                    if logp[k] <= self._log_prune_threshold:
                         continue
                     yk = Sequence(y_star)
                     yk.logp += float(logp[k])
@@ -141,9 +143,9 @@ class RNNTBeamDecoder(RNNTDecoderBase):
                         A.append(yk)
                 A.sort(key=lambda a: (-a.logp, len(a.labels)))
                 B.sort(key=lambda a: (-a.logp, len(a.labels)))
-            B = B[: self.beam_width]
+            B = B[: self._beam_width]
 
-        if self.length_norm:
+        if self._length_norm:
             B.sort(key=lambda a: -a.logp / max(len(a.labels), 0.1))
 
         label = B[0].labels
