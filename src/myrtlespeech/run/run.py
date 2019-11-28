@@ -55,8 +55,9 @@ class ReportDecoderBase(Callback):
     *Do not instantiate this class directly.*
 
     When overriding the base class, you should define the following:
-        `self.decoder_input_key` @property - this gives the kwargs key required
-            to access the decoder input.
+        `self.get_decoder_inputs` method - this gives decoder access to the
+            necessary inputs.
+
 
     Args:
         decoder: decodes output to sequence of indices.
@@ -116,10 +117,9 @@ class ReportDecoderBase(Callback):
     def on_epoch_begin(self, **kwargs):
         self._reset(**kwargs)
 
-    @property
-    def decoder_input_key(self):
+    def get_decoder_inputs(self, **kwargs):
         raise NotImplementedError(
-            "Must define `self.decoder_input_key` @property"
+            "Must define `self.get_decoder_inputs` method"
         )
 
     def on_batch_end(self, **kwargs):
@@ -131,7 +131,8 @@ class ReportDecoderBase(Callback):
 
         targets = kwargs["last_target"][0]
         target_lens = kwargs["last_target"][1]
-        acts = self.decoder(*kwargs[self.decoder_input_key])
+        decoder_inputs = self.get_decoder_inputs(**kwargs)
+        acts = self.decoder(*decoder_inputs)
         for act, target, target_len in zip(acts, targets, target_lens):
             act_chars = self.alphabet.get_symbols(act)
             exp_chars = self.alphabet.get_symbols(
@@ -195,13 +196,12 @@ class ReportCTCDecoder(ReportDecoderBase):
             ctc_decoder, alphabet, word_segmentor, eval_every, calc_quantities
         )
 
-    @property
-    def decoder_input_key(self):
-        return "last_output"
+    def get_decoder_inputs(self, **kwargs):
+        return kwargs["last_output"]
 
 
-class ReportRNNTDecoder(ReportDecoderBase):
-    """RNNT Decoder Callback.
+class ReportTransducerDecoder(ReportDecoderBase):
+    """Transducer Decoder Callback.
 
     Args:
         skip_first_epoch: bool. Default = False. If True, the first eval epoch
@@ -230,18 +230,16 @@ class ReportRNNTDecoder(ReportDecoderBase):
         r"""Performs error-rate calculation."""
         if self.skip_first_epoch and kwargs["epoch"] == 0:
             return
+
+        return super().on_batch_end(**kwargs)
+
+    def get_decoder_inputs(self, **kwargs):
         # The `RNNTTraining` callback sets kwargs["last_input"] = (x, y) as
         # ground truth values y are required for the Transducer forward pass
         # but the decoders *should not* have access to ground truth labels
         # and hence kwargs["last_input"] is updated here:
         x, y = kwargs["last_input"]
-        kwargs["last_input"] = x
-        return super().on_batch_end(**kwargs)
-
-    @property
-    def decoder_input_key(self):
-        return "last_input"  # i.e. we can't use the rnnt output during
-        # decoding as this was computed using ground-truth labels!
+        return (x,)  # tuple required as this will be unpacked
 
 
 class ClearMemory(Callback):
