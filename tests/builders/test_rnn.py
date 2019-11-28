@@ -75,16 +75,12 @@ def rnn_cfg_tensors(
 # Tests -----------------------------------------------------------------------
 
 
-<<<<<<< HEAD
+
 @given(
     rnn_cfg=rnns(),
     input_features=st.integers(1, 32),
     batch_first=st.booleans(),
 )
-=======
-@settings(deadline=1000)
-@given(rnn_cfg=rnns(), input_features=st.integers(1, 128))
->>>>>>> Added rnn tests. All passing.
 def test_build_rnn_returns_correct_rnn_with_valid_params(
     rnn_cfg: rnn_pb2.RNN, input_features: int, batch_first: bool
 ) -> None:
