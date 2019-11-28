@@ -16,9 +16,9 @@ from tests.protos.test_ctc_loss import ctc_losses
 from tests.protos.test_deep_speech_1 import deep_speech_1s
 from tests.protos.test_deep_speech_2 import deep_speech_2s
 from tests.protos.test_pre_process_step import pre_process_steps
-from tests.protos.test_rnn_t_decoders import rnn_t_beam_decoder
-from tests.protos.test_rnn_t_decoders import rnn_t_greedy_decoder
 from tests.protos.test_transducer import transducer
+from tests.protos.test_transducer_decoders import transducer_beam_decoder
+from tests.protos.test_transducer_decoders import transducer_greedy_decoder
 from tests.protos.test_transducer_loss import transducer_losses
 from tests.protos.utils import all_fields_set
 
@@ -70,10 +70,6 @@ def speech_to_texts(
     else:
         raise ValueError(f"unknown model type {model_str}")
 
-    # choice of two paths:
-    # 1) ds2/ds1 -> `ctc`
-    # 2) transducer -> `rnnt`
-
     # record blank index to share between CTC components
     blank_index: Optional[int] = None
 
@@ -123,16 +119,20 @@ def speech_to_texts(
         if blank_index is not None:
             beam_kwargs["blank_index"] = blank_index
         kwargs["ctc_beam_decoder"] = draw(ctc_beam_decoders(**beam_kwargs))
-    elif post_str == "rnn_t_beam_decoder":
+    elif post_str == "transducer_beam_decoder":
         beam_kwargs = {"alphabet_len": len(kwargs["alphabet"])}
         if blank_index is not None:
             beam_kwargs["blank_index"] = blank_index
-        kwargs["ctc_beam_decoder"] = draw(rnn_t_beam_decoder(**beam_kwargs))
-    elif post_str == "rnn_t_greedy_decoder":
+        kwargs["ctc_beam_decoder"] = draw(
+            transducer_beam_decoder(**beam_kwargs)
+        )
+    elif post_str == "transducer_greedy_decoder":
         beam_kwargs = {"alphabet_len": len(kwargs["alphabet"])}
         if blank_index is not None:
             beam_kwargs["blank_index"] = blank_index
-        kwargs["ctc_beam_decoder"] = draw(rnn_t_greedy_decoder(**beam_kwargs))
+        kwargs["ctc_beam_decoder"] = draw(
+            transducer_greedy_decoder(**beam_kwargs)
+        )
     else:
         raise ValueError(f"unknown post_process type {post_str}")
 

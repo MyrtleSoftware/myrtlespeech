@@ -3,7 +3,9 @@ from typing import Tuple
 import torch
 from myrtlespeech.model.transducer import Transducer
 from myrtlespeech.model.transducer import TransducerPredictNet
-from myrtlespeech.post_process.rnn_t_beam_decoder import RNNTBeamDecoder
+from myrtlespeech.post_process.transducer_beam_decoder import (
+    TransducerBeamDecoder,
+)
 
 
 # Fixtures and Strategies -----------------------------------------------------
@@ -132,7 +134,7 @@ class DummyTransducerModel(Transducer):
     """Transducer for testing.
 
     Note that the `joint_net` override takes place in
-    :py:class:`RNNTBeamDecoderDummy`'s :py:meth:`_joint_step` so
+    :py:class:`TransducerBeamDecoderDummy`'s :py:meth:`_joint_step` so
     `joint_net=None` is used.
     """
 
@@ -146,7 +148,7 @@ class DummyTransducerModel(Transducer):
         raise NotImplementedError
 
 
-class RNNTBeamDecoderDummy(RNNTBeamDecoder):
+class TransducerBeamDecoderDummy(TransducerBeamDecoder):
     """Decoder class which overrides _joint_step method"""
 
     def __init__(self, **kwargs):
@@ -155,7 +157,7 @@ class RNNTBeamDecoderDummy(RNNTBeamDecoder):
     def _joint_step(self, enc, pred):
         """Overrrides :py:meth:`_joint_step()`.
 
-        This is necessary as :py:meth:`RNNTDecoderBase._joint_step()`
+        This is necessary as :py:meth:`TransducerDecoderBase._joint_step()`
         concatenates `encoder` and `predict_net` outputs and also performs
         a :py:meth:`log_softmax` on results both of which which break this
         worked example.
@@ -192,7 +194,7 @@ def get_fixed_decoder(max_symbols_per_step=100):
     blank_index = 0
     model = get_dummy_transducer(hidden_size=3)
     length_norm = False
-    return RNNTBeamDecoderDummy(
+    return TransducerBeamDecoderDummy(
         blank_index=blank_index,
         model=model,
         beam_width=2,
