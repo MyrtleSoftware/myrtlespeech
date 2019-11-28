@@ -200,8 +200,6 @@ class Transducer(torch.nn.Module):
                 symbols but {y_lens.max()} > {U}"
             )
 
-        return (B1, C, I, T, U)  # return dimensions
-
 
 class TransducerEncoder(torch.nn.Module):
     r"""`Transducer <https://arxiv.org/pdf/1211.3711.pdf>`_ encoder.
@@ -369,7 +367,6 @@ class TransducerEncoder(torch.nn.Module):
         B1, C, I, T = x.shape
         (B2,) = x_lens.shape
         assert B1 == B2, "Batch size must be the same for inputs and targets"
-        del x, x_lens, inp
 
     @staticmethod
     def _prepare_inputs_rnn1(inp):
@@ -382,7 +379,6 @@ class TransducerEncoder(torch.nn.Module):
 
         x = x.squeeze(1)  # B, I, T
         x = x.permute(2, 0, 1).contiguous()  # T, B, I
-        del inp
         return (x, x_lens)
 
     @staticmethod
@@ -392,13 +388,12 @@ class TransducerEncoder(torch.nn.Module):
         This involves flattening n_context in channel dimension in the hidden
         dimension.
         """
-
         (x, x_lens) = inp
         B, C, I, T = x.shape
 
         if not C == 1:
             x = x.view(B, 1, C * I, T).contiguous()
-        del inp
+
         return (x, x_lens)
 
 
@@ -458,7 +453,7 @@ class TransducerPredictNet(torch.nn.Module):
         Returns:
             Output from ``pred_nn``. See initialisation docstring.
         """
-        return self.predict(y, hidden_state=None, training=True)
+        return self.predict(y, hidden_state=None, is_training=True)
 
     def predict(
         self,
@@ -466,7 +461,7 @@ class TransducerPredictNet(torch.nn.Module):
         hidden_state: Optional[
             Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]
         ],
-        training: bool,
+        is_training: bool,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Excecutes :py:class:`TransducerPredictNet`.
 
@@ -478,32 +473,34 @@ class TransducerPredictNet(torch.nn.Module):
                 tensor of size ``[batch, max_label_length]`` and the second is
                 a :py:class:`torch.Tensor` of size ``[batch]`` that contains
                 the *input* lengths of these target label sequences. `y` can
-                be None iff `training`=False.
+                be None iff `is_training`=False.
 
             hidden_state: The Optional hidden state of `pred_nn` which is
                 either a length 2 Tuple of :py:class:`torch.Tensor`s or
                 a single :py:class:`torch.Tensor` depending on the ``RNNType``
                 (see :py:class:`torch.nn` documentation for more information).
 
-                `hidden_state` must be None when `training`=True.
+                `hidden_state` must be None when `is_training`=True.
 
-            training: A boolean. If True then training is being performed and
-                if False, inference is being performed. When `training`=False,
-                the hidden_state is passed to `self.dec_pred` and the output
-                of this function will include the returned :py:class:`RNN`,
-                hidden state (see :py:class:`RNN` for more details.)
+            is_training: A boolean. If True then training is being performed
+                and if False, inference is being performed. When
+                `is_training=False`, the hidden_state is passed to
+                `self.dec_pred` and the output of this function will include
+                the returned :py:class:`RNN`, hidden state. This is the same
+                behaviour as :py:class:`RNN` - consult these docstrings for
+                more details.
 
         Returns:
             This will return the output of 'pred_nn' where a hidden state is
-            present iff `training = False` See :py:class:`RNN` for more
-            information.
+            present iff `is_training = False`. See :py:class:`RNN` with
+            `batch_first=True` for API.
         """
-        assert self.training == training, (
+        assert self.training == is_training, (
             f"Attempting to use TransducerPredictNet predict method with arg "
-            f"training={training} but self.training={self.training}"
+            f"is_training={is_training} but self.training={self.training}"
         )
 
-        if training:
+        if is_training:
             assert (
                 hidden_state is None
             ), "Do not pass hidden_state during training"
@@ -518,7 +515,7 @@ class TransducerPredictNet(torch.nn.Module):
             ), f"y must be a tuple of length 2"
             y = self.embed(y)
 
-        if training:
+        if is_training:
             pred_inp = self._prepend_SOS(y)
             # Update the lengths by adding one before inputing to the pred_nn
             pred_inp = (pred_inp[0], pred_inp[1] + 1)
@@ -527,7 +524,7 @@ class TransducerPredictNet(torch.nn.Module):
 
         out = self.pred_nn(pred_inp)
 
-        if training:
+        if is_training:
             # Revert the lengths to 'true' values (i.e. not including SOS)
             # by subtracting one
             out = (out[0], out[1] - 1)

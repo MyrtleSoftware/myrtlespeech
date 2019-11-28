@@ -254,10 +254,10 @@ def test_preserves_training_state(decoder=get_fixed_decoder()):
     indata = indata.unsqueeze(3)  # B, C, F, T = (1, 1, 3, 1)
     lengths = torch.IntTensor([1])
 
-    decoder.model.train()
+    decoder._model.train()
     decoder((indata, lengths))
-    assert decoder.model.training
+    assert decoder._model.training
 
-    decoder.model.eval()
+    decoder._model.eval()
     decoder((indata, lengths))
-    assert not decoder.model.training
+    assert not decoder._model.training

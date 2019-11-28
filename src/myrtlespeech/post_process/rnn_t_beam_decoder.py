@@ -71,13 +71,13 @@ class RNNTBeamDecoder(RNNTDecoderBase):
             See :py:class:`RNNTDecoderBase`.
         """
 
-        fs, fs_lens = self.model.encode(inp)
+        fs, fs_lens = self._model.encode(inp)
         fs = fs[: fs_lens[0], :, :]  # size: seq_len, batch = 1, rnn_features
         assert (
             fs_lens[0] == fs.shape[0]
         ), f"Time dimension comparison failed. {fs_lens[0]} != {fs.shape[0]}"
 
-        B = [Sequence(max_symbols=self.max_symbols_per_step)]
+        B = [Sequence(max_symbols=self._max_symbols_per_step)]
         for t in range(fs.shape[0]):
             f = fs[t, :, :].unsqueeze(0)
             # add length
@@ -123,15 +123,15 @@ class RNNTBeamDecoder(RNNTDecoderBase):
                         continue
                     yk = Sequence(y_star)
                     yk.logp += float(logp[k])
-                    if k == self.blank_index:
+                    if k == self._blank_index:
                         if yk not in B:
-                            yk.remaining_symbols = self.max_symbols_per_step
+                            yk.remaining_symbols = self._max_symbols_per_step
                             B.append(yk)
                         continue
 
                     yk.labels.append(k)
                     yk.times.append(t)
-                    if self.max_symbols_per_step is not None:
+                    if self._max_symbols_per_step is not None:
                         yk.remaining_symbols -= 1
                         if yk.remaining_symbols < 0:
                             continue
