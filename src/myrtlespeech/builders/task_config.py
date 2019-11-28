@@ -111,24 +111,34 @@ def build(
         add_seq_len_to_transforms=True,
     )
 
-    shuffle = task_config.train_config.shuffle_batches_before_every_epoch
+    shuffle_str = task_config.train_config.WhichOneof("shuffle_strategy")
     batch_sampler: Union[SortaGrad, SequentialRandomSampler]
-    if task_config.train_config.sortagrad:
+    if shuffle_str == "sortagrad":
         batch_sampler = SortaGrad(
             indices=range(len(train_dataset)),
             batch_size=task_config.train_config.batch_size,
-            shuffle=shuffle,
+            shuffle=True,
             drop_last=False,
         )
         sort = True
-    else:
+    elif shuffle_str == "random_batches":
         batch_sampler = SequentialRandomSampler(
             indices=range(len(train_dataset)),
             batch_size=task_config.train_config.batch_size,
-            shuffle=shuffle,
+            shuffle=True,
             drop_last=False,
         )
         sort = False
+    elif shuffle_str == "sequential_batches":
+        batch_sampler = SequentialRandomSampler(
+            indices=range(len(train_dataset)),
+            batch_size=task_config.train_config.batch_size,
+            shuffle=False,
+            drop_last=False,
+        )
+        sort = False
+    else:
+        raise ValueError(f"unsupported shuffle strategy {shuffle_str}")
 
     train_loader = torch.utils.data.DataLoader(
         dataset=train_dataset,

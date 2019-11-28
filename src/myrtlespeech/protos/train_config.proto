@@ -4,6 +4,7 @@ package myrtlespeech.protos;
 
 import "myrtlespeech/protos/dataset.proto";
 import "myrtlespeech/protos/optimizer.proto";
+import "myrtlespeech/protos/shuffle_strategy.proto";
 
 
 // Configuration for training.
@@ -21,10 +22,12 @@ message TrainConfig {
 
   Dataset dataset = 5;
 
-  oneof supported_shuffles {
+  oneof shuffle_strategy {
+    // Mantain a sequential batch order.
+    SequentialBatches sequential_batches = 6;
     // Shuffle batches before every epoch.
-    bool shuffle_batches_before_every_epoch = 6;
+    RandomBatches random_batches = 7;
+    // Sequential for the first epoch and random for the following ones.
+    SortaGrad sortagrad = 8;
   }
-
-  bool sortagrad = 11;
 }

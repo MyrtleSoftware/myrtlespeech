@@ -3,6 +3,7 @@ from typing import Tuple
 from typing import Union
 
 import hypothesis.strategies as st
+from myrtlespeech.protos import shuffle_strategy_pb2
 from myrtlespeech.protos import train_config_pb2
 
 from tests.protos.test_dataset import datasets
@@ -51,16 +52,18 @@ def train_configs(
         st.sampled_from(
             [
                 f.name
-                for f in descript.oneofs_by_name["supported_shuffles"].fields
+                for f in descript.oneofs_by_name["shuffle_strategy"].fields
             ]
         )
     )
-    if shuffle_str == "shuffle_batches_before_every_epoch":
-        kwargs[shuffle_str] = draw(st.booleans())
+    if shuffle_str == "sequential_batches":
+        kwargs[shuffle_str] = shuffle_strategy_pb2.SequentialBatches()
+    elif shuffle_str == "random_batches":
+        kwargs[shuffle_str] = shuffle_strategy_pb2.RandomBatches()
+    elif shuffle_str == "sortagrad":
+        kwargs[shuffle_str] = shuffle_strategy_pb2.SortaGrad()
     else:
-        raise ValueError(f"unknown shuffle type {shuffle_str}")
-
-    kwargs["sortagrad"] = draw(st.booleans())
+        raise ValueError(f"unknown shuffle strategy type {shuffle_str}")
 
     # initialise and return
     all_fields_set(train_config_pb2.TrainConfig, kwargs)

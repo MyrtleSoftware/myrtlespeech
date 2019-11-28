@@ -56,23 +56,12 @@ class SequentialRandomSampler:
         return batches
 
     def __iter__(self):
-        if self._n_iterators in self._sequential:
-            iter_ = self._seq_iter()
-        else:
-            iter_ = self._rnd_iter()
-        self._n_iterators += 1
-        return iter_
-
-    def _seq_iter(self):
-        for b in self.batch_indices:
-            yield b
-
-    def _rnd_iter(self):
         indices = list(range(len(self.batch_indices)))
-        if self.shuffle:
+        if self.shuffle and self._n_iterators not in self._sequential:
             random.shuffle(indices)
         for index in indices:
             yield self.batch_indices[index]
+        self._n_iterators += 1
 
     def __len__(self):
         return len(self.batch_indices)
