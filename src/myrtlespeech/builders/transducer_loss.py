@@ -3,7 +3,7 @@ from myrtlespeech.protos import transducer_loss_pb2
 
 
 def build(
-    transducer_loss_cfg: transducer_loss_pb2.TransducerLoss
+    transducer_loss_cfg: transducer_loss_pb2.TransducerLoss,
 ) -> TransducerLoss:
     r"""Returns a :py:class:`.TransducerLoss` based on the config.
 
