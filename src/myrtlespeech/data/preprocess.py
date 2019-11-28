@@ -178,7 +178,7 @@ class Downsample:
         subsample: The integer rate at which subsampling is performed.
 
     Raises:
-        :py:class:`ValueError`: if `subsample is less than 2`.
+        :py:class:`ValueError`: if ``subsample`` is less than 2.
 
     Example:
         >>> features = 3

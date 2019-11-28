@@ -180,8 +180,9 @@ def build_transducer_enc_cfg(
         input_features: The number of features for the input.
 
         output_features: The number of output features of the encoder if
-            transducer_enc_cfg.HasField("fc2"). Otherwise the output size will
-            be equal to the hidden size of `rnn2` if present else `rnn1`.
+            ``transducer_enc_cfg.HasField('fc2')``. Otherwise, must have
+            ``output_features=None`` since the output size will be equal to
+            the hidden size of ``rnn1``.
 
     Returns:
         A Tuple where the first element is an :py:class:`TransducerEncoder`

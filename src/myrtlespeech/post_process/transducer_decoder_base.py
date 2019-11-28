@@ -11,9 +11,12 @@ from myrtlespeech.model.transducer import Transducer
 class TransducerDecoderBase(torch.nn.Module):
     r"""Base Transducer decoder class.
 
-    *This should not be instantiated directly.* Instead use specific
-    decoders (e.g. :py:class:`TransducerGreedyDecoder` or
-    :py:class:`TransducerBeamDecoder`).
+    .. note::
+
+        This class should not be instantiated directly. Instead use specific
+        decoders (e.g. :py:class:`TransducerGreedyDecoder` or
+        :py:class:`TransducerBeamDecoder`).
+
 
     Args:
         blank_index: Index of the "blank" symbol. It is advised that the blank
@@ -31,13 +34,6 @@ class TransducerDecoderBase(torch.nn.Module):
             to output sequence in a single time step. Default value is None: in
             this case the limit is set to 100 (to avoid the potentially
             infinite loop that could occur with no limit).
-
-    Properties:
-        _SOS: Start of sequence symbol
-        _model: See Args.
-        _max_symbols_per_step: See Args.
-        _blank_index: See Args.
-        device: Device to which inputs will be sent. String.
 
     Methods:
         _pred_step(label, hidden): performs a single step of prediction
@@ -110,15 +106,16 @@ class TransducerDecoderBase(torch.nn.Module):
 
         Args:
             inp: Tuple where the first element is the encoder
-                input (a :py:`torch.Tensor`) with size ``[batch, channels,
-                features, max_input_seq_len]`` and the second element is a
-                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-                represents the sequence length of the corresponding *input*
-                sequence to the rnn.  Note that `inp` is passed straight to
-                :py:class:`myrtlespeech.model.transducer.TransducerEncoder`.
+                input (a :py:class:`torch.Tensor`) with size ``[batch,
+                channels, features, max_input_seq_len]`` and the second element
+                is a :py:class:`torch.Tensor` of size ``[batch]`` where each
+                entry represents the sequence length of the corresponding
+                *input* sequence to the rnn.  Note that ``inp`` is passed
+                straight to :py:class:`TransducerEncoder`.
 
         Returns:
-            A List of length `[batch]` where each element is a List of indexes.
+            A List of length ``[batch]`` where each element is a List of
+            indexes.
 
         """
         raise NotImplementedError(

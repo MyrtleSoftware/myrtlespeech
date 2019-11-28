@@ -25,7 +25,7 @@ def build(
         A :py:class:`TransducerBeamDecoder` based on the config.
 
     Raises:
-        :py:class:`ValueError` if ``max_symbols_per_step`` < 1.
+        :py:class:`ValueError`: if ``max_symbols_per_step`` < 1.
     """
 
     if (
