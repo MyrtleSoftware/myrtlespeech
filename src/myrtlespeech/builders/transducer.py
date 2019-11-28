@@ -77,7 +77,6 @@ def build(
         ...       num_layers: 2;
         ...       bias: true;
         ...       bidirectional: false;
-        ...       batch_first: true;
         ...     }
         ...    }
         ... }
@@ -321,8 +320,9 @@ def build_transducer_predict_net(
     hidden_size = predict_net_cfg.pred_nn.rnn.hidden_size
     embedding = nn.Embedding(input_features, embedding_dim=hidden_size)
 
+    # pred_nn is a batch_first=True rnn
     pred_nn, predict_net_out = build_rnn(
-        predict_net_cfg.pred_nn.rnn, hidden_size
+        predict_net_cfg.pred_nn.rnn, hidden_size, batch_first=True
     )
     # Set hidden_size attribute
     pred_nn.hidden_size = hidden_size

@@ -15,7 +15,7 @@ from tests.protos.utils import all_fields_set
 
 @st.composite
 def rnns(
-    draw, return_kwargs: bool = False, batch_first: bool = False
+    draw, return_kwargs: bool = False
 ) -> Union[
     st.SearchStrategy[rnn_pb2.RNN], st.SearchStrategy[Tuple[rnn_pb2.RNN, Dict]]
 ]:
@@ -28,7 +28,6 @@ def rnns(
     kwargs["num_layers"] = draw(st.integers(1, 4))
     kwargs["bias"] = draw(st.booleans())
     kwargs["bidirectional"] = draw(st.booleans())
-    kwargs["batch_first"] = batch_first
     if kwargs["rnn_type"] == rnn_pb2.RNN.RNN_TYPE.LSTM and kwargs["bias"]:
         kwargs["forget_gate_bias"] = FloatValue(
             value=draw(
