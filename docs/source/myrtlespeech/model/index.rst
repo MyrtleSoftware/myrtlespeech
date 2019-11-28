@@ -9,10 +9,10 @@
     cnn
     deep_speech_1
     deep_speech_2
-    transducer
     fully_connected
     lookahead
     rnn
     seq_len_wrapper
     seq_to_seq
+    transducer
     utils
