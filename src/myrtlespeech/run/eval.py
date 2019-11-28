@@ -13,7 +13,7 @@ def eval(
     eval_loader: DataLoader,
     callbacks: Optional[Collection[Callback]] = None,
 ) -> None:
-    r"""Eval ``seq_to_seq`` for ``eval_loader`` iters.
+    r"""Evaluate ``seq_to_seq`` for ``eval_loader`` iters.
 
     Args:
         seq_to_seq: A :py:class:`.SeqToSeq` model.
