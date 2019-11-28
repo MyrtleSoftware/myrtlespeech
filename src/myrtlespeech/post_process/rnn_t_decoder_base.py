@@ -70,33 +70,19 @@ class RNNTDecoderBase(torch.nn.Module):
         self.device = "cuda:0" if self.model.use_cuda else "cpu"
 
     @torch.no_grad()
-    def forward(
-        self,
-        inputs: Tuple[torch.Tensor, torch.Tensor],
-        lengths: Tuple[torch.Tensor, torch.Tensor],
-    ) -> List[List[int]]:
+    def forward(self, x: Tuple[torch.Tensor, torch.Tensor]) -> List[List[int]]:
         r"""Decodes Transducer output.
-
-        Note that the input args are the same as the
-        :py:class:`.Transducer` args but here the tuple of args is unpacked
-        with :py:meth:`forward(*args)` while for the :py:class:`.Transducer`
-        network they are passed as is: :py:meth:`forward(args)`.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
         initialisation.
 
         Args:
-            inputs: A Tuple of inputs to the network where both elements are
-                :py:class:`torch.Tensor`s. ``inputs[0]`` is the audio
-                feature input with  size ``[batch, channels, features,
-                max_input_seq_len]`` while ``inputs[1]`` is the target label
-                tensor of size ``[batch, max_label_length]``.
-
-            lengths: A Tuple of two :py:class:`torch.Tensor`s both of
-                size ``[batch]`` that contain the *input* lengths of a) the
-                audio feature inputs ``lengths[0]`` and b) the target sequences
-                ``lengths[1]``.
+            x: A Tuple of inputs to the network where both elements are
+                :py:class:`torch.Tensor`s. ``x[0]`` is the audio
+                feature input with size ``[batch, channels, features,
+                max_input_seq_len]`` while ``x[0]`` is the audio input lengths
+                of size ``[batch]``.
 
         Returns:
             A List of Lists where each sublist contains the index predictions
@@ -105,23 +91,10 @@ class RNNTDecoderBase(torch.nn.Module):
         training_state = self.model.training
         self.model.eval()
 
-        # certify inputs and get dimensions
-        (batches, _, _, _, _) = self.model._certify_inputs_forward(
-            (inputs, lengths)
-        )
-
-        audio_data, label_data = self.model._prepare_inputs_forward(
-            (inputs, lengths), self.model.use_cuda
-        )
-
-        # since label_data *should not* be used in decoding, delete it
-        # explicitly here:
-        del label_data
-
         preds = []
-        for b in range(batches):
-            audio_len = audio_data[1][b].unsqueeze(0)
-            audio_features = audio_data[0][b, :, :, :audio_len].unsqueeze(0)
+        for b in range(x[0].shape[0]):
+            audio_len = x[1][b].unsqueeze(0)
+            audio_features = x[0][b, :, :, :audio_len].unsqueeze(0)
             audio_inp = (audio_features, audio_len)
             sentence = self.decode(audio_inp)
             preds.append(sentence)
@@ -129,7 +102,7 @@ class RNNTDecoderBase(torch.nn.Module):
         # restore training state
         self.model.train(training_state)
 
-        del audio_inp, audio_features, audio_data, audio_len, inputs, lengths
+        del audio_inp, audio_features, audio_len
         return preds
 
     def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
@@ -155,42 +128,29 @@ class RNNTDecoderBase(torch.nn.Module):
         )
 
     def _pred_step(self, label, hidden):
-        b"""Performs a step of the model prediction network during inference.
-        """
+        b"""Performs a step of the prediction net during inference."""
         if label == self._SOS:
-            label_embedding = torch.zeros(
-                (1, 1, self.model.dec_rnn.rnn.hidden_size), device=self.device
-            )
-
-            lengths = torch.IntTensor([1])  # i.e. length of target is 1
-
+            y = None
         else:
             if label > self.blank_index:
                 label -= 1  # Since input label indexes will be offset by +1
-                # for labels above blank. Avoiding this complexity
-                # is the reason for using blank_index = (len(alphabet) - 1)
-
-            collated = collate_label_list([[label]], device=self.device)
-            label_embedding, lengths = self.model.embedding(collated)
-            del collated
-
-        inp = ((label_embedding, hidden), lengths)
-        ((pred, hidden), pred_lens) = self.model.dec_rnn(inp)
-        del label_embedding, inp, lengths
-        return (pred, pred_lens), hidden
+                # for labels above blank. Avoiding this complexity is
+                # the reason for enforcing  blank_index = (len(alphabet) - 1)
+            y = collate_label_list([[label]], device=self.device)
+        (out, hid), lengths = self.model.predict_net.predict(
+            y, hidden, training=False
+        )
+        return (out, lengths), hid
 
     def _joint_step(self, enc, pred):
-        r"""Performs a step of the model joint network during inference.
-        """
-        input = self.model._enc_pred_to_joint(enc, pred)
+        r"""Performs a step of the model joint network during inference."""
 
-        logits, _ = self.model.joint(input)
+        logits, _ = self.model.joint((enc, pred))
         res = torch.nn.functional.log_softmax(logits, dim=-1).squeeze()
         assert (
             len(res.shape) == 1
         ), "this _joint_step result should have just one non-zero dimension"
 
-        del logits, input
         return res
 
     def _get_last_idx(self, labels):

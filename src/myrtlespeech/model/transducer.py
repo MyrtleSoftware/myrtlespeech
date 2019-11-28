@@ -11,9 +11,9 @@ class Transducer(torch.nn.Module):
     Args:
         encoder: A :py:class:`torch.nn.Module` to use as the encoder. Note
             that this network is also referred to as the Transcription Network
-            in the literature. The `encoder` must accept as input a tuple
-            where the first element is the network input: a
-            :py:`torch.Tensor`) with size ``[batch, channels,
+            in the literature. The `encoder` must accept as input a Tuple
+            where the first element is the `encoder` input: a
+            :py:`torch.Tensor` with size ``[batch, channels,
             features, max_input_seq_len]`` and the second element is a
             :py:class:`torch.Tensor` of size ``[batch]`` where each entry
             represents the sequence length of the corresponding *input*
@@ -100,32 +100,29 @@ class Transducer(torch.nn.Module):
         initialisation.
 
         Args:
-            x: A Tuple ``(x[0], x[1])``. ``x[0]`` is input to the network and
-                is a Tuple ``x[0] = (x[0][0], x[0][1])`` where both elements
-                are :py:class:`torch.Tensor`s. ``x[0][0]`` is the audio feature
-                input with  size ``[batch, channels, features,
-                max_input_seq_len]`` while ``x[0][1]`` is the target label
-                tensor of size ``[batch, max_label_length]``.
-
-                ``x[1]`` is a Tuple of two :py:class:`torch.Tensor`s both of
-                size ``[batch]`` that contain the *input* lengths of a) the
-                audio feature inputs ``x[1][0]`` and b) the target sequences
-                ``x[1][1]``.
+            x: A Tuple where the first element is the input to `encoder`
+                and the second element is the input to `predict_net` (see
+                initialisation docstring).
 
         Returns:
             The output of `joint_net`. See initialization docstring.
             """
 
         self._certify_inputs_forward(x)
+        (x_inp, x_lens), (y, y_lens) = x
 
-        audio_data, label_data = self._prepare_inputs_forward(x, self.use_cuda)
+        if self.use_cuda:
+            x_inp = x_inp.cuda()
+            x_lens = x_lens.cuda()
+            y = y.cuda()
+            y_lens = y_lens.cuda()
 
-        f = self.encode(audio_data)  # f[0] = (T, B, H1)
-        g = self.predict_net(label_data)  # g[0] = (U, B, H2)
+        f = self.encode((x_inp, x_lens))  # f[0] = (T, B, H1)
+        g = self.predict_net((y, y_lens))  # g[0] = (U, B, H2)
 
         out = self.joint((f, g))
 
-        del f, g, audio_data, label_data, x
+        del f, g, x, x_inp, x_lens, y, y_lens
 
         return out
 
@@ -176,13 +173,14 @@ class Transducer(torch.nn.Module):
     @staticmethod
     def _certify_inputs_forward(inp):
         try:
-            ((x, y), (x_lens, y_lens)) = inp
-        except ValueError:
-            raise ValueError(
+            (x, x_lens), (y, y_lens) = inp
+        except ValueError as e:
+            print(
                 "Unable to unpack inputs to Transducer. Are you using the \
             `TransducerTraining()` callback \
             found in `myrtlespeech.run.callbacks.rnn_t_training`?"
             )
+            raise e
         B1, C, I, T = x.shape
         B2, U = y.shape
 
@@ -203,22 +201,6 @@ class Transducer(torch.nn.Module):
             )
 
         return (B1, C, I, T, U)  # return dimensions
-
-    @staticmethod
-    def _prepare_inputs_forward(inp, use_cuda):
-        ((x_inp, y), (x_lens, y_lens)) = inp
-        if use_cuda:
-            x_inp = x_inp.cuda()
-            x_lens = x_lens.cuda()
-            y = y.cuda()
-            y_lens = y_lens.cuda()
-
-        audio_data = (x_inp, x_lens)
-        label_data = (y, y_lens)
-
-        del x_inp, y, x_lens, y_lens, inp
-
-        return audio_data, label_data
 
 
 class TransducerEncoder(torch.nn.Module):

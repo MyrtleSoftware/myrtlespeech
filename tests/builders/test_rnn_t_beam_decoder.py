@@ -3,7 +3,7 @@ from myrtlespeech.builders.rnn_t_beam_decoder import build
 from myrtlespeech.post_process.rnn_t_beam_decoder import RNNTBeamDecoder
 from myrtlespeech.protos import rnn_t_beam_decoder_pb2
 
-from tests.post_process.test_rnn_t_beam_decoder import DummyTransducerModel
+from tests.post_process.test_rnn_t_beam_decoder import get_dummy_transducer
 from tests.protos.test_rnn_t_decoders import rnn_t_beam_decoder
 
 # Utilities -------------------------------------------------------------------
@@ -30,6 +30,6 @@ def test_build_returns_correct_rnn_t_beam_decoder_with_valid_params(
     rnn_t_cfg: rnn_t_beam_decoder_pb2.RNNTBeamDecoder,
 ) -> None:
     """Test that build returns correct RNNTBeamDecoder with valid params."""
-    rnn_t = DummyTransducerModel()
+    rnn_t = get_dummy_transducer()
     rnn_t_decoder = build(rnn_t_cfg, rnn_t)
     rnn_t_beam_decoder_module_match_cfg(rnn_t_decoder, rnn_t_cfg)
