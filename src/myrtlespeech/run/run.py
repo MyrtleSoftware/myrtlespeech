@@ -7,6 +7,7 @@ import argparse
 import time
 import warnings
 from pathlib import Path
+from typing import Dict
 from typing import List
 from typing import Union
 
@@ -49,10 +50,11 @@ class WordSegmentor:
 
 
 class ReportDecoderBase(Callback):
-    """Base class for reporting error rates (WERs and CERs).
+    """For reporting error rates word and character error rates.
 
-    *Do not use this class directly.* When overriding the base class, you must
-    define the following:
+    *Do not instantiate this class directly.*
+
+    When overriding the base class, you should define the following:
         `self.decoder_input_key` @property - this gives the kwargs key required
             to access the decoder input.
 
@@ -152,7 +154,7 @@ class ReportDecoderBase(Callback):
                 self.distances[error_rate].append(distance)
 
     def on_epoch_end(self, **kwargs):
-        if self.training:
+        if self.training or kwargs["epoch"] % self.eval_every != 0:
             return
         for error_rate in self.calc_quantities:
             lengths = sum(self.lengths[error_rate])
@@ -242,10 +244,40 @@ class ReportRNNTDecoder(ReportDecoderBase):
         # decoding as this was computed using ground-truth labels!
 
 
+class ClearMemory(Callback):
+    r"""Callback to perform explicit garbage collection at end of each batch.
+
+    This should be used to help reduce memory usage.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def on_batch_end(self, **kwargs):
+        self.__clear_memory(kwargs)
+
+    def __clear_memory(self, kwargs: Dict) -> None:
+        r"""Performs explicit garbage collection to prevent cuda oom error. """
+        to_delete = ["last_input", "last_target", "last_output", "last_loss"]
+        for key in to_delete:
+            if kwargs.get(key) is not None:
+                del kwargs[key]
+
+        # also delete state_dict["loss"][{"last_output", "last_target"}]
+        if kwargs.get("loss") is not None:
+            for key in to_delete:
+                if kwargs["loss"].get(key) is not None:
+                    del kwargs["loss"][key]
+
+            # also delete state_dict["loss"]
+            del kwargs["loss"]
+
+
 class TensorBoardLogger(ModelCallback):
     r"""Enables TensorBoard logging.
 
     .. note::
+
         If :py:class:`MixedPrecision` is used then this should appear earlier
         in the list of callbacks (i.e. have a lower index) as the
         :py:class:`MixedPrecision` callback shold rescale the losses *after*

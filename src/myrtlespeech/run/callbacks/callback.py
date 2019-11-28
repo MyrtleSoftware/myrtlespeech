@@ -430,9 +430,6 @@ class CallbackHandler:
         if self.training:
             self.state_dict["total_train_batches"] += 1
 
-        # Explicitly delete Tensors from state-dict to save memory
-        self.__clear_memory()
-
         return self.state_dict["stop_epoch"]
 
     def on_epoch_end(self) -> bool:
@@ -494,19 +491,3 @@ class CallbackHandler:
         for callback in self.callbacks:
             callback.train(mode=mode)
         return self
-
-    def __clear_memory(self) -> None:
-        r"""Performs explicit garbage collection to prevent cuda oom error. """
-        to_delete = ["last_input", "last_target", "last_output", "last_loss"]
-        for key in to_delete:
-            if self.state_dict.get(key) is not None:
-                del self.state_dict[key]
-
-        # also delete state_dict["loss"][{"last_output", "last_target"}]
-        if self.state_dict.get("loss") is not None:
-            for key in to_delete:
-                if self.state_dict["loss"].get(key) is not None:
-                    del self.state_dict["loss"][key]
-
-            # also delete state_dict["loss"]
-            del self.state_dict["loss"]

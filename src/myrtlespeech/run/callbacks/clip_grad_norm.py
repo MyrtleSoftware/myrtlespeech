@@ -10,6 +10,7 @@ class ClipGradNorm(ModelCallback):
     """Clips gradient norm of the model's parameters.
 
     .. note::
+
         If :py:class:`.MixedPrecision` is used then this must appear later in
         the list of callbacks (i.e. have a higher index) as the
         :py:class:`.MixedPrecision` callback needs to first rescale the
