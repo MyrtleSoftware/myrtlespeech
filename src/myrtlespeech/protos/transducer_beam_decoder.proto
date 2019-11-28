@@ -2,14 +2,20 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
+
 message TransducerBeamDecoder {
   // Index in Alphabet of the blank label.
   uint32 blank_index = 1;
 
+  // Beam width during decoding.
   uint32 beam_width = 2;
 
+  // Normalise returned sequences by their length to avoid favouring shorter
+  // outputs as described in https://arxiv.org/pdf/1211.3711.pdf.
+  // Default value is false.
   bool length_norm = 3;
 
-  uint32 max_symbols_per_step = 4; //if this is not provided there is no limit
-
+  // Maximum number of symbols that can be output per step during decoding.
+  // If this is not provided then it defaults to a large value
+  uint32 max_symbols_per_step = 4;
 }

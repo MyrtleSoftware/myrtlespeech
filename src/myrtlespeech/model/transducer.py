@@ -207,7 +207,9 @@ class TransducerEncoder(torch.nn.Module):
     Alternatively referred to as Transducer transcription network. All of the
     submodules other than ``rnn1` are Optional.
 
-    .. note:: If present, the modules are applied in the following order:
+    .. note::
+
+        If present, the modules are applied in the following order:
         ``fc1`` -> ``rnn1`` -> ``fc2``
 
     Args:
@@ -402,9 +404,10 @@ class TransducerPredictNet(torch.nn.Module):
 
     Args:
         embedding: A :py:class:`torch.nn.Module` which is an embedding lookup
-            for targets (eg graphemes, wordpieces) that accepts a
-            :py:`torch.Tensor` as input of size
-            ``[batch, max_output_seq_len]``.
+            for targets (eg graphemes, wordpieces) that must accept a
+            :py:`torch.Tensor` of size ``[batch, max_output_seq_len]`` as
+            input and return a :py:`torch.Tensor` of size ``[batch,
+            max_output_seq_len, pred_nn_input_feature_size]`.
 
         pred_nn: A :py:class:`torch.nn.Module` containing the non-embedding
             module the Transducer prediction.
@@ -430,15 +433,19 @@ class TransducerPredictNet(torch.nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Returns the result of applying the Transducer prediction network.
 
-        .. note:: This function is only appropriate *during training* when the
-        ground-truth labels are available. The :py:meth:`predict`
-        should be used for inference with `training=False`.
+        .. note::
 
-        .. note:: The length of the sequence is increased by one as the
-        start-of-sequence embedded state (all zeros) is prepended to the start
-        of the label sequence. Note that this change *is not* reflected in the
-        output lengths as the :py:class:`TransducerLoss` requires the true
-        label lengths.
+            This function is only appropriate *during training* when the
+            ground-truth labels are available. The :py:meth:`predict`
+            should be used for inference with `training=False`.
+
+        .. note::
+
+            The length of the sequence is increased by one as the
+            start-of-sequence embedded state (all zeros) is prepended to the
+            start of the label sequence. Note that this change *is not*
+            reflected in the output lengths as the :py:class:`TransducerLoss`
+            requires the true label lengths.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
