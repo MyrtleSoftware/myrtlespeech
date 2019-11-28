@@ -33,7 +33,7 @@ class RNNTGreedyDecoder(RNNTDecoderBase):
 
         See :py:class:`RNNTDecoderBase` for args"""
 
-        fs, fs_lens = self.model.encode(inp)
+        fs, fs_lens = self._model.encode(inp)
         fs = fs[: fs_lens[0], :, :]  # size: seq_len, batch = 1, rnn_features
         assert fs_lens[0] == fs.shape[0], "Time dimension comparison failed"
 
@@ -49,7 +49,7 @@ class RNNTGreedyDecoder(RNNTDecoderBase):
 
             not_blank = True
             symbols_added = 0
-            while not_blank and symbols_added < self.max_symbols_per_step:
+            while not_blank and symbols_added < self._max_symbols_per_step:
 
                 g, hidden_prime = self._pred_step(
                     self._get_last_idx(label), hidden
@@ -60,7 +60,7 @@ class RNNTGreedyDecoder(RNNTDecoderBase):
                 max_val, idx = logp.max(0)
                 idx = idx.item()
 
-                if idx == self.blank_index:
+                if idx == self._blank_index:
                     not_blank = False
                 else:
                     label.append(idx)
