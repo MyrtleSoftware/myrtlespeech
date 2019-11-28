@@ -10,3 +10,4 @@
     run
     stage
     train
+    eval

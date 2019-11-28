@@ -11,3 +11,9 @@
     .. literalinclude:: ../../../../src/myrtlespeech/run/train.py
         :start-after: sphinx-doc-start-after
         :end-before: sphinx-doc-end-before
+
+    where the :py:func:`run_stage` function is as follows:
+
+    .. literalinclude:: ../../../../src/myrtlespeech/run/train.py
+        :start-after: sphinx-doc-start-after-run-stage
+        :end-before: sphinx-doc-end-before-run-stage
