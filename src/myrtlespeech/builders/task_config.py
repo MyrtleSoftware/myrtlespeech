@@ -161,7 +161,7 @@ def _create_lr_scheduler(
             containing the config for the desired task.
 
         optimizer: A :py:class:`torch.optim` that is used in the learning rate
-            scheduler initialization
+            scheduler initialization.
 
     Returns:
         A :py:class:`torch.optim.lr_scheduler` instance.
