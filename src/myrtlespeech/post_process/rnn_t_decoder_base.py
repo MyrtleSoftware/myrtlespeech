@@ -34,9 +34,9 @@ class RNNTDecoderBase(torch.nn.Module):
 
     Properties:
         _SOS: Start of sequence symbol
-        model: See Args.
-        max_symbols_per_step: See Args.
-        blank_index: See Args.
+        _model: See Args.
+        _max_symbols_per_step: See Args.
+        _blank_index: See Args.
         device: Device to which inputs will be sent. String.
 
     Methods:
@@ -63,11 +63,11 @@ class RNNTDecoderBase(torch.nn.Module):
         ), "max_symbols_per_step must be a positive integer"
 
         super().__init__()
-        self.blank_index = blank_index
-        self.model = model
-        self.max_symbols_per_step = max_symbols_per_step
+        self._blank_index = blank_index
+        self._model = model
+        self._max_symbols_per_step = max_symbols_per_step
         self._SOS = -1  # Start of sequence
-        self.device = "cuda:0" if self.model.use_cuda else "cpu"
+        self._device = "cuda:0" if self._model.use_cuda else "cpu"
 
     @torch.no_grad()
     def forward(self, x: Tuple[torch.Tensor, torch.Tensor]) -> List[List[int]]:
@@ -88,8 +88,8 @@ class RNNTDecoderBase(torch.nn.Module):
             A List of Lists where each sublist contains the index predictions
             of the decoder.
         """
-        training_state = self.model.training
-        self.model.eval()
+        training_state = self._model.training
+        self._model.eval()
 
         preds = []
         for b in range(x[0].shape[0]):
@@ -100,7 +100,7 @@ class RNNTDecoderBase(torch.nn.Module):
             preds.append(sentence)
 
         # restore training state
-        self.model.train(training_state)
+        self._model.train(training_state)
 
         del audio_inp, audio_features, audio_len
         return preds
@@ -132,12 +132,12 @@ class RNNTDecoderBase(torch.nn.Module):
         if label == self._SOS:
             y = None
         else:
-            if label > self.blank_index:
+            if label > self._blank_index:
                 label -= 1  # Since input label indexes will be offset by +1
                 # for labels above blank. Avoiding this complexity is
                 # the reason for enforcing  blank_index = (len(alphabet) - 1)
-            y = collate_label_list([[label]], device=self.device)
-        (out, hid), lengths = self.model.predict_net.predict(
+            y = collate_label_list([[label]], device=self._device)
+        (out, hid), lengths = self._model.predict_net.predict(
             y, hidden, training=False
         )
         return (out, lengths), hid
@@ -145,7 +145,7 @@ class RNNTDecoderBase(torch.nn.Module):
     def _joint_step(self, enc, pred):
         r"""Performs a step of the model joint network during inference."""
 
-        logits, _ = self.model.joint((enc, pred))
+        logits, _ = self._model.joint((enc, pred))
         res = torch.nn.functional.log_softmax(logits, dim=-1).squeeze()
         assert (
             len(res.shape) == 1
@@ -159,8 +159,8 @@ class RNNTDecoderBase(torch.nn.Module):
 
     def __repr__(self):
         string = self._get_name() + "("
-        string += f"max_symbols_per_step={self.max_symbols_per_step}, "
-        string += f"blank_index={self.blank_index}"
+        string += f"max_symbols_per_step={self._max_symbols_per_step}, "
+        string += f"blank_index={self._blank_index}"
         if hasattr(self, "beam_width"):
             string += f", beam_width={self.beam_width}"
         string += ")"
