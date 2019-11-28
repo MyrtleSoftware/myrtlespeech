@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "google/protobuf/wrappers.proto";
+
+
+// Constant learning rate.
+message ConstantLR {
+}
+
+
+// See PyTorch ``torch.optim.lr_scheduler.StepLR``.
+message StepLR {
+  // Period of learning rate decay.
+  uint32 step_size = 1;
+
+  // Multiplicative factor of learning rate decay.
+  google.protobuf.FloatValue gamma = 2;
+}
+
+
+// See PyTorch ``torch.optim.lr_scheduler.ExponentialLR``.
+message ExponentialLR {
+  // Multiplicative factor of learning rate decay.
+  float gamma = 1;
+}
+
+
+// See PyTorch ``torch.optim.lr_scheduler.CosineAnnealingLR``.
+message CosineAnnealingLR {
+  // Maximum number of iterations.
+  uint32 t_max = 1;
+
+  // Minimum learning rate.
+  google.protobuf.FloatValue eta_min = 2;
+}

@@ -3,6 +3,7 @@ syntax = "proto3";
 package myrtlespeech.protos;
 
 import "myrtlespeech/protos/dataset.proto";
+import "myrtlespeech/protos/lr_scheduler.proto";
 import "myrtlespeech/protos/optimizer.proto";
 
 
@@ -19,10 +20,17 @@ message TrainConfig {
     Adam adam = 4;
   }
 
-  Dataset dataset = 5;
+  oneof supported_lr_scheduler {
+    ConstantLR constant_lr = 5;
+    StepLR step_lr = 6;
+    ExponentialLR exponential_lr = 7;
+    CosineAnnealingLR cosine_annealing_lr = 8;
+  }
+
+  Dataset dataset = 9;
 
   oneof supported_shuffles {
     // Shuffle batches before every epoch.
-    bool shuffle_batches_before_every_epoch = 6;
+    bool shuffle_batches_before_every_epoch = 10;
   }
 }
