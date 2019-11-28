@@ -502,11 +502,6 @@ class TransducerPredictNet(torch.nn.Module):
             present iff `is_training = False`. See :py:class:`RNN` with
             `batch_first=True` for API.
         """
-        assert self.training == is_training, (
-            f"Attempting to use TransducerPredictNet predict method with arg "
-            f"is_training={is_training} but self.training={self.training}"
-        )
-
         if is_training:
             assert (
                 hidden_state is None
