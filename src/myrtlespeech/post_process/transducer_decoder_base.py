@@ -8,12 +8,12 @@ from myrtlespeech.data.batch import collate_label_list
 from myrtlespeech.model.transducer import Transducer
 
 
-class RNNTDecoderBase(torch.nn.Module):
+class TransducerDecoderBase(torch.nn.Module):
     r"""Base Transducer decoder class.
 
     *This should not be instantiated directly.* Instead use specific
-    decoders (e.g. :py:class:`RNNTGreedyDecoder` or
-    :py:class:`RNNTBeamDecoder`).
+    decoders (e.g. :py:class:`TransducerGreedyDecoder` or
+    :py:class:`TransducerBeamDecoder`).
 
     Args:
         blank_index: Index of the "blank" symbol. It is advised that the blank
@@ -123,8 +123,8 @@ class RNNTDecoderBase(torch.nn.Module):
         """
         raise NotImplementedError(
             "decode method not implemented. Do not \
-            instantiate `RNNTDecoderBase` directly. Instead use a specific \
-            e.g. `RNNTGreedyDecoder`"
+            instantiate `TransducerDecoderBase` directly. Instead use a \
+            specific e.g. `TransducerGreedyDecoder`"
         )
 
     def _pred_step(self, label, hidden):
@@ -138,7 +138,7 @@ class RNNTDecoderBase(torch.nn.Module):
                 # the reason for enforcing  blank_index = (len(alphabet) - 1)
             y = collate_label_list([[label]], device=self._device)
         (out, hid), lengths = self._model.predict_net.predict(
-            y, hidden, training=False
+            y, hidden, is_training=False
         )
         return (out, lengths), hid
 

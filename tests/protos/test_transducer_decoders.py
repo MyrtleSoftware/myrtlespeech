@@ -4,8 +4,8 @@ from typing import Tuple
 from typing import Union
 
 import hypothesis.strategies as st
-from myrtlespeech.protos import rnn_t_beam_decoder_pb2
-from myrtlespeech.protos import rnn_t_greedy_decoder_pb2
+from myrtlespeech.protos import transducer_beam_decoder_pb2
+from myrtlespeech.protos import transducer_greedy_decoder_pb2
 
 from tests.protos.utils import all_fields_set
 
@@ -14,16 +14,18 @@ from tests.protos.utils import all_fields_set
 
 
 @st.composite
-def rnn_t_beam_decoder(
+def transducer_beam_decoder(
     draw,
     return_kwargs: bool = False,
     alphabet_len: Optional[int] = None,
     blank_index: Optional[int] = None,
 ) -> Union[
-    st.SearchStrategy[rnn_t_beam_decoder_pb2.RNNTBeamDecoder],
-    st.SearchStrategy[Tuple[rnn_t_beam_decoder_pb2.RNNTBeamDecoder, Dict]],
+    st.SearchStrategy[transducer_beam_decoder_pb2.TransducerBeamDecoder],
+    st.SearchStrategy[
+        Tuple[transducer_beam_decoder_pb2.TransducerBeamDecoder, Dict]
+    ],
 ]:
-    """Returns a SearchStrategy for RNNTBeamDecoder plus maybe the kwargs."""
+    """Returns an st for TransducerBeamDecoder plus maybe the kwargs."""
 
     kwargs: Dict = {}
 
@@ -43,24 +45,26 @@ def rnn_t_beam_decoder(
     kwargs["max_symbols_per_step"] = draw(st.integers(0, 4))
 
     # initialise and return
-    all_fields_set(rnn_t_beam_decoder_pb2.RNNTBeamDecoder, kwargs)
-    beam_decoder = rnn_t_beam_decoder_pb2.RNNTBeamDecoder(**kwargs)
+    all_fields_set(transducer_beam_decoder_pb2.TransducerBeamDecoder, kwargs)
+    beam_decoder = transducer_beam_decoder_pb2.TransducerBeamDecoder(**kwargs)
     if not return_kwargs:
         return beam_decoder
     return beam_decoder, kwargs
 
 
 @st.composite
-def rnn_t_greedy_decoder(
+def transducer_greedy_decoder(
     draw,
     return_kwargs: bool = False,
     alphabet_len: Optional[int] = None,
     blank_index: Optional[int] = None,
 ) -> Union[
-    st.SearchStrategy[rnn_t_greedy_decoder_pb2.RNNTGreedyDecoder],
-    st.SearchStrategy[Tuple[rnn_t_greedy_decoder_pb2.RNNTGreedyDecoder, Dict]],
+    st.SearchStrategy[transducer_greedy_decoder_pb2.TransducerGreedyDecoder],
+    st.SearchStrategy[
+        Tuple[transducer_greedy_decoder_pb2.TransducerGreedyDecoder, Dict]
+    ],
 ]:
-    """Returns a SearchStrategy for RNNTGreedyDecoder plus maybe the kwargs."""
+    """Returns an st for TransducerGreedyDecoder plus maybe the kwargs."""
     kwargs: Dict = {}
 
     end = 100
@@ -75,8 +79,12 @@ def rnn_t_greedy_decoder(
     kwargs["max_symbols_per_step"] = draw(st.integers(0, 4))
 
     # initialise and return
-    all_fields_set(rnn_t_greedy_decoder_pb2.RNNTGreedyDecoder, kwargs)
-    greedy_decoder = rnn_t_greedy_decoder_pb2.RNNTGreedyDecoder(**kwargs)
+    all_fields_set(
+        transducer_greedy_decoder_pb2.TransducerGreedyDecoder, kwargs
+    )
+    greedy_decoder = transducer_greedy_decoder_pb2.TransducerGreedyDecoder(
+        **kwargs
+    )
     if not return_kwargs:
         return greedy_decoder
     return greedy_decoder, kwargs
