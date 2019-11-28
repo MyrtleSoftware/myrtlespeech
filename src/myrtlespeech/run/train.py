@@ -52,8 +52,10 @@ def fit(
                 break
 
     cb_handler.on_train_end()
+    # sphinx-doc-end-before
 
 
+# sphinx-doc-start-after-run-stage
 def run_stage(seq_to_seq, cb_handler, loader, is_training):
     seq_to_seq.train(mode=is_training)
     cb_handler.train(mode=is_training)
@@ -91,4 +93,6 @@ def run_stage(seq_to_seq, cb_handler, loader, is_training):
             del x, y, out, loss, loss_out, loss_y
 
     return cb_handler.on_epoch_end()
-    # sphinx-doc-end-before
+
+
+# sphinx-doc-end-before-run-stage
