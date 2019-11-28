@@ -42,7 +42,7 @@ def _pred_nn(
 ]:
     """Returns a SearchStrategy for PredNN plus maybe the kwargs."""
     kwargs: Dict = {}
-    kwargs["rnn"] = draw(rnns(batch_first=True))
+    kwargs["rnn"] = draw(rnns())
 
     all_fields_set(transducer_predict_net_pb2.PredNN, kwargs)
     pred_nn = transducer_predict_net_pb2.PredNN(**kwargs)
