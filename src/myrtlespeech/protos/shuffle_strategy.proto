@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "google/protobuf/wrappers.proto";
+
+
+message SequentialBatches {
+}
+
+
+message RandomBatches {
+}
+
+
+message SortaGrad {
+}
