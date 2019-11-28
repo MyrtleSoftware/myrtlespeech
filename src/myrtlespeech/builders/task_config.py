@@ -173,11 +173,8 @@ def _create_lr_scheduler(
         "supported_lr_scheduler"
     )
 
-    lr_scheduler = None
     if lr_scheduler_str == "constant_lr":
-        lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
-            optimizer=optimizer, lr_lambda=lambda epoch: 1.0
-        )
+        lr_scheduler = None
     elif lr_scheduler_str == "step_lr":
         kwargs = {}
 
