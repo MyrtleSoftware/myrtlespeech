@@ -56,11 +56,11 @@ def test_all_gradients_computed_for_all_model_parameters(
 
     if torch.cuda.is_available():
         input = (
-            (x.cuda(), y.cuda()),
-            (seq_lens.cuda(), label_seq_lens.cuda()),
+            (x.cuda(), seq_lens.cuda()),
+            (y.cuda(), label_seq_lens.cuda()),
         )
     else:
-        input = ((x, y), (seq_lens, label_seq_lens))
+        input = ((x, seq_lens), (y, label_seq_lens))
 
     # forward pass
     out = transducer(input)
