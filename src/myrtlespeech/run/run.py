@@ -52,22 +52,25 @@ class WordSegmentor:
 class ReportDecoderBase(Callback):
     """For reporting error rates word and character error rates.
 
-    *Do not instantiate this class directly.*
+    .. note::
 
-    When overriding the base class, you should define the following:
-        `self.get_decoder_inputs` method - this gives decoder access to the
-            necessary inputs.
+        This class should not be instantiated directly.
+
+    When overriding the base class, you should define a
+    :py:meth:`get_decoder_inputs` method so that the decoder is able to
+    access the required inputs.
 
 
     Args:
         decoder: decodes output to sequence of indices.
 
-        alphabet: converts sequences of indices to sequences of symbols (strs).
+        alphabet: converts sequences of indices to sequences of symbols
+            (:py:data:`strs`).
 
         word_segmentor: groups sequences of symbols into sequences of words.
-            By default this splits words on the space symbol " ".
+            By default this splits words on the space symbol.
 
-        eval_every: WER/CER is cacluated every `eval_every`th epoch. Default
+        eval_every: WER/CER is cacluated every ``eval_every``th epoch. Default
             is 1.
 
         calc_quantities: Iterable of strings of error quantities to calculate.
@@ -77,7 +80,7 @@ class ReportDecoderBase(Callback):
 
                 'cer': Character-error rate is calculated.
 
-            `calc_quantities` defaults to ('cer', 'wer').
+            ``calc_quantities`` defaults to ('cer', 'wer').
     """
 
     def __init__(

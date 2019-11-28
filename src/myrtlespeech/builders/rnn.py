@@ -17,7 +17,7 @@ def build(
 
         input_features: The number of features for the input.
 
-        batch_first: If True this will return a batch_first RNN.
+        batch_first: If :py:data:`True` this will return a batch_first RNN.
 
     Returns:
         A tuple containing an :py:class:`myrtlespeech.model.encoder.rnn.RNN`

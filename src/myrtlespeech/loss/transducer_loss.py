@@ -10,17 +10,18 @@ class TransducerLoss(torch.nn.Module):
     Args:
         blank: Index of the blank label.
 
-        reduction: (string) Specifies the reduction to apply to the output:
+        reduction: A string that specifies the reduction to apply to the
+            output. It can take the following values:
 
-            none:
-                No reduction will be applied.
+                none:
+                    No reduction will be applied.
 
-            mean:
-                The output losses will be divided by the target lengths and
-                then the mean over the batch is taken.
+                mean:
+                    The output losses will be divided by the target lengths and
+                    then the mean over the batch is taken.
 
-            sum:
-                Sum all losses in a batch.
+                sum:
+                    Sum all losses in a batch.
 
     Attributes:
         transducer_loss: A :py:class:`warprnnt_pytorch.RNNTLoss` instance.
@@ -47,18 +48,18 @@ class TransducerLoss(torch.nn.Module):
 
         Args:
             inputs: A Tuple where the first element is the unnormalized output
-                of the :py:class`Transducer` network: a
+                of the :py:class:`Transducer` network: a
                 :py:class:`torch.Tensor` with size ``[batch, max_seq_len,
-                max_label_length + 1, vocab_size + 1]``. `max_seq_len` is the
+                max_label_length + 1, vocab_size + 1]``. ``max_seq_len`` is the
                 length of the longest sequence in the batch output from the
                 :py:attr:`Transducer.encoder` network whereas
-                `max_label_seq_len` is the length of the longest *label*
+                ``max_label_seq_len`` is the length of the longest *label*
                 sequence in the batch output from the
                 :py:attr:`Transducer.prediction`. Note that the dimension at
-                index 2 is `max_label_seq_len + 1` since the
+                index 2 is ``max_label_seq_len + 1`` since the
                 start-of-sequence label is prepended to the label sequence and
-                the dimension at index 3 is `vocab_size + 1` because the blank
-                symbol can be optput.
+                the dimension at index 3 is ``vocab_size + 1`` because the
+                blank symbol can be optput.
 
                 The second element is a :py:class:`torch.Tensor` of size
                 ``[batch]`` that contains the :py:attr:`Transducer.encoder`

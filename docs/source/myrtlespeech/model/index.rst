@@ -9,7 +9,7 @@
     cnn
     deep_speech_1
     deep_speech_2
-    rnn_t
+    transducer
     fully_connected
     lookahead
     rnn

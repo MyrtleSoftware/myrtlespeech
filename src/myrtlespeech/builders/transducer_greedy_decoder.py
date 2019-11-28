@@ -11,16 +11,13 @@ def build(
 ) -> TransducerGreedyDecoder:
     r"""Returns a :py:class:`TransducerGreedyDecoder` based on the config.
 
+
     Args:
-        decoder_cfg: A ``TransducerGreedyDecoder``
-            protobuf object containing the config for the desired
-            :py:class:`TransducerGreedyDecoder`.
+        decoder_cfg: A ``TransducerGreedyDecoder`` protobuf object containing
+            the config for the desired :py:class:`TransducerGreedyDecoder`.
 
-
-        model: A :py:class:`myrtlespeech.model.transducer.Transducer` model to
-            use during decoding. See the
-            :py:class:`myrtlespeech.model.transducer.Transducer`
-            docstring for more information.
+        model: A :py:class:`Transducer` model to use during decoding. See the
+            :py:class:`Transducer` docstring for more information.
 
     Returns:
         A :py:class:`TransducerGreedyDecoder` based on the config.
