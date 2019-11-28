@@ -7,6 +7,10 @@ from myrtlespeech.protos import shuffle_strategy_pb2
 from myrtlespeech.protos import train_config_pb2
 
 from tests.protos.test_dataset import datasets
+from tests.protos.test_lr_scheduler import constant_lrs
+from tests.protos.test_lr_scheduler import cosine_annealing_lrs
+from tests.protos.test_lr_scheduler import exponential_lrs
+from tests.protos.test_lr_scheduler import step_lrs
 from tests.protos.test_optimizer import adams
 from tests.protos.test_optimizer import sgds
 from tests.protos.utils import all_fields_set
@@ -44,6 +48,28 @@ def train_configs(
         kwargs[optim_str] = draw(adams())
     else:
         raise ValueError(f"unknown optim type {optim_str}")
+
+    # learning rate scheduler
+    lr_scheduler_str = draw(
+        st.sampled_from(
+            [
+                f.name
+                for f in descript.oneofs_by_name[
+                    "supported_lr_scheduler"
+                ].fields
+            ]
+        )
+    )
+    if lr_scheduler_str == "constant_lr":
+        kwargs[lr_scheduler_str] = draw(constant_lrs())
+    elif lr_scheduler_str == "step_lr":
+        kwargs[lr_scheduler_str] = draw(step_lrs())
+    elif lr_scheduler_str == "exponential_lr":
+        kwargs[lr_scheduler_str] = draw(exponential_lrs())
+    elif lr_scheduler_str == "cosine_annealing_lr":
+        kwargs[lr_scheduler_str] = draw(cosine_annealing_lrs())
+    else:
+        raise ValueError(f"unknown lr_scheduler type {lr_scheduler_str}")
 
     kwargs["dataset"] = draw(datasets())
 

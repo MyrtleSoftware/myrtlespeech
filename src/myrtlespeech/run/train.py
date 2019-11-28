@@ -82,6 +82,9 @@ def fit(
                     if cb_handler.on_batch_end():
                         break
 
+                if is_training and seq_to_seq.lr_scheduler is not None:
+                    seq_to_seq.lr_scheduler.step()
+
             if cb_handler.on_epoch_end():
                 break
 
