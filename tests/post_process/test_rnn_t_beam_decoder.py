@@ -2,66 +2,61 @@ from typing import Tuple
 
 import torch
 from myrtlespeech.model.transducer import Transducer
+from myrtlespeech.model.transducer import TransducerPredictNet
 from myrtlespeech.post_process.rnn_t_beam_decoder import RNNTBeamDecoder
 
 
 # Fixtures and Strategies -----------------------------------------------------
 
 
-class DummyTransducerModel(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.use_cuda = False
-        self.dec_rnn = DecRNN(3)
+class DummyPredictNet(TransducerPredictNet):
+    """TransducerPredictNet with overriden `pred_nn` and `embed`.
 
-    def forward(self):
-        raise NotImplementedError
+    Note that embedding=None will be passed to :py:meth:`super.__init__` as the
+    :py:meth:`embed` method that calls forward on :py:class:`embedding` in
+    :py:class:`TransducerPredictNet` is overidden below.
 
-    def encode(
-        self, x: Tuple[torch.Tensor, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        ``[B, C, H, T]`` -> ``[T, B, H_out]`` """
+    Args:
+        pred_nn: module with same :py:meth:`__call__` API as `pred_nn` in
+            :py:class:`TransducerPredictNet`.
+    """
 
-        h = x[0]  # B, C, H, T
-        B, C, F, T = h.shape
+    def __init__(self, pred_nn):
+        super().__init__(embedding=None, pred_nn=pred_nn)
 
-        assert (
-            C == 1
-        ), f"In DummyTransducerModel(), input channels must == 1 but C == {C}"
-        h = h.squeeze(1)  # B, H, T
-        h = h.permute(2, 0, 1)
-
-        return h, x[1]
-
-    def embedding(self, x):
+    def embed(self, x):
+        """Overiden `:py:meth:`embed`."""
         res = torch.tensor([1, x[0].item() + 1]).unsqueeze(0).unsqueeze(0)
         x = res, x[1]
 
         return x
 
-    @staticmethod
-    def _certify_inputs_forward(*args):
-        return Transducer._certify_inputs_forward(*args)
 
-    @staticmethod
-    def _prepare_inputs_forward(*args):
-        return Transducer._prepare_inputs_forward(*args)
+class PredNN:
+    """Class to override `pred_nn` in :py:meth:`TransducerPredictNet`.
 
+    This class replicates the :py:class:`TransducerPredictNet.pred_nn` API
+    (which in turn is the same as an :py:class:`RNN` with `batch_first=True`).
 
-class RNN:
+    Args:
+        hidden_size: fake `hidden_size` of module.
+    """
+
     def __init__(self, hidden_size=3):
         self.hidden_size = hidden_size
 
-
-class DecRNN:
-    def __init__(self, hidden_size=3):
-        self.rnn = RNN(hidden_size)
-
     def __call__(self, x):
-        """TODO: The way this works is by using the hidden state to decide which
-        chars to upweight at a given timestep.
-         ``[B, U + 1, H]``"""
+        """Replicate `pred_nn` :py:meth:`forward` method.
+
+        This works by using the hidden state to decide which characters to
+        upweight at a given timestep.
+
+        Args:
+            x: See :py:class:`RNN` with `batch_first=True`.
+
+        Returns:
+            x: See :py:class:`RNN` with `batch_first=True`.
+        """
 
         if isinstance(x[0], torch.Tensor):
             embedded = x[0]
@@ -84,7 +79,7 @@ class DecRNN:
         if state is None:
             # `state` is the index of char to upweight.
             # In first instance upweight character at index 1
-            state = 1
+            state = torch.IntTensor([1])
         if embedded.squeeze().int()[0] == 0:
             # i.e. if this is the SOS,
             # assign probability of 0.2 to all three chars:
@@ -93,8 +88,7 @@ class DecRNN:
             res = torch.ones(3, dtype=torch.float32) * 0.1
             state_to_upweight = embedded.squeeze().int()[1]  # 0 or 1
             res[state_to_upweight] += 0.3
-
-        res[state] += 0.4
+        res[state.item()] += 0.4
         out, hid = torch.log(res), (state + 1) % 3
         # blow up to full dimension
         out = out.unsqueeze(0).unsqueeze(0)
@@ -105,6 +99,53 @@ class DecRNN:
             return out, lengths
 
 
+class DummyTransducerEncoder:
+    r"""Class to replicate :py:class:`TransducerEncoder` API."""
+
+    def __init__(self):
+        pass
+
+    def __call__(
+        self, x: Tuple[torch.Tensor, torch.Tensor]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Replicates :py:meth:`TransducerEncoder.forward` API.
+
+        Args:
+            See :py:meth:`TransducerEncoder.forward`.
+        Returns:
+            See :py:meth:`TransducerEncoder.forward`.
+        """
+
+        h = x[0]  # B, C, H, T
+        B, C, F, T = h.shape
+
+        assert (
+            C == 1
+        ), f"In DummyTransducerModel(), input channels must == 1 but C == {C}"
+        h = h.squeeze(1)  # B, H, T
+        h = h.permute(2, 0, 1)
+
+        return h, x[1]
+
+
+class DummyTransducerModel(Transducer):
+    """Transducer for testing.
+
+    Note that the `joint_net` override takes place in
+    :py:class:`RNNTBeamDecoderDummy`'s :py:meth:`_joint_step` so
+    `joint_net=None` is used.
+    """
+
+    def __init__(self, encoder, predict_net):
+        super().__init__(
+            encoder=encoder, predict_net=predict_net, joint_net=None
+        )
+
+    def forward(self):
+        r"""Override forward method as it should not be called."""
+        raise NotImplementedError
+
+
 class RNNTBeamDecoderDummy(RNNTBeamDecoder):
     """Decoder class which overrides _joint_step method"""
 
@@ -112,11 +153,12 @@ class RNNTBeamDecoderDummy(RNNTBeamDecoder):
         super().__init__(**kwargs)
 
     def _joint_step(self, enc, pred):
-        """Overrride _joint_step().
+        """Overrrides :py:meth:`_joint_step()`.
 
-        This is necessary as :RNNTDecoderBase._joint_step() performs a
-        log_softmax on outputs which causes problems for this worked
-        example.
+        This is necessary as :py:meth:`RNNTDecoderBase._joint_step()`
+        concatenates `encoder` and `predict_net` outputs and also performs
+        a :py:meth:`log_softmax` on results both of which which break this
+        worked example.
         """
 
         f, f_lens = enc
@@ -137,10 +179,18 @@ class RNNTBeamDecoderDummy(RNNTBeamDecoder):
         return (f + g).squeeze()
 
 
+def get_dummy_transducer(hidden_size=3):
+    encoder = DummyTransducerEncoder()
+    predict_net = DummyPredictNet(pred_nn=PredNN(hidden_size=hidden_size))
+    model = DummyTransducerModel(encoder=encoder, predict_net=predict_net)
+    model.eval()
+    return model
+
+
 def get_fixed_decoder(max_symbols_per_step=100):
     # alphabet = ["_", "a", "b"]
     blank_index = 0
-    model = DummyTransducerModel()
+    model = get_dummy_transducer(hidden_size=3)
     length_norm = False
     return RNNTBeamDecoderDummy(
         blank_index=blank_index,
@@ -196,19 +246,7 @@ def test_multi_element_batch(decoder=get_fixed_decoder()):
 
     assert indata.shape == (2, 1, 3, 2)  # B, C, F, T = (2, 1, 3, 2)
     lengths = torch.IntTensor([2, 1])
-    # API for decoder requires label input to decoder (as these inputs are
-    # required for the foward pass of the model). These are deleted
-    # almost immediately but user must pass torch.Tensors for labels
-    # and label lengths (otherwise checks will throw exceptions)
-    B, C, F, T = indata.shape
-    U = 1
-    labels = torch.zeros(B, U)
-    label_lens = torch.IntTensor([1, 1])
-
-    assert decoder((indata, labels), (lengths, label_lens)) == [
-        [1, 1, 1, 1, 1],
-        [1, 1],
-    ]
+    assert decoder((indata, lengths)) == [[1, 1, 1, 1, 1], [1, 1]]
 
 
 def test_preserves_training_state(decoder=get_fixed_decoder()):
@@ -217,9 +255,9 @@ def test_preserves_training_state(decoder=get_fixed_decoder()):
     lengths = torch.IntTensor([1])
 
     decoder.model.train()
-    decoder.decode((indata, lengths))
+    decoder((indata, lengths))
     assert decoder.model.training
 
     decoder.model.eval()
-    decoder.decode((indata, lengths))
+    decoder((indata, lengths))
     assert not decoder.model.training

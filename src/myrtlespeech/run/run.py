@@ -225,8 +225,15 @@ class ReportRNNTDecoder(ReportDecoderBase):
         self.skip_first_epoch = skip_first_epoch
 
     def on_batch_end(self, **kwargs):
+        r"""Performs error-rate calculation."""
         if self.skip_first_epoch and kwargs["epoch"] == 0:
             return
+        # The `RNNTTraining` callback sets kwargs["last_input"] = (x, y) as
+        # ground truth values y are required for the Transducer forward pass
+        # but the decoders *should not* have access to ground truth labels
+        # and hence kwargs["last_input"] is updated here:
+        x, y = kwargs["last_input"]
+        kwargs["last_input"] = x
         return super().on_batch_end(**kwargs)
 
     @property
