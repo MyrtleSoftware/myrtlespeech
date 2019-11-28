@@ -33,11 +33,20 @@ def pre_process_step_match_cfg(
         assert step[0].n_mfcc == step_cfg.mfcc.n_mfcc
         assert step[0].MelSpectrogram.win_length == step_cfg.mfcc.win_length
         assert step[0].MelSpectrogram.hop_length == step_cfg.mfcc.hop_length
-    elif step_str == "lmfb":
+    elif step_str == "log_mel_filter_bank":
         assert isinstance(step[0], LogMelFB)
-        assert step[0].MelSpectrogram.n_mels == step_cfg.lmfb.n_mels
-        assert step[0].MelSpectrogram.win_length == step_cfg.lmfb.win_length
-        assert step[0].MelSpectrogram.hop_length == step_cfg.lmfb.hop_length
+        assert (
+            step[0].MelSpectrogram.n_mels
+            == step_cfg.log_mel_filter_bank.n_mels
+        )
+        assert (
+            step[0].MelSpectrogram.win_length
+            == step_cfg.log_mel_filter_bank.win_length
+        )
+        assert (
+            step[0].MelSpectrogram.hop_length
+            == step_cfg.log_mel_filter_bank.hop_length
+        )
     elif step_str == "spec_augment":
         assert isinstance(step[0], SpecAugment)
     elif step_str == "standardize":
