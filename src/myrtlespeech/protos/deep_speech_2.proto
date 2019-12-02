@@ -19,11 +19,10 @@ message DeepSpeech2 {
       Conv1d conv1d = 1;
       Conv2d conv2d = 2;
     }
+    Activation activation = 3;
 
     // If true then batch normalization is added after the conv layer.
-    bool batch_norm = 3;
-
-    Activation activation = 4;
+    bool batch_norm = 4;
   }
 
   // If no_lookahead, activation is ignored.
