@@ -141,8 +141,8 @@ class RNN(torch.nn.Module):
             x = (x[0].cuda(), x[1].cuda())
 
         if self.batch_norm is not None:
-            # Collapses input of dim T*N*H to (T*N)*H and gives it to a batch
-            # norm layer.
+            # Collapses the first two input dimensions (batch and seq_len) and
+            # gives it to a batch norm layer.
             # Allows handling of variable sequence lengths and minibatch sizes.
             t, n = x[0].size(0), x[0].size(1)
             x_norm = self.batch_norm(x[0].view(t * n, -1))
