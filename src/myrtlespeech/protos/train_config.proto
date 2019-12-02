@@ -36,6 +36,6 @@ message TrainConfig {
     // Shuffle batches before every epoch.
     RandomBatches random_batches = 11;
     // Sequential for the first epoch and random for the following ones.
-    SortaGrad sortagrad = 12;
+    SortaGrad sorta_grad = 12;
   }
 }
