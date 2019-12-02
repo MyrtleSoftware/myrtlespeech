@@ -86,7 +86,7 @@ def train_configs(
         kwargs[shuffle_str] = shuffle_strategy_pb2.SequentialBatches()
     elif shuffle_str == "random_batches":
         kwargs[shuffle_str] = shuffle_strategy_pb2.RandomBatches()
-    elif shuffle_str == "sortagrad":
+    elif shuffle_str == "sorta_grad":
         kwargs[shuffle_str] = shuffle_strategy_pb2.SortaGrad()
     else:
         raise ValueError(f"unknown shuffle strategy type {shuffle_str}")
