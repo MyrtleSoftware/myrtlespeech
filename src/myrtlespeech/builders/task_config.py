@@ -125,7 +125,6 @@ def build(
             shuffle=True,
             drop_last=False,
         )
-        sort = True
     elif shuffle_str == "random_batches":
         batch_sampler = SequentialRandomSampler(
             indices=range(len(train_dataset)),
@@ -133,7 +132,6 @@ def build(
             shuffle=True,
             drop_last=False,
         )
-        sort = False
     elif shuffle_str == "sequential_batches":
         batch_sampler = SequentialRandomSampler(
             indices=range(len(train_dataset)),
@@ -141,7 +139,6 @@ def build(
             shuffle=False,
             drop_last=False,
         )
-        sort = False
     else:
         raise ValueError(f"unsupported shuffle strategy {shuffle_str}")
 
@@ -149,7 +146,7 @@ def build(
         dataset=train_dataset,
         batch_sampler=batch_sampler,
         num_workers=num_workers,
-        collate_fn=lambda batch: seq_to_seq_collate_fn(batch, sort=sort),
+        collate_fn=seq_to_seq_collate_fn,
         pin_memory=torch.cuda.is_available(),
     )
 

@@ -48,8 +48,7 @@ def seq_to_seq_collate_fn(
             Tuple[torch.Tensor, torch.Tensor],
             Tuple[torch.Tensor, torch.Tensor],
         ]
-    ],
-    sort: bool = False,
+    ]
 ) -> Tuple[
     Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]
 ]:
@@ -77,9 +76,6 @@ def seq_to_seq_collate_fn(
                 A scalar, integer :py:class:`torch.Tensor` giving the length of
                 ``target``.
 
-        sort: A boolean value used to decide whether the batch should be sorted
-            by the input tensor_len
-
     Returns:
         A tuple of ``((batch_tensor, batch_tensor_len), (batch_target,
         batch_target_len))`` where ``batch_tensor`` is the
@@ -87,8 +83,7 @@ def seq_to_seq_collate_fn(
         ``batch_tensor_lens`` is the result of stacking all ``tensor_len``\s,
         ``batch_target`` is the result of appying :py:func:`.pad_sequence` to
         all ``target``\s and ``batch_target_len`` is the result of stacking all
-        ``target_len``\s. If sort is set to True then the output is sorted by
-        the input tensor_len.
+        ``target_len``\s.
     """
     inputs, in_seq_lens = [], []
     targets, target_seq_lens = [], []
@@ -98,17 +93,6 @@ def seq_to_seq_collate_fn(
         in_seq_lens.append(in_seq_len)
         targets.append(target)
         target_seq_lens.append(target_seq_len)
-
-    if sort:
-        # Sort the samples
-        samples = [
-            (input, in_seq_len, target, target_seq_len)
-            for input, in_seq_len, target, target_seq_len in zip(
-                inputs, in_seq_lens, targets, target_seq_lens
-            )
-        ]
-        sorted_samples = sorted(samples, key=lambda s: s[0].size(-1))
-        inputs, in_seq_lens, targets, target_seq_lens = zip(*sorted_samples)
 
     inputs = pad_sequence(inputs)
     in_seq_lens = torch.tensor(in_seq_lens, requires_grad=False)

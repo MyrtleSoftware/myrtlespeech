@@ -102,7 +102,7 @@ def test_pad_sequences_returns_tensor_with_correct_values(
 
 
 def test_seq_to_seq_collate_fn() -> None:
-    """Ensure seq_to_seq_collate_fn returns correct values when sort=False."""
+    """Ensure seq_to_seq_collate_fn returns correct values"""
     inputs = [rand([1, 2, 3]), rand([1, 2, 5])]
     seq_lens = tensor([3, 5])
 
@@ -114,51 +114,13 @@ def test_seq_to_seq_collate_fn() -> None:
         ((inputs[1], seq_lens[1]), (targets[1], target_lengths[1])),
     ]
 
-    x, y = seq_to_seq_collate_fn(batch, sort=False)
+    x, y = seq_to_seq_collate_fn(batch)
 
     assert isinstance(x, tuple)
     assert len(x) == 2
 
     assert isinstance(y, tuple)
     assert len(y) == 2
-
-    assert torch.all(x[0] == pad_sequence(inputs))
-    assert torch.all(x[1] == seq_lens)
-
-    assert torch.all(y[0] == pad_sequence(targets))
-    assert torch.all(y[1] == target_lengths)
-
-
-def test_seq_to_seq_collate_fn_sorted() -> None:
-    """Ensure seq_to_seq_collate_fn returns correct values when sort=True."""
-    inputs = [rand([1, 2, 3]), rand([1, 2, 5])]
-    seq_lens = tensor([3, 5])
-
-    targets = [rand([10]), rand([7])]
-    target_lengths = tensor([10, 7])
-
-    batch = [
-        ((inputs[0], seq_lens[0]), (targets[0], target_lengths[0])),
-        ((inputs[1], seq_lens[1]), (targets[1], target_lengths[1])),
-    ]
-
-    x, y = seq_to_seq_collate_fn(batch, sort=True)
-
-    assert isinstance(x, tuple)
-    assert len(x) == 2
-
-    assert isinstance(y, tuple)
-    assert len(y) == 2
-
-    # Sort the input samples
-    samples = [
-        (input, seq_lens, target, target_lengths)
-        for input, seq_len, target, target_length in zip(
-            inputs, seq_lens, targets, target_lengths
-        )
-    ]
-    sorted_samples = sorted(samples, key=lambda s: s[0].size(-1))
-    inputs, in_seq_lens, targets, target_seq_lens = zip(*sorted_samples)
 
     assert torch.all(x[0] == pad_sequence(inputs))
     assert torch.all(x[1] == seq_lens)
