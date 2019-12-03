@@ -59,9 +59,9 @@ class SequentialRandomSampler:
         indices = list(range(len(self.batch_indices)))
         if self.shuffle and self._n_iterators not in self._sequential:
             random.shuffle(indices)
+        self._n_iterators += 1
         for index in indices:
             yield self.batch_indices[index]
-        self._n_iterators += 1
 
     def __len__(self):
         return len(self.batch_indices)

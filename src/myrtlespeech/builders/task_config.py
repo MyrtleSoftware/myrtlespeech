@@ -118,7 +118,7 @@ def build(
 
     shuffle_str = task_config.train_config.WhichOneof("shuffle_strategy")
     batch_sampler: Union[SortaGrad, SequentialRandomSampler]
-    if shuffle_str == "sortagrad":
+    if shuffle_str == "sorta_grad":
         batch_sampler = SortaGrad(
             indices=range(len(train_dataset)),
             batch_size=task_config.train_config.batch_size,
