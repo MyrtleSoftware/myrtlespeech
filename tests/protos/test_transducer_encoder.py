@@ -29,7 +29,7 @@ def transducer_encoder(
     # maybe add time_reduction layer:
     if draw(st.booleans()):
         kwargs["time_reduction_factor"] = draw(st.integers(2, 3))
-        kwargs["rnn2"] = draw(rnns(batch_first=False))
+        kwargs["rnn2"] = draw(rnns())
     else:
         to_ignore = ["rnn2", "time_reduction_factor"]
 
