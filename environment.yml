@@ -1,4 +1,4 @@
-name: myrtlespeech_CV
+name: myrtlespeech
 channels:
   - pytorch
   - conda-forge/label/cf201901
