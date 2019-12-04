@@ -211,7 +211,7 @@ class TransducerEncoder(torch.nn.Module):
     .. note::
 
         If present, the modules are applied in the following order:
-        ``fc1 -> rnn1 -> fc2``
+        ``fc1`` -> ``rnn1`` -> ``time_reducer`` -> ``rnn2`` -> ``fc2``
 
     Args:
         rnn1: A :py:class:`torch.nn.Module` containing the first recurrent part
@@ -250,6 +250,48 @@ class TransducerEncoder(torch.nn.Module):
             corresponding *output* sequence (which will be identical to the
             input lengths).
 
+        time_reducer: An Optional ``Callable`` that reduces the number of
+            timesteps into ``rnn2`` by stacking adjacent frames in the
+            frequency dimension as employed in `Streaming End-to-end Speech
+            Recognition For Mobile Devices
+            <https://arxiv.org/pdf/1811.06621.pdf>`_.
+
+            This Callable takes two arguments: a Tuple of ``rnn1`` output and
+            the *input* sequence lengths of size ``[batch]``,
+            and an optional ``time_reduction_factor`` (see below).
+
+            This Callable must return a Tuple where the first element is the
+            result after applying the module to the input which must have size
+            ``[ceil(max_rnn_seq_len/time_reduction_factor) , batch,
+            rnn_features * time_reduction_factor ]``. The second element of the
+            tuple must be a :py:class:`torch.Tensor` of size ``[batch]``
+            that contains the new length of the corresponding sequence.
+
+        time_reduction_factor: An Optional ``int`` with default value 1
+            (i.e. no reduction). If ``time_reducer`` is not :py:data:`None`,
+            this is the ratio by which the time dimension is reduced.
+            If ``time_reducer`` *is* :py:data:`None`, this must be 1.
+
+        rnn2: An Optional :py:class:`torch.nn.Module` containing the second
+            recurrent part of the Transducer encoder. This must be
+            :py:data:`None` unless``time_reducer`` is not :py:data:`None`.
+
+            Must accept as input a tuple where the first element is the output
+            from time_reducer (a :py:class:`torch.Tensor`) with size
+            ``[max_downsampled_seq_len, batch, rnn1_features *
+            time_reduction_factor]`` and the second element is a
+            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+            represents the sequence length of the corresponding *input*
+            sequence to the rnn.
+
+            It must return a tuple where the first element is the result after
+            applying the module to the output. It must have size
+            ``[max_downsampled_seq_len, batch, rnn_features]``. The second
+            element of the tuple return value is a :py:class:`torch.Tensor`
+            with size ``[batch]`` where each entry represents the sequence
+            length of the corresponding *output* sequence. These may be
+            different than the input sequence lengths due to downsampling.
+
         fc2: An Optional :py:class:`torch.nn.Module` containing the second
             fully connected part of the Transducer encoder.
 
@@ -270,27 +312,50 @@ class TransducerEncoder(torch.nn.Module):
 
 
     Returns:
-        A Tuple where the first element is the  output of ``fc2`` if it is not
-        None, else the output of ``rnn1`` and the second element is a
-        :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-        represents the sequence length of the corresponding *output*
-        sequence to the encoder.
+        A Tuple where the first element is the  output of ``fc2`` if present,
+        else the output of ``rnn2`` if present, else the output of ``rnn1``.
+        The second element is a :py:class:`torch.Tensor` of size ``[batch]``
+        where each entry represents the sequence length of the corresponding
+        *output* sequence to the encoder.
     """
 
     def __init__(
         self,
         rnn1: torch.nn.Module,
         fc1: Optional[torch.nn.Module] = None,
+        time_reducer: Optional[torch.nn.Module] = None,
+        time_reduction_factor: Optional[int] = 1,
+        rnn2: Optional[torch.nn.Module] = None,
         fc2: Optional[torch.nn.Module] = None,
     ):
-
+        assert isinstance(time_reduction_factor, int)
+        if time_reducer is None:
+            assert (
+                rnn2 is None
+            ), "Do not pass rnn2 without a time_reducer Callable"
+            assert (
+                time_reduction_factor == 1
+            ), f"if `time_reducer` is None, must have \
+                time_reduction_factor == 1 \
+                but it is = {time_reduction_factor}"
+        else:
+            assert (
+                time_reduction_factor > 1
+            ), f"time_reduction_factor must be > 1 \
+                but = {time_reduction_factor}"
         assert rnn1.rnn.batch_first is False
+        if rnn2:
+            assert rnn2.rnn.batch_first is False
 
         super().__init__()
 
         if fc1:
             self.fc1 = fc1
         self.rnn1 = rnn1
+        self.time_reducer = time_reducer
+        self.time_reduction_factor = time_reduction_factor
+        if rnn2:
+            self.rnn2 = rnn2
         if fc2:
             self.fc2 = fc2
 
@@ -300,6 +365,8 @@ class TransducerEncoder(torch.nn.Module):
             if fc1 is not None:
                 self.fc1 = self.fc1.cuda()
             self.rnn1 = self.rnn1.cuda()
+            if rnn2 is not None:
+                self.rnn2 = self.rnn2.cuda()
             if fc2 is not None:
                 self.fc2 = self.fc2.cuda()
 
@@ -334,8 +401,8 @@ class TransducerEncoder(torch.nn.Module):
                 input to the first layer ``fc1``/``rnn1``.
 
         Returns:
-            Output from ``fc2`` if present else output from ``rnn1``. See
-            initialisation docstring.
+            Output from ``fc2`` if present else output from ``rnn2`` if
+            present, else output from ``rnn1``. See initialisation docstring.
         """
 
         self._certify_inputs_encode(x)
@@ -355,6 +422,10 @@ class TransducerEncoder(torch.nn.Module):
         h = self._prepare_inputs_rnn1(h)
 
         h = self.rnn1(h)
+
+        if self.time_reducer:
+            h = self.time_reducer(h)
+            h = self.rnn2(h)
 
         if hasattr(self, "fc2"):
             h = self.fc2(h)

@@ -26,6 +26,13 @@ def transducer_encoder(
     to_ignore: List[str] = []
     kwargs["rnn1"] = draw(rnns())
 
+    # maybe add time_reduction layer:
+    if draw(st.booleans()):
+        kwargs["time_reduction_factor"] = draw(st.integers(2, 3))
+        kwargs["rnn2"] = draw(rnns(batch_first=False))
+    else:
+        to_ignore = ["rnn2", "time_reduction_factor"]
+
     # maybe add fully connected layers at beginning and end of encoder:
     if draw(st.booleans()):
         kwargs["fc1"] = draw(fully_connecteds(valid_only=True))

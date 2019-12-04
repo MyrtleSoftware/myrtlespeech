@@ -16,6 +16,19 @@ message TransducerEncoder {
   // Required RNN that takes input from fc1 (if present)
   RNN rnn1 = 1;
 
+  // An Optional integer. If provided a time-reduction layer is added to
+  // the encoder in which the audio sequence inputs are reduced in length
+  // by stacking frames in the encoder hidden dimension as described in
+  // https://arxiv.org/pdf/1811.06621.pdf.
+  // The ratio by which the time dimension is reduced is given by
+  // this integer (which must be > 1 if provided).
+  uint32 time_reduction_factor = 3;
+
+  // Optional RNN that takes input from time-reduction layer.
+  // rnn2 *must* be provided if time_reduction_factor is provided, and
+  // *must not* be provided if time_reduction_factor is not provided
+  RNN rnn2 = 4;
+
   // Optional second fully connected layer
   FullyConnected fc2 = 5;
 }
