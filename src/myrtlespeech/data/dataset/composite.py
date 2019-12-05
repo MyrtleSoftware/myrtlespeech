@@ -5,7 +5,7 @@ from torch.utils.data import Dataset
 
 
 class Composite(Dataset):
-    """Composite Dataset - combination of multiple individual datasets
+    """Combines multiple individual datasets.
 
     Args:
         *children: the individual datasets to make up this composite one

@@ -15,7 +15,7 @@ from torch.utils.data import Dataset
 
 
 class CommonVoice(Dataset):
-    f"""`CommonVoice Dataset <https://voice.mozilla.org/>`_.
+    r"""`CommonVoice Dataset <https://voice.mozilla.org/>`_.
 
     Args:
         root: Root directory of the dataset. This should contain the
@@ -263,7 +263,7 @@ class CommonVoice(Dataset):
             return True
 
         down_file = file[:-3] + "wav"
-        down_path = os.path.join(root, "clips_down", down_file)
+        down_path = os.path.join(root, "clips_downsampled", down_file)
         if not os.path.isfile(down_path):
             # Downsample to 16KHz sample rate for consistency with other data
             # sets. Not using torchaudio and SoxEffectChain for this since it
