@@ -9,11 +9,10 @@ RUN chown -R 1000:1000 /opt/conda/
 # warp-transducer build (make, cmake gcc-6)
 RUN apt-get update && apt-get install \
     build-essential  \
-    python3-dev cmake make \
-    software-properties-common -y && \
-    echo "deb  http://deb.debian.org/debian  stretch main" >> /etc/apt/sources.list && \
-    apt-get update && \
-    apt-get install gcc-6 g++-6 -y
+    cmake \
+    make \
+    python3-dev \
+    software-properties-common -y
 
 # create non-root user
 RUN useradd --create-home --shell /bin/bash user
