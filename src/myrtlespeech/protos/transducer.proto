@@ -5,6 +5,7 @@ package myrtlespeech.protos;
 import "myrtlespeech/protos/fully_connected.proto";
 import "myrtlespeech/protos/rnn.proto";
 import "myrtlespeech/protos/transducer_encoder.proto";
+import "myrtlespeech/protos/transducer_joint_net.proto";
 import "myrtlespeech/protos/transducer_predict_net.proto";
 
 // Configuration for Transducer model:
@@ -12,5 +13,5 @@ import "myrtlespeech/protos/transducer_predict_net.proto";
 message Transducer {
   TransducerEncoder transducer_encoder = 1;
   TransducerPredictNet transducer_predict_net = 2;
-  FullyConnected joint_net = 4;
+  TransducerJointNet transducer_joint_net = 4;
 }

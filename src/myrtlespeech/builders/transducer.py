@@ -8,8 +8,10 @@ from myrtlespeech.builders.fully_connected import (
 from myrtlespeech.builders.rnn import build as build_rnn
 from myrtlespeech.model.transducer import Transducer
 from myrtlespeech.model.transducer import TransducerEncoder
+from myrtlespeech.model.transducer import TransducerJointNet
 from myrtlespeech.model.transducer import TransducerPredictNet
 from myrtlespeech.protos import transducer_encoder_pb2
+from myrtlespeech.protos import transducer_joint_net_pb2
 from myrtlespeech.protos import transducer_pb2
 from myrtlespeech.protos import transducer_predict_net_pb2
 from torch import nn
@@ -139,9 +141,9 @@ def build(
     out_enc_size = None
     if (
         transducer_cfg.transducer_encoder.HasField("fc2")
-        and transducer_cfg.joint_net.hidden_size > 0
+        and transducer_cfg.transducer_joint_net.fc.hidden_size > 0
     ):
-        out_enc_size = transducer_cfg.joint_net.hidden_size
+        out_enc_size = transducer_cfg.transducer_joint_net.fc.hidden_size
     encoder, encoder_out = build_transducer_enc_cfg(
         transducer_cfg.transducer_encoder,
         input_features * input_channels,
@@ -156,14 +158,29 @@ def build(
 
     joint_in_dim = encoder_out + predict_net_out  # features are concatenated
 
-    joint_net_fc = build_fully_connected(
-        transducer_cfg.joint_net,
+    joint_net = build_joint_net(
+        transducer_cfg.transducer_joint_net,
         input_features=joint_in_dim,
         output_features=vocab_size + 1,
     )
+
     return Transducer(
-        encoder=encoder, predict_net=predict_net, joint_net=joint_net_fc
+        encoder=encoder, predict_net=predict_net, joint_net=joint_net
     )
+
+
+def build_joint_net(
+    transducer_joint_net_cfg: transducer_joint_net_pb2.TransducerJointNet,
+    input_features: int,
+    output_features: int,
+) -> Tuple[TransducerEncoder, int]:
+    """TODO"""
+    fc = build_fully_connected(
+        transducer_joint_net_cfg.fc,
+        input_features=input_features,
+        output_features=output_features,
+    )
+    return TransducerJointNet(fc=fc)
 
 
 def build_transducer_enc_cfg(

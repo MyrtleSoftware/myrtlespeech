@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package myrtlespeech.protos;
+
+import "myrtlespeech/protos/fully_connected.proto";
+
+// Configuration for Transducer Joint Network
+// https://arxiv.org/pdf/1211.3711.pdf
+message TransducerJointNet {
+
+  // Fully connected layer
+  FullyConnected fc = 1;
+}
