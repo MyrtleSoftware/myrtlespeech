@@ -19,7 +19,9 @@ class CommonVoice(Dataset):
     .. note::
 
         You must manually download the CommonVoice dataset
-        from `https://voice.mozilla.org <https://voice.mozilla.org/>`_.
+        from `https://voice.mozilla.org
+        <https://voice.mozilla.org/en/datasets>`_. Mozilla requires that you
+        provide an email before the download.
 
     Args:
         root: Root directory of the dataset. This should contain the
@@ -162,8 +164,8 @@ class CommonVoice(Dataset):
                 raise ValueError(f"{subset} is not valid")
         return subsets
 
-    def download(self) -> None:
-        """Extracts dataset unless already cached.
+    def download_extract_and_check(self) -> None:
+        """Extracts dataset unless already cached and performs checksum.
 
         If the ``clips`` directory and all required dataset files already
         exist, this function becomes a noop.
