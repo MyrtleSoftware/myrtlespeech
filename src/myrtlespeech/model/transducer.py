@@ -467,7 +467,7 @@ class TransducerPredictNet(torch.nn.Module):
         Returns:
             Output from ``pred_nn``. See initialisation docstring.
         """
-        return self.predict(y, hidden_state=None, is_training=True)
+        return self.predict(y, hidden_state=None, decoding=False)
 
     def predict(
         self,
@@ -475,7 +475,7 @@ class TransducerPredictNet(torch.nn.Module):
         hidden_state: Optional[
             Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]
         ],
-        is_training: bool,
+        decoding: bool,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Excecutes :py:class:`TransducerPredictNet`.
 
@@ -487,35 +487,34 @@ class TransducerPredictNet(torch.nn.Module):
                 tensor of size ``[batch, max_label_length]`` and the second is
                 a :py:class:`torch.Tensor` of size ``[batch]`` that contains
                 the *input* lengths of these target label sequences. ``y`` can
-                be None iff ``is_training=False``.
+                be None iff ``decoding=True``.
 
             hidden_state: The Optional hidden state of ``pred_nn`` which is
                 either a length 2 Tuple of :py:class:`torch.Tensor`s or
                 a single :py:class:`torch.Tensor` depending on the ``RNNType``
                 (see :py:class:`torch.nn` documentation for more information).
 
-                ``hidden_state`` must be None when ``is_training=True``.
+                ``hidden_state`` must be None when ``decoding=False``.
 
-            is_training: A boolean. If :py:data:`True` then training is being
-                performed and if False, inference is being performed. When
-                ``is_training=False``, the hidden_state is passed to
-                ``pred_nn`` and the output of this function will include
+            decoding: A boolean. If :py:data:`True` then decoding is being
+                performed. When ``decoding=True``, the hidden_state is passed
+                to ``pred_nn`` and the output of this function will include
                 the returned :py:class:`RNN`, hidden state. This is the same
                 behaviour as :py:class:`RNN` - consult these docstrings for
                 more details.
 
         Returns:
             This will return the output of ``pred_nn`` where a hidden state is
-            present iff ``is_training = False``. See :py:class:`RNN` with
+            present iff ``decoding=True``. See :py:class:`RNN` with
             ``batch_first=True`` for API.
         """
-        if is_training:
+        if not decoding:
             assert (
                 hidden_state is None
             ), "Do not pass hidden_state during training"
             assert y is not None, f"y must be None during training"
 
-        if y is None:  # then performing inference and at start-of-sequence
+        if y is None:  # then performing decoding and at start-of-sequence
             B = 1 if hidden_state is None else hidden_state[0].size(1)
             y = torch.zeros((1, B, self.hidden_size)), torch.IntTensor([1])
         else:
@@ -524,7 +523,7 @@ class TransducerPredictNet(torch.nn.Module):
             ), f"y must be a tuple of length 2"
             y = self.embed(y)
 
-        if is_training:
+        if not decoding:
             pred_inp = self._prepend_SOS(y)
             # Update the lengths by adding one before inputing to the pred_nn
             pred_inp = (pred_inp[0], pred_inp[1] + 1)
@@ -533,7 +532,7 @@ class TransducerPredictNet(torch.nn.Module):
 
         out = self.pred_nn(pred_inp)
 
-        if is_training:
+        if not decoding:
             # Revert the lengths to 'true' values (i.e. not including SOS)
             # by subtracting one
             out = (out[0], out[1] - 1)
