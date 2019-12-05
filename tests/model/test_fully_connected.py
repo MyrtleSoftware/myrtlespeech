@@ -25,6 +25,7 @@ def fully_connecteds(
     kwargs["num_hidden_layers"] = draw(st.integers(0, 8))
     if kwargs["num_hidden_layers"] == 0:
         kwargs["hidden_size"] = None
+        kwargs["batch_norm"] = False
         kwargs["hidden_activation_fn"] = None
     else:
         kwargs["hidden_size"] = draw(st.integers(1, 32))
@@ -37,32 +38,33 @@ def fully_connecteds(
 
     num_hidden_layers = kwargs["num_hidden_layers"]
     input_features = kwargs["in_features"]
+    batch_norm = kwargs["batch_norm"]
+    hidden_activation_fn = kwargs["hidden_activation_fn"]
     hidden_layers = []
     for i in range(num_hidden_layers + 1):
         # Hidden activation is eventually added only to the hidden layers
-        # before the last FullyConnected layer. The same is for the batch norm
-        # layers.
-        hidden_layers.append(
-            FullyConnected(
-                in_features=input_features,
-                out_features=kwargs["hidden_size"]
-                if i < num_hidden_layers
-                else kwargs["out_features"],
-                hidden_activation_fn=kwargs["hidden_activation_fn"]
-                if i < num_hidden_layers
-                else None,
-                batch_norm=kwargs["batch_norm"]
-                if i < num_hidden_layers
-                else False,
-            )
-        )
+        # before the last FullyConnected layer. The same is for the batch
+        # norm layers.
+        if i < num_hidden_layers:
+            output_features = kwargs["hidden_size"]
+        else:
+            output_features = kwargs["out_features"]
+            hidden_activation_fn = None
+            batch_norm = False
+
+        hidden_layers.append(torch.nn.Linear(input_features, output_features))
+        if batch_norm:
+            hidden_layers.append(torch.nn.BatchNorm1d(output_features))
+        if hidden_activation_fn is not None:
+            hidden_layers.append(hidden_activation_fn)
+
         input_features = kwargs["hidden_size"]
 
-    fully_connected_module = torch.nn.Sequential(*hidden_layers)
+    fully_connected = torch.nn.Sequential(*hidden_layers)
 
     if not return_kwargs:
-        return fully_connected_module
-    return fully_connected_module, kwargs
+        return fully_connected
+    return fully_connected, kwargs
 
 
 # Tests -----------------------------------------------------------------------
@@ -77,36 +79,49 @@ def test_fully_connected_module_structure_correct_for_valid_kwargs(
 
     assert isinstance(fully_connected, torch.nn.Sequential)
 
-    if kwargs["num_hidden_layers"] == 0:
-        assert isinstance(fully_connected[0].fully_connected, torch.nn.Linear)
-        assert (
-            fully_connected[0].fully_connected.in_features
-            == kwargs["in_features"]
-        )
-        assert (
-            fully_connected[0].fully_connected.out_features
-            == kwargs["out_features"]
-        )
-        return
+    # configuration of each layer in Sequential depends on whether activation
+    # and batch norm are present
+    act_fn_is_none = "hidden_activation_fn" not in kwargs
+    batch_norm = kwargs["batch_norm"]
+    hidden_size = kwargs["hidden_size"]
+    input_features = kwargs["in_features"]
 
-    assert len(fully_connected) == kwargs["num_hidden_layers"] + 1
+    num_layers = kwargs["num_hidden_layers"] + 1
+    if batch_norm:
+        num_layers += kwargs["num_hidden_layers"]
+    if not act_fn_is_none:
+        num_layers += kwargs["num_hidden_layers"]
 
-    in_features = kwargs["in_features"]
-    for idx, module in enumerate(fully_connected):
-        # should be alternating linear/batch_norm/activation_fn layers
-        assert isinstance(module.fully_connected, torch.nn.Linear)
-        assert module.fully_connected.in_features == in_features
-        if idx == len(fully_connected) - 1:
-            assert (
-                module.fully_connected.out_features == kwargs["out_features"]
-            )
-        else:
-            assert module.fully_connected.out_features == kwargs["hidden_size"]
-            in_features = kwargs["hidden_size"]
+    assert len(fully_connected) == num_layers
 
-            if kwargs["batch_norm"] and idx < kwargs["num_hidden_layers"]:
-                assert isinstance(module.batch_norm, torch.nn.BatchNorm1d)
-            if idx < kwargs["num_hidden_layers"]:
-                assert isinstance(
-                    module.activation, type(kwargs["hidden_activation_fn"])
+    for i in range(num_layers):
+        # should be alternating linear/activation_fn layers if !act_fn_is_none
+        # or linear/batch_norm/activation_fn if also batch_norm is True
+        if (
+            (batch_norm and not act_fn_is_none and i % 3 == 0)
+            or (batch_norm and act_fn_is_none and i % 2 == 0)
+            or (not batch_norm and not act_fn_is_none and i % 2 == 0)
+            or (not batch_norm and act_fn_is_none)
+        ):
+            assert isinstance(fully_connected[i], torch.nn.Linear)
+            assert fully_connected[i].in_features == input_features
+            if i == num_layers - 1:
+                assert (
+                    fully_connected[i].out_features == kwargs["out_features"]
                 )
+            else:
+                assert fully_connected[i].out_features == hidden_size
+
+        elif (batch_norm and not act_fn_is_none and i % 3 == 1) or (
+            batch_norm and act_fn_is_none and i % 2 == 1
+        ):
+            assert isinstance(fully_connected[i], torch.nn.BatchNorm1d)
+
+        elif (batch_norm and not act_fn_is_none and i % 3 == 2) or (
+            not batch_norm and not act_fn_is_none and i % 2 == 1
+        ):
+            assert isinstance(
+                fully_connected[i], type(kwargs["hidden_activation_fn"])
+            )
+
+        input_features = hidden_size

@@ -25,8 +25,7 @@ def fully_connected_module_match_cfg(
     output_features: int,
 ) -> None:
     """Ensures ``FullyConnected`` module matches protobuf configuration."""
-    # otherwise it will be a Sequential of layers
-    assert isinstance(fully_connected, torch.nn.Sequential)
+    assert isinstance(fully_connected.fully_connected, torch.nn.Sequential)
 
     # configuration of each layer in Sequential depends on whether activation
     # and batch norm are present
@@ -34,25 +33,57 @@ def fully_connected_module_match_cfg(
     batch_norm = fully_connected_cfg.batch_norm
     hidden_size = fully_connected_cfg.hidden_size
 
-    assert len(fully_connected) == fully_connected_cfg.num_hidden_layers + 1
+    num_layers = fully_connected_cfg.num_hidden_layers + 1
+    if batch_norm:
+        num_layers += fully_connected_cfg.num_hidden_layers
+    if not act_fn_is_none:
+        num_layers += fully_connected_cfg.num_hidden_layers
 
-    for idx, module in enumerate(fully_connected):
+    assert len(fully_connected.fully_connected) == num_layers
+
+    for i in range(num_layers):
         # should be alternating linear/activation_fn layers if !act_fn_is_none
-        # or linear/batch_norm_activation_fn if also batch_norm is True
-        assert isinstance(module.fully_connected, torch.nn.Linear)
-        assert module.fully_connected.in_features == input_features
-        if idx == len(fully_connected) - 1:
-            assert module.fully_connected.out_features == output_features
-        else:
-            assert module.fully_connected.out_features == hidden_size
-        input_features = hidden_size
-
-        if batch_norm and idx < fully_connected_cfg.num_hidden_layers:
-            assert isinstance(module.batch_norm, torch.nn.BatchNorm1d)
-        if not act_fn_is_none and idx < fully_connected_cfg.num_hidden_layers:
-            activation_match_cfg(
-                module.activation, fully_connected_cfg.activation
+        # or linear/batch_norm/activation_fn if also batch_norm is True
+        if (
+            (batch_norm and not act_fn_is_none and i % 3 == 0)
+            or (batch_norm and act_fn_is_none and i % 2 == 0)
+            or (not batch_norm and not act_fn_is_none and i % 2 == 0)
+            or (not batch_norm and act_fn_is_none)
+        ):
+            assert isinstance(
+                fully_connected.fully_connected[i], torch.nn.Linear
             )
+            assert (
+                fully_connected.fully_connected[i].in_features
+                == input_features
+            )
+            if i == num_layers - 1:
+                assert (
+                    fully_connected.fully_connected[i].out_features
+                    == output_features
+                )
+            else:
+                assert (
+                    fully_connected.fully_connected[i].out_features
+                    == hidden_size
+                )
+
+        elif (batch_norm and not act_fn_is_none and i % 3 == 1) or (
+            batch_norm and act_fn_is_none and i % 2 == 1
+        ):
+            assert isinstance(
+                fully_connected.fully_connected[i], torch.nn.BatchNorm1d
+            )
+
+        elif (batch_norm and not act_fn_is_none and i % 3 == 2) or (
+            not batch_norm and not act_fn_is_none and i % 2 == 1
+        ):
+            activation_match_cfg(
+                fully_connected.fully_connected[i],
+                fully_connected_cfg.activation,
+            )
+
+        input_features = hidden_size
 
 
 # Tests -----------------------------------------------------------------------
@@ -222,7 +253,11 @@ def test_fully_connected_module_returns_correct_seq_lens(
     )
 
     tensor = torch.empty(
-        [max_seq_len, batch_size, fully_connected[0].in_features],
+        [
+            max_seq_len,
+            batch_size,
+            fully_connected.fully_connected[0].in_features,
+        ],
         requires_grad=False,
     ).normal_()
 
