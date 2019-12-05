@@ -25,7 +25,7 @@ class Transducer(torch.nn.Module):
             corresponding *output* sequence. These may be different than the
             input sequence lengths due to downsampling in `encoder`.
 
-            It is possible *but not necessary* to use an initialized
+            It is possible **but not necessary** to use an initialized
             :py:class:`TransducerEncoder` class as `encoder`.
 
             Note that the encoder network is sometimes referred to as the
@@ -48,7 +48,7 @@ class Transducer(torch.nn.Module):
             the lengths of the target label sequence. These should be
             unchanged from the input lengths.
 
-            It is possible *but not necessary* to use an initialized
+            It is possible **but not necessary** to use an initialized
             :py:class:`TransducerPredictNet` class as `predict_net`.
 
         joint_net: A :py:class:`torch.nn.Module` to use as the the transducer
@@ -76,6 +76,9 @@ class Transducer(torch.nn.Module):
             The second element is a :py:class:`torch.Tensor` of
             size ``[batch]`` where each entry represents the sequence length
             of the ``encoder`` features after ``joint_net`` has acted on them.
+
+            It is possible **but not necessary** to use an initialized
+            :py:class:`TransducerJointNet` class as `joint_net`.
     """
 
     def __init__(
@@ -128,8 +131,6 @@ class Transducer(torch.nn.Module):
         g = self.predict_net((y, y_lens))  # g[0] = (U, B, H2)
 
         out = self.joint_net((f, g))
-
-        del f, g, x, x_inp, x_lens, y, y_lens
 
         return out
 
@@ -361,57 +362,40 @@ class TransducerEncoder(torch.nn.Module):
 
         # Add Optional convolutions here in the future?
         h = self._prepare_inputs_fc1(h)
+
         if hasattr(self, "fc1"):
-            h = h[0].transpose(2, 3), h[1]
             h = self.fc1(h)
-            h = h[0].transpose(2, 3), h[1]
             h = self.hardtanh(h)
-        h = self._prepare_inputs_rnn1(h)
 
         h = self.rnn1(h)
 
         if hasattr(self, "fc2"):
             h = self.fc2(h)
             h = self.hardtanh(h)
-        del x
-
         return h
 
     @staticmethod
     def _certify_inputs_encode(inp):
 
-        (x, x_lens) = inp
+        x, x_lens = inp
         B1, C, I, T = x.shape
         (B2,) = x_lens.shape
         assert B1 == B2, "Batch size must be the same for inputs and targets"
 
     @staticmethod
-    def _prepare_inputs_rnn1(inp):
-        r"""Reshapes inputs to prepare for `rnn1`.
-        """
-        (x, x_lens) = inp
-        B, C, I, T = x.shape
-
-        assert C == 1, f"There should only be a single channel input but C={C}"
-
-        x = x.squeeze(1)  # B, I, T
-        x = x.permute(2, 0, 1).contiguous()  # T, B, I
-        return (x, x_lens)
-
-    @staticmethod
     def _prepare_inputs_fc1(inp):
         r"""Reshapes inputs to prepare them for ``fc1``.
 
-        This involves flattening n_context in channel dimension in the hidden
-        dimension.
+        The overall transformation is: ````[batch, channels, features,
+        max_input_seq_len] -> [max_input_seq_len, batch,
+        channels * features]``.
         """
-        (x, x_lens) = inp
+        x, x_lens = inp
         B, C, I, T = x.shape
-
-        if not C == 1:
-            x = x.view(B, 1, C * I, T).contiguous()
-
-        return (x, x_lens)
+        x = x.view(B, C * I, T)
+        # All modules in this method assume time-dimension-first inputs:
+        x = x.permute(2, 0, 1)  # (B, hid, T) -> (T, B, hid)
+        return x.contiguous(), x_lens
 
 
 class TransducerPredictNet(torch.nn.Module):
