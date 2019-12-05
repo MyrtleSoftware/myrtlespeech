@@ -60,7 +60,7 @@ class CommonVoice(Dataset):
 
         label_transform: A function that returns a transformed target.
 
-        download: If :py:data:`True`, dataset is extracted it in the ``root``
+        download: If :py:data:`True`, dataset is extracted to the ``root``
             directory. Note that automatic download is not supported and the
             user must manually download the .tar file.
 
