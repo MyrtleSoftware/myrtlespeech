@@ -40,11 +40,12 @@ def build(
 
     Example:
         >>> from google.protobuf import text_format
-        >>> cfg_text = '''
+        >>> cfg_txt = '''
         ... transducer_encoder {
-        ...    fc1 {
+        ...       fc1 {
         ...       num_hidden_layers: 1;
         ...       hidden_size: 1152;
+        ...       dropout: {value: 0.25}
         ...       activation {
         ...         hardtanh {
         ...           min_val: 0.0;
@@ -52,51 +53,54 @@ def build(
         ...           }
         ...         }
         ...       }
-        ...     rnn1 {
+        ...       rnn1 {
         ...         rnn_type: LSTM;
         ...         hidden_size: 1152;
         ...         num_layers: 2;
         ...         bias: true;
         ...         bidirectional: false;
+        ...         forget_gate_bias: {value: 1.0}
         ...             }
         ...
-        ...      fc2 {
-        ...        num_hidden_layers: 1;
-        ...         hidden_size: 1152;
+        ...       fc2 {
+        ...       num_hidden_layers: 1;
+        ...       hidden_size: 1152;
+        ...       dropout: {value: 0.25}
+        ...       activation {
+        ...         hardtanh {
+        ...           min_val: 0.0;
+        ...           max_val: 20.0;
+        ...           }
+        ...         }
+        ...       }
+        ...     }
+        ...     transducer_predict_net {
+        ...       pred_nn {
+        ...         rnn {
+        ...           rnn_type: LSTM;
+        ...           hidden_size: 256;
+        ...           num_layers: 2;
+        ...           bias: true;
+        ...           bidirectional: false;
+        ...           forget_gate_bias: {value: 1.0}
+        ...         }
+        ...       }
+        ...     }
+        ...     transducer_joint_net {
+        ...       fc {
+        ...         num_hidden_layers: 1;
+        ...         hidden_size: 512;
+        ...         dropout: {value: 0.25}
         ...         activation {
         ...           hardtanh {
         ...             min_val: 0.0;
         ...             max_val: 20.0;
-        ...             }
         ...           }
-        ...         }
-        ...     }
-        ... transducer_predict_net {
-        ...   pred_nn {
-        ...     rnn {
-        ...       rnn_type: LSTM;
-        ...       hidden_size: 256;
-        ...       num_layers: 2;
-        ...       bias: true;
-        ...       bidirectional: false;
-        ...     }
-        ...    }
-        ... }
-        ... joint_net {
-        ...     num_hidden_layers: 1;
-        ...     hidden_size: 512;
-        ...     activation {
-        ...       hardtanh {
-        ...         min_val: 0.0;
-        ...         max_val: 20.0;
         ...         }
         ...       }
         ...     }
         ... '''
-        >>> cfg = text_format.Merge(
-        ...             cfg_text,
-        ...             transducer_pb2.Transducer()
-        ... )
+        >>> cfg = text_format.Merge(cfg_txt, transducer_pb2.Transducer())
         >>> build(cfg, input_features=80, input_channels=5, vocab_size=28)
         Transducer(
           (encode): TransducerEncoder(
@@ -104,7 +108,8 @@ def build(
               (fully_connected): Sequential(
                 (0): Linear(in_features=400, out_features=1152, bias=True)
                 (1): Hardtanh(min_val=0.0, max_val=20.0)
-                (2): Linear(in_features=1152, out_features=1152, bias=True)
+                (2): Dropout(p=0.25, inplace=False)
+                (3): Linear(in_features=1152, out_features=1152, bias=True)
               )
             )
             (rnn1): RNN(
@@ -114,7 +119,8 @@ def build(
               (fully_connected): Sequential(
                 (0): Linear(in_features=1152, out_features=1152, bias=True)
                 (1): Hardtanh(min_val=0.0, max_val=20.0)
-                (2): Linear(in_features=1152, out_features=512, bias=True)
+                (2): Dropout(p=0.25, inplace=False)
+                (3): Linear(in_features=1152, out_features=512, bias=True)
               )
             )
           )
@@ -124,14 +130,18 @@ def build(
               (rnn): LSTM(256, 256, num_layers=2, batch_first=True)
             )
           )
-          (joint_net): FullyConnected(
-            (fully_connected): Sequential(
-              (0): Linear(in_features=768, out_features=512, bias=True)
-              (1): Hardtanh(min_val=0.0, max_val=20.0)
-              (2): Linear(in_features=512, out_features=29, bias=True)
+          (joint_net): TransducerJointNet(
+            (fc): FullyConnected(
+              (fully_connected): Sequential(
+                (0): Linear(in_features=768, out_features=512, bias=True)
+                (1): Hardtanh(min_val=0.0, max_val=20.0)
+                (2): Dropout(p=0.25, inplace=False)
+                (3): Linear(in_features=512, out_features=29, bias=True)
+              )
             )
           )
         )
+
     """
     # encoder output size is only required for build_transducer_enc_cfg if fc2
     # layer is present
