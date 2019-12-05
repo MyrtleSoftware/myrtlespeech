@@ -16,12 +16,12 @@ deps/warp-transducer:
 	git checkout c6d12f9e1562833c2b4e7ad84cb22aa4ba31d18c && \
 	mkdir build && \
 	cd build && \
-	export WARP_RNNT_PATH=/usr/local/lib/ && \
+	export WARP_RNNT_PATH=$(CONDA_PREFIX)/lib && \
 	cmake .. && \
 	make && \
-	mv libwarprnnt.so /usr/local/lib/ && \
+	mv libwarprnnt.so  $(CONDA_PREFIX)/lib && \
 	cd ../pytorch_binding && \
 	python3 setup.py install --user && \
 	cd ../../../ && \
   rm -rf deps && \
-  echo "export WARP_RNNT_PATH=/usr/local/lib/" >> ~/.bashrc
+  echo "export WARP_RNNT_PATH=$(CONDA_PREFIX)/lib" >> ~/.bashrc
