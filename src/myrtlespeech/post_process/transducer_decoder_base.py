@@ -135,7 +135,7 @@ class TransducerDecoderBase(torch.nn.Module):
                 # the reason for enforcing  blank_index = (len(alphabet) - 1)
             y = collate_label_list([[label]], device=self._device)
         (out, hid), lengths = self._model.predict_net.predict(
-            y, hidden, is_training=False
+            y, hidden, decoding=True
         )
         return (out, lengths), hid
 
