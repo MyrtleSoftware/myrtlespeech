@@ -107,7 +107,6 @@ dependencies:
   - pycodestyle=2.5.0=py37_0
   - pycosat=0.6.3=py37h470a237_1
   - pycparser=2.19=py37_0
-  - pydub=0.23.1=py_0
   - pyflakes=2.1.1=py37_0
   - pygments=2.4.2=py_0
   - pyopenssl=19.0.0=py37_0

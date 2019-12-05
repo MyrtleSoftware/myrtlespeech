@@ -7,7 +7,6 @@ from typing import Optional
 from typing import Sequence
 from typing import Tuple
 
-import pydub
 import torch
 import torchaudio
 from myrtlespeech.data.dataset import utils
@@ -265,14 +264,9 @@ class CommonVoice(Dataset):
         down_file = file[:-3] + "wav"
         down_path = os.path.join(root, "clips_downsampled", down_file)
         if not os.path.isfile(down_path):
-            # Downsample to 16KHz sample rate for consistency with other data
-            # sets. Not using torchaudio and SoxEffectChain for this since it
-            # is not thread safe
-            audio = pydub.AudioSegment.from_mp3(path)
-            audio = audio.set_frame_rate(16000)
-
-            # Save sample as file
-            audio.export(down_path, format="wav")
+            # Convert mp3 -> wav and downsample to 16KHz
+            audio, rate = torchaudio.load(path)
+            torchaudio.save(down_path, audio, 16000)
         self.paths.append(down_path)
         self.durations.append(duration)
         return False
