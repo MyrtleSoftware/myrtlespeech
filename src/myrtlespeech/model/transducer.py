@@ -127,13 +127,51 @@ class Transducer(torch.nn.Module):
         f = self.encode((x_inp, x_lens))  # f[0] = (T, B, H1)
         g = self.predict_net((y, y_lens))  # g[0] = (U, B, H2)
 
-        out = self.joint((f, g))
+        out = self.joint_net((f, g))
 
         del f, g, x, x_inp, x_lens, y, y_lens
 
         return out
 
-    def joint(
+    @staticmethod
+    def _certify_inputs_forward(inp):
+        try:
+            (x, x_lens), (y, y_lens) = inp
+        except ValueError as e:
+            print(
+                "Unable to unpack inputs to Transducer. Are you using the \
+            `TransducerTraining()` callback \
+            found in `myrtlespeech.run.callbacks.rnn_t_training`?"
+            )
+            raise e
+        B1, C, I, T = x.shape
+        B2, U = y.shape
+
+        (B3,) = x_lens.shape
+        (B4,) = y_lens.shape
+        assert (
+            B1 == B2 == B3 == B4
+        ), "Batch size must be the same for inputs and targets"
+
+        if not (x_lens <= T).all():
+            raise ValueError(
+                "x_lens must be less than or equal to max number of time-steps"
+            )
+        if not (y_lens <= U).all():
+            raise ValueError(
+                f"y_lens must be less than or equal to max number of output \
+                symbols but {y_lens.max()} > {U}"
+            )
+
+
+class TransducerJointNet(torch.nn.Module):
+    """TODO"""
+
+    def __init__(self, fc: torch.nn.Module):
+        super().__init__()
+        self.fc = fc
+
+    def forward(
         self,
         x: Tuple[
             Tuple[torch.Tensor, torch.Tensor],
@@ -171,41 +209,11 @@ class Transducer(torch.nn.Module):
         ).contiguous()  # (B, T, U_, H1 + H2)
 
         # drop g_lens (see :py:class:`Transducer` docstrings)
-        h = self.joint_net((concat_inp, f_lens))
+        h = self.fc((concat_inp, f_lens))
 
         del concat_inp, f, g, x
 
         return h
-
-    @staticmethod
-    def _certify_inputs_forward(inp):
-        try:
-            (x, x_lens), (y, y_lens) = inp
-        except ValueError as e:
-            print(
-                "Unable to unpack inputs to Transducer. Are you using the \
-            `TransducerTraining()` callback \
-            found in `myrtlespeech.run.callbacks.rnn_t_training`?"
-            )
-            raise e
-        B1, C, I, T = x.shape
-        B2, U = y.shape
-
-        (B3,) = x_lens.shape
-        (B4,) = y_lens.shape
-        assert (
-            B1 == B2 == B3 == B4
-        ), "Batch size must be the same for inputs and targets"
-
-        if not (x_lens <= T).all():
-            raise ValueError(
-                "x_lens must be less than or equal to max number of time-steps"
-            )
-        if not (y_lens <= U).all():
-            raise ValueError(
-                f"y_lens must be less than or equal to max number of output \
-                symbols but {y_lens.max()} > {U}"
-            )
 
 
 class TransducerEncoder(torch.nn.Module):
