@@ -16,41 +16,55 @@ from tests.utils.utils import tensors
 # Utilities -------------------------------------------------------------------
 
 
-def rnn_match_cfg(
-    rnn: RNN, rnn_cfg: rnn_pb2.RNN, input_features: int, layer_idx: int
-) -> None:
+def rnn_match_cfg(rnn: RNN, rnn_cfg: rnn_pb2.RNN, input_features: int) -> None:
     """Ensures RNN matches protobuf configuration."""
-    if rnn_cfg.rnn_type == rnn_pb2.RNN.LSTM:
-        assert isinstance(rnn.rnn, torch.nn.LSTM)
-    elif rnn_cfg.rnn_type == rnn_pb2.RNN.GRU:
-        assert isinstance(rnn.rnn, torch.nn.GRU)
-    elif rnn_cfg.rnn_type == rnn_pb2.RNN.BASIC_RNN:
-        assert isinstance(rnn.rnn, torch.nn.RNN)
-    else:
-        raise ValueError(f"rnn_type {rnn_cfg.rnn_type} not supported by test")
+    num_directions = 2 if rnn_cfg.bidirectional else 1
+    for i in range(rnn_cfg.num_layers):
+        input_features = (
+            rnn_cfg.hidden_size * num_directions if i > 0 else input_features
+        )
+        # if batch_norm is True then batch norm layers should correspond to the
+        # layers with an odd index
+        if i % 2 == 0 or not rnn_cfg.batch_norm:
+            # RNN layers corresponds to even indexes but also odd ones if
+            # batch_norm is False
+            if rnn_cfg.rnn_type == rnn_pb2.RNN.LSTM:
+                assert isinstance(rnn.rnn[i], torch.nn.LSTM)
+            elif rnn_cfg.rnn_type == rnn_pb2.RNN.GRU:
+                assert isinstance(rnn.rnn[i], torch.nn.GRU)
+            elif rnn_cfg.rnn_type == rnn_pb2.RNN.BASIC_RNN:
+                assert isinstance(rnn.rnn[i], torch.nn.RNN)
+            else:
+                raise ValueError(
+                    f"rnn_type {rnn_cfg.rnn_type} not supported " f"by test"
+                )
 
-    assert input_features == rnn.rnn.input_size
-    assert rnn_cfg.hidden_size == rnn.rnn.hidden_size
-    assert rnn_cfg.bias == rnn.rnn.bias
-    assert not rnn.rnn.batch_first
-    assert rnn.rnn.dropout == 0.0
-    assert rnn_cfg.bidirectional == rnn.rnn.bidirectional
+            assert rnn.rnn[i].input_size == input_features
+            assert rnn.rnn[i].hidden_size == rnn_cfg.hidden_size
+            assert rnn.rnn[i].bias == rnn_cfg.bias
+            assert not rnn.rnn[i].batch_first
+            assert rnn.rnn[i].bidirectional == rnn_cfg.bidirectional
 
-    if rnn_cfg.batch_norm and layer_idx > 0:
-        assert isinstance(rnn.batch_norm, torch.nn.BatchNorm1d)
+            if not (
+                rnn_cfg.rnn_type == rnn_pb2.RNN.LSTM
+                and rnn_cfg.bias
+                and rnn_cfg.HasField("forget_gate_bias")
+            ):
+                continue
 
-    if not (
-        rnn_cfg.rnn_type == rnn_pb2.RNN.LSTM
-        and rnn_cfg.bias
-        and rnn_cfg.HasField("forget_gate_bias")
-    ):
-        return
+            hidden_size = rnn_cfg.hidden_size
+            forget_gate_bias = rnn_cfg.forget_gate_bias.value
+            bias_value = getattr(rnn.rnn[i], f"bias_ih_l0")[
+                hidden_size : 2 * hidden_size
+            ]
+            bias_value += getattr(rnn.rnn[i], f"bias_hh_l0")[
+                hidden_size : 2 * hidden_size
+            ]
+            assert torch.allclose(bias_value, torch.tensor(forget_gate_bias))
 
-    hidden_size = rnn_cfg.hidden_size
-    forget_gate_bias = rnn_cfg.forget_gate_bias.value
-    bias = getattr(rnn.rnn, f"bias_ih_l0")[hidden_size : 2 * hidden_size]
-    bias += getattr(rnn.rnn, f"bias_hh_l0")[hidden_size : 2 * hidden_size]
-    assert torch.allclose(bias, torch.tensor(forget_gate_bias))
+        else:
+            # i % 2 != 0 and batch_norm
+            assert isinstance(rnn.rnn[i], torch.nn.BatchNorm1d)
 
 
 @st.composite
@@ -77,14 +91,7 @@ def test_build_rnn_returns_correct_rnn_with_valid_params(
     """Test that build_rnn returns the correct RNN with valid params."""
     rnn, rnn_output_size = build(rnn_cfg, input_features)
 
-    for i in range(rnn_cfg.num_layers):
-        num_directions = 2 if rnn_cfg.bidirectional else 1
-        rnn_match_cfg(
-            rnn[i],
-            rnn_cfg,
-            rnn_cfg.hidden_size * num_directions if i > 0 else input_features,
-            i,
-        )
+    rnn_match_cfg(rnn, rnn_cfg, input_features)
 
 
 @given(rnn_cfg_tensor=rnn_cfg_tensors())

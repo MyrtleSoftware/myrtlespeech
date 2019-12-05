@@ -95,9 +95,9 @@ def build(
             )
             (3): Conv1dTo2d(seq_len_support=True)
           )
-          (rnn): Sequential(
-            (0): RNN(
-              (rnn): LSTM(8, 32, bidirectional=True)
+          (rnn): RNN(
+            (rnn): Sequential(
+              (0): LSTM(8, 32, bidirectional=True)
             )
           )
           (fully_connected): Sequential(
