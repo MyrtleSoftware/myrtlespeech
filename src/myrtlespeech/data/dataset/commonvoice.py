@@ -16,6 +16,11 @@ from torch.utils.data import Dataset
 class CommonVoice(Dataset):
     r"""`CommonVoice Dataset <https://voice.mozilla.org/>`_.
 
+    .. note::
+
+        You must manually download the CommonVoice dataset
+        from `https://voice.mozilla.org <https://voice.mozilla.org/>`_.
+
     Args:
         root: Root directory of the dataset. This should contain the
             ``CommonVoice`` directory with a tsv file for each subset that
