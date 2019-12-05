@@ -10,9 +10,11 @@ RUN chown -R 1000:1000 /opt/conda/
 RUN apt-get update && apt-get install \
     build-essential  \
     cmake \
-    make \
     python3-dev \
-    software-properties-common -y
+    software-properties-common -y && \
+    echo "deb  http://deb.debian.org/debian  stretch main" >> /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get install gcc-6 g++-6 -y
 
 # create non-root user
 RUN useradd --create-home --shell /bin/bash user
