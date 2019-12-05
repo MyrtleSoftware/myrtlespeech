@@ -24,10 +24,11 @@ class CommonVoice(Dataset):
         provide an email before the download.
 
     Args:
-        root: Root directory of the dataset. This should contain the
-            ``CommonVoice`` directory with a tsv file for each subset that
-            contains paths to samples and transcriptions. There should also be
-            a ``clips`` directory containing all the audio files. e.g.
+        root: Root directory of the dataset. This should contain either a
+            compressed .tar file or the ``CommonVoice`` directory with a tsv
+            file for each subset that contains paths to samples and
+            transcriptions. There should also be a ``clips`` directory
+            containing all the audio files. e.g.
 
             .. code-block::
 

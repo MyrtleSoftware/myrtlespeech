@@ -7,8 +7,12 @@ from torch.utils.data import Dataset
 class Composite(Dataset):
     """Combines multiple individual datasets.
 
+    An Iterable of :py:class:`torch.utils.data.Dataset`s are combined to
+    create a single :py:class:`torch.utils.data.Dataset`.
+
     Args:
-        *children: the individual datasets to make up this composite one
+        *children: the individual datasets that are combined to create this
+            composite dataset.
     """
 
     def __init__(self, *children: Dataset):
