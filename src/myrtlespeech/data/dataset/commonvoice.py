@@ -59,10 +59,9 @@ class CommonVoice(Dataset):
 
         label_transform: A function that returns a transformed target.
 
-        download: If :py:data:`True`, downloads the dataset from the internet
-            and extracts it in the ``root`` directory. If the dataset is
-            already downloaded, it is not downloaded again. See the
-            :py:meth:`CommonVoice.download` method for more information.
+        download: If :py:data:`True`, dataset is extracted it in the ``root``
+            directory. Note that automatic download is not supported and the
+            user must manually download the .tar file.
 
         skip_integrity_check: If :py:data:`True` the integrity check is
             skipped.  This is useful when doing quick experiments on the larger
@@ -109,7 +108,7 @@ class CommonVoice(Dataset):
         self.max_duration = max_duration
 
         if download:
-            self.download()
+            self.extract_and_check()
 
         if not skip_integrity_check:
             self.check_integrity()
@@ -164,7 +163,7 @@ class CommonVoice(Dataset):
                 raise ValueError(f"{subset} is not valid")
         return subsets
 
-    def download_extract_and_check(self) -> None:
+    def extract_and_check(self) -> None:
         """Extracts dataset unless already cached and performs checksum.
 
         If the ``clips`` directory and all required dataset files already
