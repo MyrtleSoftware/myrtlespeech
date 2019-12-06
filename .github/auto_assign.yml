@@ -14,3 +14,8 @@ reviewers:
 # A number of reviewers added to the pull request
 # Set 0 to add all the reviewers (default: 0)
 numberOfReviewers: 1
+
+# A list of keywords that skip the process to auto-add reviewers if pull
+# requests include them:
+skipKeywords:
+   - "not ready"
