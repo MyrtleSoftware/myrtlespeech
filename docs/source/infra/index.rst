@@ -19,7 +19,7 @@ A `Google Kuberentes Engine <https://cloud.google.com/kubernetes-engine/>`_
 <https://docs.gitlab.com/runner/executors/kubernetes.html>`_. The cluster is
 configured and created from a set of declarative, version controlled scripts
 using `Terraform <https://www.terraform.io/>`_. The Kubernetes executor is
-installed into the cluster using `Helm <https://helm.sh>`_.
+installed into the cluster using `Helm 2 <https://v2.helm.sh>`_.
 
 
 Google Cloud Platform (GCP) Project
@@ -224,15 +224,15 @@ Configure :literal:`kubectl` to point to this cluster:
     $ gcloud container clusters get-credentials myrtlespeech --region europe-west2-a
 
 
-Helm
------
+Helm 2
+-------
 
-Helm is a package manager for Kubernetes.
+Helm 2 is a package manager for Kubernetes.
 
     "Helm helps you manage Kubernetes applications --- Helm Charts help you
     define, install, and upgrade even the most complex Kubernetes application."
 
-    -- `What is Helm? <https://helm.sh/>`_
+    -- `What is Helm? <https://v2.helm.sh/>`_
 
 Installation
 ~~~~~~~~~~~~~
@@ -240,15 +240,15 @@ Installation
     "There are two parts to Helm: The Helm client (:literal:`helm`) and the
     Helm server (Tiller)."
 
-    -- `Installing Helm <https://helm.sh/docs/using_helm/#installing-helm>`_
+    -- `Installing Helm <https://v2.helm.sh/docs/using_helm/#installing-helm>`_
 
 Both parts need to be installed.
 
-The Helm client is a binary that is run on the local device. It is included by
-default in the :literal:`myrtlespeech` Conda environment.
+The Helm 2 client is a binary that is run on the local device. It is included
+by default in the :literal:`myrtlespeech` Conda environment.
 
 Tiller, which runs inside of the Kubernetes cluster and manages releases
-(installations) of charts, can be installed into the cluster using the Helm
+(installations) of charts, can be installed into the cluster using the Helm 2
 client. First create a service account for Tiller:
 
 .. code-block:: bash
@@ -264,7 +264,7 @@ and then install it:
     $ helm init --history-max 200
 
 More information can be found `here
-<https://helm.sh/docs/using_helm/#initialize-helm-and-install-tiller>`_.
+<https://v2.helm.sh/docs/using_helm/#initialize-helm-and-install-tiller>`_.
 
 Charts
 ~~~~~~~
@@ -278,15 +278,16 @@ Charts
     "A chart is organized as a collection of files inside of a directory. The
     directory name is the name of the chart (without versioning information)."
 
-    -- `Charts <https://helm.sh/docs/developing_charts/#charts>`_
+    -- `Charts <https://v2.helm.sh/docs/developing_charts/#charts>`_
 
 The Repaper chart configures the necessary software to run on the GKE cluster.
 
 See the :literal:`infra/myrtlespeech/` directory for more information about the
 chart.
 
-Add the registration token to ``values.yaml`` and then use the the Helm client
-library to install the chart ensure to change to the repaper chart directory:
+Add the registration token to ``values.yaml`` and then use the the Helm 2
+client library to install the chart ensure to change to the repaper chart
+directory:
 
 .. code-block:: bash
 
@@ -300,7 +301,7 @@ library to install the chart ensure to change to the repaper chart directory:
 GitLab CI
 ~~~~~~~~~
 
-Helm installed a `GitLab Runner instance
+Helm 2 installed a `GitLab Runner instance
 <https://docs.gitlab.com/runner/install/kubernetes.html>`_ into the cluster
 that will provision a new pod for each GitLab CI/CD job it receives.
 
