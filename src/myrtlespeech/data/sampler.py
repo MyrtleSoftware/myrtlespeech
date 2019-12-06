@@ -1,5 +1,6 @@
 import random
 from typing import Dict
+from typing import List
 from typing import Optional
 from typing import Set
 from typing import Union
@@ -32,7 +33,7 @@ class SequentialRandomSampler:
 
     def __init__(
         self,
-        indices: range,
+        indices: Union[range, List],
         batch_size: int,
         shuffle: bool,
         drop_last: Optional[bool] = False,
@@ -95,7 +96,7 @@ class SortaGrad(SequentialRandomSampler):
 
     def __init__(
         self,
-        indices: range,
+        indices: Union[range, List],
         batch_size: int,
         shuffle: bool,
         drop_last: Optional[bool] = False,
