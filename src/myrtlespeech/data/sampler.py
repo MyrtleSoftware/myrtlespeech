@@ -27,7 +27,7 @@ class SequentialRandomSampler:
         sequential: Counts at which to return a sequential iterator.
 
     Yields:
-        Batches from `batches`.
+        Batches from `indices`.
     """
 
     def __init__(
@@ -90,7 +90,7 @@ class SortaGrad(SequentialRandomSampler):
         start_epoch: Number of iterators returned so far by the sampler.
 
     Yields:
-        Batches from `batches`.
+        Batches from `indices`.
     """
 
     def __init__(
