@@ -227,7 +227,9 @@ Configure :literal:`kubectl` to point to this cluster:
 Helm 2
 -------
 
-Helm 2 is a package manager for Kubernetes.
+Helm 2 is a package manager for Kubernetes that is now in legacy mode. It is
+used because this documentation and infrastructure was written and developed
+when Helm 2 was not in legacy mode.
 
     "Helm helps you manage Kubernetes applications --- Helm Charts help you
     define, install, and upgrade even the most complex Kubernetes application."
