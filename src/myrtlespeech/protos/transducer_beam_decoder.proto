@@ -12,10 +12,9 @@ message TransducerBeamDecoder {
 
   // Normalise returned sequences by their length to avoid favouring shorter
   // outputs as described in https://arxiv.org/pdf/1211.3711.pdf.
-  // Default value is false.
   bool length_norm = 3;
 
   // Maximum number of symbols that can be output per step during decoding.
-  // If this is not provided then it defaults to a large value
+  // If this is not provided then it defaults to a large value.
   uint32 max_symbols_per_step = 4;
 }
