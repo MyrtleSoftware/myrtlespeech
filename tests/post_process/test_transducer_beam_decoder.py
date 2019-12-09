@@ -1,8 +1,8 @@
 from typing import Tuple
 
 import torch
+from myrtlespeech.model.rnn_t import RNNTPredictNet
 from myrtlespeech.model.transducer import Transducer
-from myrtlespeech.model.transducer import TransducerPredictNet
 from myrtlespeech.post_process.transducer_beam_decoder import (
     TransducerBeamDecoder,
 )
@@ -11,16 +11,16 @@ from myrtlespeech.post_process.transducer_beam_decoder import (
 # Fixtures and Strategies -----------------------------------------------------
 
 
-class DummyPredictNet(TransducerPredictNet):
-    """TransducerPredictNet with overriden `pred_nn` and `embed`.
+class DummyPredictNet(RNNTPredictNet):
+    """RNNTPredictNet with overriden `pred_nn` and `embed`.
 
     Note that embedding=None will be passed to :py:meth:`super.__init__` as the
     :py:meth:`embed` method that calls forward on :py:class:`embedding` in
-    :py:class:`TransducerPredictNet` is overidden below.
+    :py:class:`RNNTPredictNet` is overidden below.
 
     Args:
         pred_nn: module with same :py:meth:`__call__` API as `pred_nn` in
-            :py:class:`TransducerPredictNet`.
+            :py:class:`RNNTPredictNet`.
     """
 
     def __init__(self, pred_nn):
@@ -35,9 +35,9 @@ class DummyPredictNet(TransducerPredictNet):
 
 
 class PredNN:
-    """Class to override `pred_nn` in :py:meth:`TransducerPredictNet`.
+    """Class to override `pred_nn` in :py:meth:`RNNTPredictNet`.
 
-    This class replicates the :py:class:`TransducerPredictNet.pred_nn` API
+    This class replicates the :py:class:`RNNTPredictNet.pred_nn` API
     (which in turn is the same as an :py:class:`RNN` with `batch_first=True`).
 
     Args:
@@ -102,7 +102,7 @@ class PredNN:
 
 
 class DummyTransducerEncoder:
-    r"""Class to replicate :py:class:`TransducerEncoder` API."""
+    r"""Class to replicate Transducer ``encoder`` API."""
 
     def __init__(self):
         pass
@@ -131,7 +131,7 @@ class DummyTransducerEncoder:
 
 
 class DummyTransducerModel(Transducer):
-    """Transducer for testing.
+    """Dummy Transducer for testing.
 
     Note that the `joint_net` override takes place in
     :py:class:`TransducerBeamDecoderDummy`'s :py:meth:`_joint_step` so
@@ -149,7 +149,7 @@ class DummyTransducerModel(Transducer):
 
 
 class TransducerBeamDecoderDummy(TransducerBeamDecoder):
-    """Decoder class which overrides _joint_step method"""
+    """Decoder class which overrides :py:meth:`_joint_step` method."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
