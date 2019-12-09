@@ -1,4 +1,5 @@
 from typing import Dict
+from typing import List
 from typing import Optional
 from typing import Tuple
 from typing import Union
@@ -28,7 +29,7 @@ def transducer_beam_decoder(
     """Returns an st for TransducerBeamDecoder plus maybe the kwargs."""
 
     kwargs: Dict = {}
-
+    to_ignore: List = []
     end = 100
     if alphabet_len is not None:
         end = max(0, alphabet_len - 1)
@@ -42,10 +43,15 @@ def transducer_beam_decoder(
 
     kwargs["length_norm"] = draw(st.booleans())
 
-    kwargs["max_symbols_per_step"] = draw(st.integers(0, 4))
+    if draw(st.booleans()):
+        kwargs["max_symbols_per_step"] = draw(st.integers(1, 4))
+    else:
+        to_ignore.append("max_symbols_per_step")
 
     # initialise and return
-    all_fields_set(transducer_beam_decoder_pb2.TransducerBeamDecoder, kwargs)
+    all_fields_set(
+        transducer_beam_decoder_pb2.TransducerBeamDecoder, kwargs, to_ignore
+    )
     beam_decoder = transducer_beam_decoder_pb2.TransducerBeamDecoder(**kwargs)
     if not return_kwargs:
         return beam_decoder
@@ -66,6 +72,7 @@ def transducer_greedy_decoder(
 ]:
     """Returns an st for TransducerGreedyDecoder plus maybe the kwargs."""
     kwargs: Dict = {}
+    to_ignore: List = []
 
     end = 100
     if alphabet_len is not None:
@@ -76,11 +83,15 @@ def transducer_greedy_decoder(
     else:
         kwargs["blank_index"] = end
 
-    kwargs["max_symbols_per_step"] = draw(st.integers(0, 4))
-
+    if draw(st.booleans()):
+        kwargs["max_symbols_per_step"] = draw(st.integers(1, 4))
+    else:
+        to_ignore.append("max_symbols_per_step")
     # initialise and return
     all_fields_set(
-        transducer_greedy_decoder_pb2.TransducerGreedyDecoder, kwargs
+        transducer_greedy_decoder_pb2.TransducerGreedyDecoder,
+        kwargs,
+        to_ignore,
     )
     greedy_decoder = transducer_greedy_decoder_pb2.TransducerGreedyDecoder(
         **kwargs
