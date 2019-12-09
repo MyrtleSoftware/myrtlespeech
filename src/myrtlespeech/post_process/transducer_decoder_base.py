@@ -2,7 +2,6 @@ from typing import List
 from typing import Tuple
 
 import torch
-from myrtlespeech.data.batch import collate_label_list
 from myrtlespeech.model.transducer import Transducer
 
 
@@ -122,7 +121,8 @@ class TransducerDecoderBase(torch.nn.Module):
             if label > self._blank_index:
                 label -= 1  # Since ``output indices = input indices + 1``
                 # when ``index > self._blank_index``.
-            y = collate_label_list([[label]], device=self._device)
+            y = torch.IntTensor([[label]]), torch.IntTensor([1])
+            y = y[0].to(self._device), y[1].to(self._device)
         (out, hid), lengths = self._model.predict_net.predict(
             y, hidden, decoding=True
         )
