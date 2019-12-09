@@ -131,7 +131,7 @@ class TransducerDecoderBase(torch.nn.Module):
     def _joint_step(self, enc, pred):
         r"""Performs a step of the transducer joint network."""
 
-        logits, _ = self._model.joint((enc, pred))
+        logits, _ = self._model.joint_net((enc, pred))
         res = torch.nn.functional.log_softmax(logits, dim=-1).squeeze()
         assert (
             len(res.shape) == 1
