@@ -1,7 +1,5 @@
 from typing import List
-from typing import Optional
 from typing import Tuple
-from typing import Union
 
 import torch
 from myrtlespeech.data.batch import collate_label_list
@@ -23,7 +21,7 @@ class TransducerDecoderBase(torch.nn.Module):
             symbol is placed at the end of the alphabet in order to avoid
             different symbol index conventions in the prediction and joint
             networks (i.e. input and output of Transducer) but this condition
-            is not enforced here.
+            is not enforced.
 
         model: An :py:class:`myrtlespeech.model.transducer.Transducer` model
             to use during decoding. See the
@@ -31,32 +29,25 @@ class TransducerDecoderBase(torch.nn.Module):
             docstring for more information.
 
         max_symbols_per_step: The maximum number of symbols that can be added
-            to output sequence in a single time step. Default value is None: in
-            this case the limit is set to 100 (to avoid the potentially
-            infinite loop that could occur with no limit).
-
-    Methods:
-        _pred_step(label, hidden): performs a single step of prediction
-            network.
-        _joint_step(enc, pred): performs a single step of the joint network.
-        _get_last_idx(label): gets final index of a list of indexes.
+            to the output sequence in a single time step.
     """
 
     def __init__(
         self,
         blank_index: int,
         model: Transducer,
-        max_symbols_per_step: Optional[Union[int, None]] = None,
+        max_symbols_per_step: int = 100,
     ):
         if blank_index < 0:
             raise ValueError(f"blank_index={blank_index} must be >= 0")
 
-        if max_symbols_per_step is None:
-            max_symbols_per_step = 100  # i.e. to prevent infinite loop
-        assert max_symbols_per_step is not None
         assert (
             max_symbols_per_step > 0
         ), "max_symbols_per_step must be a positive integer"
+
+        assert isinstance(
+            model, Transducer
+        ), "To perform Transducer decoding, model must be a Transducer"
 
         super().__init__()
         self._blank_index = blank_index
@@ -105,13 +96,12 @@ class TransducerDecoderBase(torch.nn.Module):
         r"""Decodes a single sample.
 
         Args:
-            inp: Tuple where the first element is the encoder
+            inp: Tuple where the first element is the transducer encoder
                 input (a :py:class:`torch.Tensor`) with size ``[batch,
                 channels, features, max_input_seq_len]`` and the second element
                 is a :py:class:`torch.Tensor` of size ``[batch]`` where each
                 entry represents the sequence length of the corresponding
-                *input* sequence to the rnn.  Note that ``inp`` is passed
-                straight to :py:class:`TransducerEncoder`.
+                *input* sequence to the transducer encoder.
 
         Returns:
             A List of length ``[batch]`` where each element is a List of
@@ -125,14 +115,13 @@ class TransducerDecoderBase(torch.nn.Module):
         )
 
     def _pred_step(self, label, hidden):
-        b"""Performs a step of the prediction net during inference."""
+        r"""Performs a step of the transducer prediction network."""
         if label == self._SOS:
             y = None
         else:
             if label > self._blank_index:
-                label -= 1  # Since input label indexes will be offset by +1
-                # for labels above blank. Avoiding this complexity is
-                # the reason for enforcing  blank_index = (len(alphabet) - 1)
+                label -= 1  # Since ``output indices = input indices + 1``
+                # when ``index > self._blank_index``.
             y = collate_label_list([[label]], device=self._device)
         (out, hid), lengths = self._model.predict_net.predict(
             y, hidden, decoding=True
@@ -140,7 +129,7 @@ class TransducerDecoderBase(torch.nn.Module):
         return (out, lengths), hid
 
     def _joint_step(self, enc, pred):
-        r"""Performs a step of the model joint network during inference."""
+        r"""Performs a step of the transducer joint network."""
 
         logits, _ = self._model.joint((enc, pred))
         res = torch.nn.functional.log_softmax(logits, dim=-1).squeeze()
@@ -151,14 +140,11 @@ class TransducerDecoderBase(torch.nn.Module):
         return res
 
     def _get_last_idx(self, labels):
-        b"""Returns the final index of a list of labels."""
+        r"""Returns the final index in a list of indexes."""
         return self._SOS if labels == [] else labels[-1]
 
     def __repr__(self):
-        string = self._get_name() + "("
-        string += f"max_symbols_per_step={self._max_symbols_per_step}, "
-        string += f"blank_index={self._blank_index}"
-        if hasattr(self, "beam_width"):
-            string += f", beam_width={self.beam_width}"
-        string += ")"
-        return string
+        str = self._get_name() + "("
+        str += f"max_symbols_per_step={self._max_symbols_per_step}, "
+        str += f"blank_index={self._blank_index}"
+        return str + ")"

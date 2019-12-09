@@ -70,8 +70,7 @@ class ReportDecoderBase(Callback):
         word_segmentor: groups sequences of symbols into sequences of words.
             By default this splits words on the space symbol.
 
-        eval_every: WER/CER is cacluated every ``eval_every``th epoch. Default
-            is 1.
+        eval_every: WER/CER is cacluated every ``eval_every``th epoch.
 
         calc_quantities: Iterable of strings of error quantities to calculate.
             The strings can take the following values:
@@ -79,8 +78,6 @@ class ReportDecoderBase(Callback):
                 'wer': Word-error rate is calculated.
 
                 'cer': Character-error rate is calculated.
-
-            ``calc_quantities`` defaults to ('cer', 'wer').
     """
 
     def __init__(
@@ -207,8 +204,8 @@ class ReportTransducerDecoder(ReportDecoderBase):
     """Transducer Decoder Callback.
 
     Args:
-        skip_first_epoch: bool. Default = False. If True, the first eval epoch
-            is skipped. This is useful as the decoding is *very* slow with an
+        skip_first_epoch: If :py:data:`True`, the first eval epoch
+            is skipped. This is useful since decoding is **very** slow with an
             un-trained model (i.e. inference is considerably faster when the
             model is more confident in its predictions).
 
@@ -248,7 +245,7 @@ class ReportTransducerDecoder(ReportDecoderBase):
 class ClearMemory(Callback):
     r"""Callback to perform explicit garbage collection at end of each batch.
 
-    This should be used to help reduce memory usage.
+    This can be used to help reduce memory usage.
     """
 
     def __init__(self):
@@ -258,7 +255,7 @@ class ClearMemory(Callback):
         self.__clear_memory(kwargs)
 
     def __clear_memory(self, kwargs: Dict) -> None:
-        r"""Performs explicit garbage collection to prevent cuda oom error. """
+        r"""Performs explicit garbage collection to prevent cuda oom error."""
         to_delete = ["last_input", "last_target", "last_output", "last_loss"]
         for key in to_delete:
             if kwargs.get(key) is not None:
@@ -289,7 +286,7 @@ class TensorBoardLogger(ModelCallback):
             location.
         model: A :py:class:`torch.nn.Module`.
         histograms: If True, gradient and parameter histograms are saved.
-            Defaults to False as this adds *substantial* overhead.
+            Defaults to False as this adds **substantial** overhead.
     """
 
     def __init__(

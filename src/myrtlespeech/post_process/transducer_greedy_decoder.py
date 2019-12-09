@@ -1,7 +1,5 @@
 from typing import List
-from typing import Optional
 from typing import Tuple
-from typing import Union
 
 import torch
 from myrtlespeech.model.transducer import Transducer
@@ -20,7 +18,7 @@ class TransducerGreedyDecoder(TransducerDecoderBase):
         self,
         blank_index: int,
         model: Transducer,
-        max_symbols_per_step: Optional[Union[int, None]] = None,
+        max_symbols_per_step: int = 100,
     ):
 
         super().__init__(
@@ -32,11 +30,13 @@ class TransducerGreedyDecoder(TransducerDecoderBase):
     def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
         """Greedy Transducer decode method.
 
-        See :py:class:`TransducerDecoderBase` for args"""
+        See :py:class:`TransducerDecoderBase` for args.
+        """
 
         fs, fs_lens = self._model.encode(inp)
-        fs = fs[: fs_lens[0], :, :]  # size: seq_len, batch = 1, rnn_features
-        assert fs_lens[0] == fs.shape[0], "Time dimension comparison failed"
+        fs = fs[
+            : fs_lens.max(), :, :
+        ]  # size: seq_len, batch = 1, rnn_features
 
         hidden = None
         label: List[int] = []
