@@ -9,8 +9,7 @@ RUN apt-get update && apt-get install -y \
     cmake \
     g++-7 \
     gcc-7 \
-    make \
-    python3-dev
+    make
 
 # create non-root user
 RUN useradd --create-home --shell /bin/bash user
