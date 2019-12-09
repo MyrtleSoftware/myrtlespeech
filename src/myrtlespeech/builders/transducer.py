@@ -6,10 +6,10 @@ from myrtlespeech.builders.fully_connected import (
     build as build_fully_connected,
 )
 from myrtlespeech.builders.rnn import build as build_rnn
+from myrtlespeech.model.rnn_t import RNNTEncoder
+from myrtlespeech.model.rnn_t import RNNTJointNet
+from myrtlespeech.model.rnn_t import RNNTPredictNet
 from myrtlespeech.model.transducer import Transducer
-from myrtlespeech.model.transducer import TransducerEncoder
-from myrtlespeech.model.transducer import TransducerJointNet
-from myrtlespeech.model.transducer import TransducerPredictNet
 from myrtlespeech.protos import transducer_encoder_pb2
 from myrtlespeech.protos import transducer_joint_net_pb2
 from myrtlespeech.protos import transducer_pb2
@@ -24,6 +24,11 @@ def build(
     vocab_size: int,
 ) -> Transducer:
     r"""Returns a :py:class:`.Transducer` based on the config.
+
+    .. note::
+
+        This Transducer builder function currently supports RNN-Transducers
+        **only** and will initialise the classes in ``model/rnn_t.py``.
 
     Args:
         transducer_cfg: An ``Transducer`` protobuf object containing
@@ -103,7 +108,7 @@ def build(
         >>> cfg = text_format.Merge(cfg_txt, transducer_pb2.Transducer())
         >>> build(cfg, input_features=80, input_channels=5, vocab_size=28)
         Transducer(
-          (encode): TransducerEncoder(
+          (encode): RNNTEncoder(
             (fc1): FullyConnected(
               (fully_connected): Sequential(
                 (0): Linear(in_features=400, out_features=1152, bias=True)
@@ -124,13 +129,13 @@ def build(
               )
             )
           )
-          (predict_net): TransducerPredictNet(
+          (predict_net): RNNTPredictNet(
             (embedding): Embedding(28, 256)
             (pred_nn): RNN(
               (rnn): LSTM(256, 256, num_layers=2, batch_first=True)
             )
           )
-          (joint_net): TransducerJointNet(
+          (joint_net): RNNTJointNet(
             (fc): FullyConnected(
               (fully_connected): Sequential(
                 (0): Linear(in_features=768, out_features=512, bias=True)
@@ -179,26 +184,12 @@ def build(
     )
 
 
-def build_joint_net(
-    transducer_joint_net_cfg: transducer_joint_net_pb2.TransducerJointNet,
-    input_features: int,
-    output_features: int,
-) -> Tuple[TransducerEncoder, int]:
-    """TODO"""
-    fc = build_fully_connected(
-        transducer_joint_net_cfg.fc,
-        input_features=input_features,
-        output_features=output_features,
-    )
-    return TransducerJointNet(fc=fc)
-
-
 def build_transducer_enc_cfg(
     transducer_enc_cfg: transducer_encoder_pb2.TransducerEncoder,
     input_features: int,
     output_features: Optional[int] = None,
-) -> Tuple[TransducerEncoder, int]:
-    """Returns a :py:class:`.TransducerEncoder` based on the config.
+) -> Tuple[torch.nn.Module, int]:
+    """Returns a transducer encoder based on the config.
 
     Args:
         transducer_enc_cfg: An ``TransducerEncoder`` protobuf object containing
@@ -212,9 +203,9 @@ def build_transducer_enc_cfg(
             the hidden size of ``rnn1``.
 
     Returns:
-        A Tuple where the first element is an :py:class:`TransducerEncoder`
+        A Tuple where the first element is an :py:class:`RNNTEncoder`
         based on the config and the second element is the encoder output
-        feature size. See :py:class:`TransducerEncoder` docstrings for more
+        feature size. See :py:class:`RNNTEncoder` docstrings for more
         information.
 
     Example:
@@ -255,7 +246,7 @@ def build_transducer_enc_cfg(
         ... )
         >>> encoder, out = build_transducer_enc_cfg(cfg, input_features=400)
         >>> encoder
-        TransducerEncoder(
+        RNNTEncoder(
           (fc1): FullyConnected(
             (fully_connected): Sequential(
               (0): Linear(in_features=400, out_features=1152, bias=True)
@@ -314,7 +305,7 @@ def build_transducer_enc_cfg(
     else:
         output_features = rnn_out_features
 
-    encoder = TransducerEncoder(rnn1=rnn1, fc1=fc1, fc2=fc2)
+    encoder = RNNTEncoder(rnn1=rnn1, fc1=fc1, fc2=fc2)
 
     return encoder, output_features
 
@@ -322,8 +313,8 @@ def build_transducer_enc_cfg(
 def build_transducer_predict_net(
     predict_net_cfg: transducer_predict_net_pb2.TransducerPredictNet,
     input_features: int,
-) -> Tuple[TransducerEncoder, int]:
-    """Returns a :py:class:`TransducerPredictNet` based on the config.
+) -> Tuple[torch.nn.Module, int]:
+    """Returns a Transducer predict net based on the config.
 
     Currently only supports prediction network variant where pred_nn is
     an RNN.
@@ -335,9 +326,9 @@ def build_transducer_predict_net(
         input_features: The input feature size.
 
     Returns:
-        A Tuple where the first element is an :py:class:`TransducerEncoder`
+        A Tuple where the first element is an :py:class:`RNNTEncoder`
         based on the config and the second element is the encoder output
-        feature size. See :py:class:`TransducerEncoder` docstrings for more
+        feature size. See :py:class:`RNNTEncoder` docstrings for more
         information.
     """
     if not predict_net_cfg.pred_nn.HasField("rnn"):
@@ -354,5 +345,19 @@ def build_transducer_predict_net(
     )
     # Set hidden_size attribute
     pred_nn.hidden_size = hidden_size
-    predict_net = TransducerPredictNet(embedding=embedding, pred_nn=pred_nn)
+    predict_net = RNNTPredictNet(embedding=embedding, pred_nn=pred_nn)
     return predict_net, predict_net_out
+
+
+def build_joint_net(
+    transducer_joint_net_cfg: transducer_joint_net_pb2.TransducerJointNet,
+    input_features: int,
+    output_features: int,
+) -> Tuple[RNNTJointNet, int]:
+    """TODO"""
+    fc = build_fully_connected(
+        transducer_joint_net_cfg.fc,
+        input_features=input_features,
+        output_features=output_features,
+    )
+    return RNNTJointNet(fc=fc)
