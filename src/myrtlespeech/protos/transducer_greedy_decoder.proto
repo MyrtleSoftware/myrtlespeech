@@ -8,6 +8,6 @@ message TransducerGreedyDecoder {
   uint32 blank_index = 1;
 
   // Maximum number of symbols that can be output per step during decoding.
-  // If this is not provided then it defaults to a large value
+  // If this is not provided then it defaults to a large value.
   uint32 max_symbols_per_step = 2;
 }
