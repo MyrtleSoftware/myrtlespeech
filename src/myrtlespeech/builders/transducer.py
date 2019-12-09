@@ -27,11 +27,11 @@ def build(
 
     .. note::
 
-        This Transducer builder function currently supports RNN-Transducers
-        **only** and will initialise the classes in ``model/rnn_t.py``.
+        This Transducer builder currently supports RNN-Transducers **only**
+        and will initialise the classes in ``model/rnn_t.py``.
 
     Args:
-        transducer_cfg: An ``Transducer`` protobuf object containing
+        transducer_cfg: A ``Transducer`` protobuf object containing
             the config for the desired :py:class:`torch.nn.Module`.
 
         input_features: The number of features for the input.
@@ -203,10 +203,10 @@ def build_transducer_enc_cfg(
             the hidden size of ``rnn1``.
 
     Returns:
-        A Tuple where the first element is an :py:class:`RNNTEncoder`
+        A Tuple where the first element is a :py:class:`torch.nn.Module`
         based on the config and the second element is the encoder output
-        feature size. See :py:class:`RNNTEncoder` docstrings for more
-        information.
+        feature size. See :py:class:`Transducer` docstring for description of
+        the encoder API.
 
     Example:
         >>> from google.protobuf import text_format
@@ -316,7 +316,7 @@ def build_transducer_predict_net(
 ) -> Tuple[torch.nn.Module, int]:
     """Returns a Transducer predict net based on the config.
 
-    Currently only supports prediction network variant where pred_nn is
+    Currently only supports prediction network variant in which ``pred_nn`` is
     an RNN.
 
     Args:
@@ -326,10 +326,10 @@ def build_transducer_predict_net(
         input_features: The input feature size.
 
     Returns:
-        A Tuple where the first element is an :py:class:`RNNTEncoder`
-        based on the config and the second element is the encoder output
-        feature size. See :py:class:`RNNTEncoder` docstrings for more
-        information.
+        A Tuple where the first element is a :py:class:`torch.nn.Module`
+        based on the config and the second element is the prediction output
+        feature size. See :py:class:`Transducer` docstring for description of
+        the prediction net API.
     """
     if not predict_net_cfg.pred_nn.HasField("rnn"):
         raise NotImplementedError(
@@ -353,8 +353,23 @@ def build_joint_net(
     transducer_joint_net_cfg: transducer_joint_net_pb2.TransducerJointNet,
     input_features: int,
     output_features: int,
-) -> Tuple[RNNTJointNet, int]:
-    """TODO"""
+) -> Tuple[torch.nn.Module, int]:
+    """Returns a Transducer joint net based on the config.
+
+    Currently only supports joint network variant with a single fc layer.
+
+    Args:
+        transducer_joint_net_cfg: a ``TransducerJointNet`` protobuf object
+            containing the config for the desired :py:class:`torch.nn.Module`.
+
+        input_features: The input feature size.
+
+        output_features: The output feature size.
+
+    Returns:
+        A :py:class:`torch.nn.Module` based on the config. See
+        :py:class:`Transducer` docstring for description of the joint net API.
+    """
     fc = build_fully_connected(
         transducer_joint_net_cfg.fc,
         input_features=input_features,
