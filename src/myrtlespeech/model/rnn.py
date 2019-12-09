@@ -1,6 +1,7 @@
 from enum import IntEnum
 from typing import Optional
 from typing import Tuple
+from typing import TypeVar
 from typing import Union
 
 import torch
@@ -10,6 +11,13 @@ class RNNType(IntEnum):
     LSTM = 0
     GRU = 1
     BASIC_RNN = 2
+
+
+RNNState = TypeVar("RNNState", torch.Tensor, Tuple[torch.Tensor, torch.Tensor])
+
+RNNLengths = TypeVar("RNNLengths", bound=torch.Tensor)
+
+RNNInput = Union[torch.Tensor, Tuple[torch.Tensor, Optional[RNNState]]]
 
 
 class RNN(torch.nn.Module):
@@ -104,26 +112,8 @@ class RNN(torch.nn.Module):
             self.rnn = self.rnn.cuda()
 
     def forward(
-        self,
-        x: Tuple[
-            Union[
-                torch.tensor,
-                Tuple[
-                    torch.Tensor,
-                    Optional[
-                        Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]
-                    ],
-                ],
-            ],
-            torch.Tensor,
-        ],
-    ) -> Tuple[
-        Tuple[
-            torch.Tensor,
-            Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]],
-        ],
-        torch.Tensor,
-    ]:
+        self, x: Tuple[RNNInput, RNNLengths]
+    ) -> Tuple[RNNInput, RNNLengths]:
         r"""Returns the result of applying the rnn to ``x[0]``.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda`
