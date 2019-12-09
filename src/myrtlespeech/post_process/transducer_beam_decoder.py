@@ -1,6 +1,5 @@
 import math
 from typing import List
-from typing import Optional
 from typing import Tuple
 
 import torch
@@ -22,16 +21,14 @@ class TransducerBeamDecoder(TransducerDecoderBase):
 
         model: See :py:class:`TransducerDecoderBase`.
 
-        beam_width: A positive :py:data:`int`, that defaults to 4. The beam
-            width for the decoding.
+        beam_width: The beam width for the decoding.
 
-        length_norm: :py:data:`bool`, default=False. If :py:data`True`,
-            normalise log probabilities by length before the returning the
-            "most probable" sequence. This avoids favouring short predictions
-            and was used in the first Graves `Transducer paper (2012)
-            <https://arxiv.org/pdf/1211.3711.pdf>`_.
-            Default is :py:data:`False` since the practice was discontinued
-            by Graves in his subsequent `2013 paper
+        length_norm: If :py:data`True`, log probabilities are normalised by
+            length before the "most probable" sequence is returned. This
+            avoids favouring of short predictions and was used in the first
+            Graves `Transducer paper (2012)
+            <https://arxiv.org/pdf/1211.3711.pdf>`_. Note that the practice
+            was discontinued by Graves in his subsequent `2013 paper
             <https://arxiv.org/pdf/1303.5778.pdf>`_.
 
         max_symbols_per_step: See :py:class:`TransducerDecoderBase`.
@@ -46,9 +43,9 @@ class TransducerBeamDecoder(TransducerDecoderBase):
         self,
         blank_index: int,
         model: Transducer,
-        beam_width: Optional[int] = 4,
-        length_norm: Optional[bool] = False,
-        max_symbols_per_step: Optional[int] = None,
+        beam_width: int = 4,
+        length_norm: bool = False,
+        max_symbols_per_step: int = 100,
         prune_threshold: float = 0.001,
     ):
         assert (
@@ -69,15 +66,12 @@ class TransducerBeamDecoder(TransducerDecoderBase):
         r"""Beam Transducer decode method.
 
         See :py:class:`TransducerDecoderBase` for args.
-
-        See :py:class:`TransducerDecoderBase` for args.
         """
 
         fs, fs_lens = self._model.encode(inp)
-        fs = fs[: fs_lens[0], :, :]  # size: seq_len, batch = 1, rnn_features
-        assert (
-            fs_lens[0] == fs.shape[0]
-        ), f"Time dimension comparison failed. {fs_lens[0]} != {fs.shape[0]}"
+        fs = fs[
+            : fs_lens.max(), :, :
+        ]  # size: seq_len, batch = 1, rnn_features
 
         B = [Sequence(max_symbols=self._max_symbols_per_step)]
         for t in range(fs.shape[0]):
@@ -152,18 +146,20 @@ class TransducerBeamDecoder(TransducerDecoderBase):
         del f, pred, hidden, logp, fs, B, A, y_star, yk
         return label
 
+    def __repr__(self):
+        str = super().__repr__()[:-1]
+        str += f", beam_width={self._beam_width}"
+        str += f", length_norm={self._length_norm}"
+        return str + ")"
+
 
 def log_aplusb(a, b):
     return max(a, b) + math.log1p(math.exp(-math.fabs(a - b)))
 
 
 def is_prefix(a, b):
-    if a == b or len(a) >= len(b):
-        return False
-    for i in range(len(a)):
-        if a[i] != b[i]:
-            return False
-    return True
+    """Returns True if a is a proper prefix of b."""
+    return len(a) < len(b) and a == b[: len(a)]
 
 
 class Sequence:
