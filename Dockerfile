@@ -3,16 +3,13 @@ FROM continuumio/miniconda3
 # fix https://github.com/conda/conda/issues/7267
 RUN chown -R 1000:1000 /opt/conda/
 
-# install headers to build regex as part of Black
-# https://github.com/psf/black/issues/1112
-# and also install required components for
-# warp-transducer build (make, cmake gcc-6)
+# install required components for the
+# warp-transducer build (make, cmake gcc-7)
 RUN apt-get update && apt-get install -y \
     cmake \
     g++-7 \
     gcc-7 \
-    make \
-    python3-dev
+    make
 
 # create non-root user
 RUN useradd --create-home --shell /bin/bash user
