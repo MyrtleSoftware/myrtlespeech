@@ -6,6 +6,7 @@ tested.
 import argparse
 import time
 import warnings
+from enum import Enum
 from pathlib import Path
 from typing import Dict
 from typing import List
@@ -26,6 +27,11 @@ from myrtlespeech.run.callbacks.report_mean_batch_loss import (
 from myrtlespeech.run.callbacks.stop_epoch_after import StopEpochAfter
 from myrtlespeech.run.train import fit
 from torch.utils.tensorboard import SummaryWriter
+
+
+class Metric(Enum):
+    WER = 0
+    CER = 1
 
 
 class WordSegmentor:
@@ -86,23 +92,14 @@ class ReportDecoderBase(Callback):
         alphabet,
         word_segmentor=WordSegmentor(" "),
         eval_every=1,
-        calc_quantities=("cer", "wer"),
+        calc_quantities=(Metric.WER, Metric.CER),
     ):
+        assert len(calc_quantities) > 0, "calc_quantities cannot be empty!."
         self.decoder = decoder
         self.alphabet = alphabet
         self.word_segmentor = word_segmentor
         self.eval_every = eval_every
-
-        for idx, error_rate in enumerate(calc_quantities):
-            assert error_rate in [
-                "cer",
-                "wer",
-            ], f"calc_quantities[{idx}]={error_rate} is not in ['cer', 'wer']."
-        assert (
-            list(set(calc_quantities)).sort() == list(calc_quantities).sort()
-        ), f"Repeated error rate in {calc_quantities}"
-        assert len(calc_quantities) > 0, "calc_quantities cannot be empty!."
-        self.calc_quantities = list(calc_quantities)
+        self.calc_quantities = calc_quantities
 
     def _reset(self, **kwargs):
         decoder_report = {quant: -1 for quant in self.calc_quantities}
