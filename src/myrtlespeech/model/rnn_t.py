@@ -200,7 +200,6 @@ class RNNTPredictNet(torch.nn.Module):
             has the same input and return arguments as a
             :py:class:`myrtlespeech.model.rnn.RNN` with ``batch_first=True`` as
             well as the integer attribute ``hidden_size``.
-
     """
 
     def __init__(self, embedding: torch.nn.Module, pred_nn: torch.nn.Module):
@@ -367,7 +366,27 @@ class RNNTPredictNet(torch.nn.Module):
 
 
 class RNNTJointNet(torch.nn.Module):
-    """TODO"""
+    r"""`Transducer <https://arxiv.org/pdf/1211.3711.pdf>`_ joint network.
+
+    Args:
+        fc: An :py:class:`torch.nn.Module` containing the fully connected part
+            of the Transducer joint net.
+
+            Must accept as input a tuple where the first element is the network
+            input (a :py`torch.Tensor`) with size ``[batch, max_seq_len
+            * max_label_len, encoder_out_feat + pred_net_out_feat]`` and the
+            second element is a :py:class:`torch.Tensor` of size ``[batch]``
+            where each entry represents the sequence length of the
+            corresponding *input* sequence to the fc layer.
+
+            It must return a tuple where the first element is the result after
+            applying this fc layer over the final dimension only meaning it
+            has size ``[batch, max_seq_len * max_label_len,
+            joint_net_out_feat]``. The second element of the tuple return
+            value is a :py:class:`torch.Tensor` with size ``[batch]`` where
+            each entry represents the sequence length of the corresponding
+            *output* sequence.
+    """
 
     def __init__(self, fc: torch.nn.Module):
         super().__init__()
@@ -410,8 +429,14 @@ class RNNTJointNet(torch.nn.Module):
             [f, g], dim=3
         ).contiguous()  # (B, T, U_, H1 + H2)
 
+        # reshape input to give 3 dimensions instead of 4 as required by fc API
+        concat_inp = concat_inp.view(B1, T * U_, -1)
+
         # drop g_lens (see :py:class:`Transducer` docstrings)
         h = self.fc((concat_inp, f_lens))
+
+        # return to 4D shape
+        h = h[0].view(B1, T, U_, -1), h[1]
 
         del concat_inp, f, g, x
 
