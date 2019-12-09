@@ -73,7 +73,7 @@ class TransducerBeamDecoder(TransducerDecoderBase):
             : fs_lens.max(), :, :
         ]  # size: seq_len, batch = 1, rnn_features
 
-        B = [Sequence(max_symbols=self._max_symbols_per_step)]
+        B = [Sequence()]
         for t in range(fs.shape[0]):
             f = fs[t, :, :].unsqueeze(0)
             # add length
@@ -89,13 +89,13 @@ class TransducerBeamDecoder(TransducerDecoderBase):
                     if not is_prefix(y_hat.labels, y.labels):
                         continue
                     pred, _ = self._pred_step(
-                        self._get_last_idx(y_hat.labels), y_hat.h
+                        self._get_last_idx(y_hat.labels), y_hat.pred_hidden
                     )
                     idx = len(y_hat.labels)
                     logp = self._joint_step(f, pred)
                     curlogp = y_hat.logp + float(logp[y.labels[idx]])
                     for k in range(idx, len(y.labels) - 1):
-                        logp = self._joint_step(f, y.g[k])
+                        logp = self._joint_step(f, y.pred_log[k])
                         curlogp += float(logp[y.labels[k + 1]])
                     y.logp = log_aplusb(y.logp, curlogp)
 
@@ -110,7 +110,7 @@ class TransducerBeamDecoder(TransducerDecoderBase):
                 A.remove(y_star)
 
                 pred, hidden = self._pred_step(
-                    self._get_last_idx(y_star.labels), y_star.h
+                    self._get_last_idx(y_star.labels), y_star.pred_hidden
                 )
                 logp = self._joint_step(f, pred)
 
@@ -121,19 +121,18 @@ class TransducerBeamDecoder(TransducerDecoderBase):
                     yk.logp += float(logp[k])
                     if k == self._blank_index:
                         if yk not in B:
-                            yk.remaining_symbols = self._max_symbols_per_step
+                            yk.n_step_labels = 0
                             B.append(yk)
                         continue
 
                     yk.labels.append(k)
                     yk.times.append(t)
-                    if self._max_symbols_per_step is not None:
-                        yk.remaining_symbols -= 1
-                        if yk.remaining_symbols < 0:
-                            continue
+                    if yk.n_step_labels == self._max_symbols_per_step:
+                        continue
+                    yk.n_step_labels += 1
                     if yk not in A:
-                        yk.g.append(pred)
-                        yk.h = hidden
+                        yk.pred_log.append(pred)
+                        yk.pred_hidden = hidden
                         A.append(yk)
                 A.sort(key=lambda a: (-a.logp, len(a.labels)))
                 B.sort(key=lambda a: (-a.logp, len(a.labels)))
@@ -163,26 +162,64 @@ def is_prefix(a, b):
 
 
 class Sequence:
-    def __init__(self, seq=None, hidden=None, max_symbols=None):
+    """A candidate sequence in the beam search.
+
+    Args:
+        seq (Sequence): If not :py:data:`None`, an existing Sequence to
+            initialize from. If not :py:data:`None`, ``pred_hidden`` must be
+            :py:data:`None` else a :py:exception:`ValueError` is raised.
+
+        pred_hidden: Predict net hidden state for the Sequence.
+
+    Attributes:
+        pred_log: A list containing the prediction network output
+            :py:class:`torch.Tensor`s. ``pred_log[i]`` is the predict
+            net output that was used when computing the ``i``th symbol
+            in ``labels``.
+
+        labels: A List of ints containing the label indexes.
+
+        times: A List of ints. ``times[i]`` is the time step at which
+            ``labels[i]`` was added to the Sequence. Note that this does not
+            necessarily correspond to the input time steps due to downsampling
+            (pooling, convolutions, striding, etc).
+
+        pred_hidden: Hidden state of the prediction network for the current
+            sequence.
+
+        logp: Log probability of the sequence. Initialised to ``math.log(1.0)``
+            as all sequences should derive from a single starting sequence.
+
+        n_step_labels: Number of labels added to ``labels`` during the current
+            time step.
+    """
+
+    def __init__(self, seq=None, pred_hidden=None):
         if seq is None:
-            self.g = []  # predictions of phoneme language model
-            self.labels = []  # prediction phoneme label
-            self.times = (
-                []
-            )  # list of timesteps at which predictions are emmitted
-            self.h = hidden
-            self.logp = 0  # probability of this sequence, in log scale
-            self.remaining_symbols = max_symbols
+            self.pred_log = []
+            self.labels = []
+            self.times = []
+            self.pred_hidden = pred_hidden
+            self.logp = 0
+            self.n_step_labels = 0
         else:
-            self.g = seq.g[:]  # save for prefixsum
+            if pred_hidden is not None:
+                raise ValueError("pred_hidden must be None")
+            self.pred_log = seq.pred_log[:]
             self.labels = seq.labels[:]
             self.times = seq.times[:]
-            self.h = seq.h
+            self.pred_hidden = seq.pred_hidden
             self.logp = seq.logp
-            self.remaining_symbols = seq.remaining_symbols
+            self.n_step_labels = seq.n_step_labels
 
     def __eq__(self, other):
         return self.labels == other.labels
 
-    def __str__(self):
-        return f"{self.labels, self.logp}"
+    def __repr__(self):
+        p = math.exp(self.logp)
+        return (
+            f"{self.__class__.__name__}(labels={self.labels}, "
+            f"times={self.times}, "
+            f"probability={p}, "
+            f"n_step_labels={self.n_step_labels})"
+        )
