@@ -7,14 +7,12 @@ RUN chown -R 1000:1000 /opt/conda/
 # https://github.com/psf/black/issues/1112
 # and also install required components for
 # warp-transducer build (make, cmake gcc-6)
-RUN apt-get update && apt-get install \
-    build-essential  \
+RUN apt-get update && apt-get install -y \
     cmake \
-    python3-dev \
-    software-properties-common -y && \
-    echo "deb  http://deb.debian.org/debian  stretch main" >> /etc/apt/sources.list && \
-    apt-get update && \
-    apt-get install gcc-6 g++-6 -y
+    g++-7 \
+    gcc-7 \
+    make \
+    python3-dev
 
 # create non-root user
 RUN useradd --create-home --shell /bin/bash user
@@ -43,8 +41,8 @@ RUN git clone https://github.com/NVIDIA/apex && \
     rm -rf apex
 
 # install warp-transducer
-ENV CXX=/usr/bin/g++-6
-ENV CC=/usr/bin/gcc-6
+ENV CXX=/usr/bin/g++-7
+ENV CC=/usr/bin/gcc-7
 RUN make deps/warp-transducer
 
 # use CI Hypothesis profile, see ``tests/__init__.py``
