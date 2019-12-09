@@ -92,21 +92,21 @@ class ReportDecoderBase(Callback):
         alphabet,
         word_segmentor=WordSegmentor(" "),
         eval_every=1,
-        calc_quantities=(Metric.WER, Metric.CER),
+        calc_quantities=[Metric.WER, Metric.CER],
     ):
         assert len(calc_quantities) > 0, "calc_quantities cannot be empty!."
         self.decoder = decoder
         self.alphabet = alphabet
         self.word_segmentor = word_segmentor
         self.eval_every = eval_every
-        self.calc_quantities = calc_quantities
+        self.calc_quantities = list(set(calc_quantities))
 
     def _reset(self, **kwargs):
-        decoder_report = {quant: -1 for quant in self.calc_quantities}
+        decoder_report = {metric.name: -1 for metric in self.calc_quantities}
         decoder_report["transcripts"] = []
         kwargs["reports"][self.decoder.__class__.__name__] = decoder_report
-        self.distances = {quant: [] for quant in self.calc_quantities}
-        self.lengths = {quant: [] for quant in self.calc_quantities}
+        self.distances = {metric.name: [] for metric in self.calc_quantities}
+        self.lengths = {metric.name: [] for metric in self.calc_quantities}
 
     def on_train_begin(self, **kwargs):
         self._reset(**kwargs)
@@ -139,27 +139,29 @@ class ReportDecoderBase(Callback):
             exp_words = self.word_segmentor(exp_chars)
             transcripts.append((act_words, exp_words))
 
-            for error_rate in self.calc_quantities:
-                if error_rate == "wer":
+            for metric in self.calc_quantities:
+                if metric is Metric.WER:
                     distance = levenshtein(act_words, exp_words)
-                    self.lengths[error_rate].append(len(exp_words))
-                elif error_rate == "cer":
+                    self.lengths[metric.name].append(len(exp_words))
+                elif metric is Metric.CER:
                     distance = levenshtein(act_chars, exp_chars)
-                    self.lengths[error_rate].append(len(exp_chars))
+                    self.lengths[metric.name].append(len(exp_chars))
                 else:
-                    raise ValueError("error_rate is not in ['cer', 'wer'].")
+                    raise ValueError(
+                        "metric is not in ['Metric.CER', 'Metric.WER']."
+                    )
 
-                self.distances[error_rate].append(distance)
+                self.distances[metric.name].append(distance)
 
     def on_epoch_end(self, **kwargs):
         if self.training or kwargs["epoch"] % self.eval_every != 0:
             return
-        for error_rate in self.calc_quantities:
-            lengths = sum(self.lengths[error_rate])
+        for metric in self.calc_quantities:
+            lengths = sum(self.lengths[metric.name])
             if lengths != 0:
                 err = (
-                    float(sum(self.distances[error_rate]))
-                    / sum(self.lengths[error_rate])
+                    float(sum(self.distances[metric.name]))
+                    / sum(self.lengths[metric.name])
                     * 100
                 )
             else:
@@ -170,7 +172,7 @@ class ReportDecoderBase(Callback):
                 err = -1  # return infeasible value
 
             kwargs["reports"][self.decoder.__class__.__name__][
-                error_rate
+                metric.name
             ] = err
 
 
@@ -187,7 +189,7 @@ class ReportCTCDecoder(ReportDecoderBase):
         alphabet,
         word_segmentor,
         eval_every=1,
-        calc_quantities=("cer", "wer"),
+        calc_quantities=(Metric.WER, Metric.CER),
     ):
         super().__init__(
             ctc_decoder, alphabet, word_segmentor, eval_every, calc_quantities
@@ -215,7 +217,7 @@ class ReportTransducerDecoder(ReportDecoderBase):
         alphabet,
         word_segmentor=WordSegmentor(" "),
         eval_every=1,
-        calc_quantities=("cer", "wer"),
+        calc_quantities=(Metric.WER, Metric.CER),
         skip_first_epoch=False,
     ):
         super().__init__(
