@@ -19,6 +19,7 @@ message PreProcessStep {
   }
 }
 
+
 // Computes Mel-frequency cepstral coefficients (MFCC).
 message MFCC {
   // Number of mfc coefficients to retain.
@@ -30,6 +31,7 @@ message MFCC {
   // Step between successive windows in number of frames.
   uint32 hop_length = 3;
 }
+
 
 // Computes Log Mel-frequency Filter Banks.
 message LogMelFB {
@@ -69,6 +71,7 @@ message ContextFrames {
   // Number of context frames (channels) to add.
   uint32 n_context = 1;
 }
+
 
 message Downsample {
   // Rate at which to downsample input.
