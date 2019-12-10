@@ -45,7 +45,7 @@ def fit(
         assert epochs == 1, "If train_loader is None, epochs must be 1 "
 
     # sphinx-doc-start-after
-    cb_handler = CallbackHandler(callbacks)
+    cb_handler = CallbackHandler(callbacks, model=seq_to_seq.model)
     cb_handler.on_train_begin(epochs)
 
     for epoch in range(epochs):
