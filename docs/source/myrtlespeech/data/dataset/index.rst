@@ -7,6 +7,7 @@
     :caption: Supported Datasets:
 
     commonvoice
+    composite
     fake
     librispeech
 

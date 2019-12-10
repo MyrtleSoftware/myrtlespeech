@@ -1,3 +1,4 @@
+import logging
 import os
 import tarfile
 import warnings
@@ -178,16 +179,16 @@ class CommonVoice(Dataset):
         """
         os.makedirs(os.path.join(self.root, self.base_dir), exist_ok=True)
 
-        alread_downloaded = os.path.exists(
+        already_downloaded = os.path.exists(
             os.path.join(self.root, self.base_dir, "clips")
         )
         for subset in self.subsets:
-            alread_downloaded &= os.path.isfile(
+            already_downloaded &= os.path.isfile(
                 os.path.join(self.root, self.base_dir, subset + ".tsv")
             )
 
-        if alread_downloaded:
-            print("Already downloaded all required data")
+        if already_downloaded:
+            logging.info("Already downloaded all required data")
             return
 
         path = os.path.join(self.root, "en.tar.gz")

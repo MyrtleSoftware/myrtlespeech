@@ -9,6 +9,9 @@ from myrtlespeech.data.dataset.composite import Composite
 from torch.utils.data import Dataset
 
 
+# Fixtures and Strategies -----------------------------------------------------
+
+
 class MockDataset(Dataset):
     def __init__(self, durations: Sequence[float]):
         self.durations = sorted(durations)
@@ -37,6 +40,9 @@ def composite_dataset_strategy(
     num_children = draw(st.integers(1, 4))
     children = [draw(mock_dataset_strategy()) for _ in range(num_children)]
     return Composite(*children), children
+
+
+# Tests -----------------------------------------------------------------------
 
 
 @given(composite_dataset_strategy())

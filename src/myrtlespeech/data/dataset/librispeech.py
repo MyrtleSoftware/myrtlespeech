@@ -1,4 +1,5 @@
 import fnmatch
+import logging
 import os
 import shutil
 import tarfile
@@ -181,7 +182,7 @@ class LibriSpeech(Dataset):
 
         for subset in self.subsets:
             if self._check_subset_integrity(subset):
-                print(f"{subset} already downloaded and verified")
+                logging.info(f"{subset} already downloaded and verified")
                 continue
             path = os.path.join(self.root, subset + ".tar.gz")
 
