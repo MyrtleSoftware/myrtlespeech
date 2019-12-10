@@ -19,14 +19,14 @@ from tests.protos.test_transducer import transducer
     vocab_size=st.integers(min_value=2, max_value=32),
 )
 @settings(deadline=5000)
-def test_all_gradients_computed_for_all_model_parameters(
+def test_all_gradients_computed_for_all_parameters_and_size_as_expected(
     data,
     transducer_cfg: transducer_pb2.Transducer,
     input_features: int,
     input_channels: int,
     vocab_size: int,
 ) -> None:
-
+    """Tests that gradients are computed and output shape is as expected."""
     # create network
     transducer = build_transducer(
         transducer_cfg, input_features, input_channels, vocab_size
@@ -68,6 +68,8 @@ def test_all_gradients_computed_for_all_model_parameters(
     # backward pass using mean as proxy for an actual loss function
     loss = out[0].mean()
     loss.backward()
+
+    assert out[0].shape == (batch, seq_len, label_seq_len + 1, vocab_size + 1)
 
     # check all parameters have gradient
     for name, p in transducer.named_parameters():
