@@ -87,8 +87,6 @@ class RNNTEncoder(torch.nn.Module):
         fc2: Optional[torch.nn.Module] = None,
     ):
 
-        assert rnn1.rnn.batch_first is False
-
         super().__init__()
 
         if fc1:

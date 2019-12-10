@@ -1,6 +1,8 @@
 from typing import Tuple
 
 import torch
+from myrtlespeech.model.rnn_t import RNNTEncoder
+from myrtlespeech.model.rnn_t import RNNTJointNet
 from myrtlespeech.model.rnn_t import RNNTPredictNet
 from myrtlespeech.model.transducer import Transducer
 from myrtlespeech.post_process.transducer_beam_decoder import (
@@ -12,11 +14,11 @@ from myrtlespeech.post_process.transducer_beam_decoder import (
 
 
 class DummyPredictNet(RNNTPredictNet):
-    """RNNTPredictNet with overriden `pred_nn` and `embed`.
+    """An :py:class:`RNNTPredictNet` with overridden forward method.
 
-    Note that embedding=None will be passed to :py:meth:`super.__init__` as the
-    :py:meth:`embed` method that calls forward on :py:class:`embedding` in
-    :py:class:`RNNTPredictNet` is overidden below.
+    Note that ``embedding=None`` will be passed to :py:meth:`super.__init__`
+    as the :py:meth:`embed` method that calls forward on
+    :py:class:`embedding` in :py:class:`RNNTPredictNet` is overridden below.
 
     Args:
         pred_nn: module with same :py:meth:`__call__` API as `pred_nn` in
@@ -27,7 +29,7 @@ class DummyPredictNet(RNNTPredictNet):
         super().__init__(embedding=None, pred_nn=pred_nn)
 
     def embed(self, x):
-        """Overiden `:py:meth:`embed`."""
+        """Overridden `:py:meth:`embed`."""
         res = torch.tensor([1, x[0].item() + 1]).unsqueeze(0).unsqueeze(0)
         x = res, x[1]
 
@@ -48,7 +50,7 @@ class PredNN:
         self.hidden_size = hidden_size
 
     def __call__(self, x):
-        """Replicate `pred_nn` :py:meth:`forward` method.
+        """Replicates `pred_nn` :py:meth:`forward` method.
 
         This works by using the hidden state to decide which characters to
         upweight at a given timestep.
@@ -74,7 +76,7 @@ class PredNN:
 
         B, U_, H = embedded.shape
 
-        assert B == U_ and B == 1, "Currently only supports batch=seq len == 1"
+        assert B == U_ and B == 1, "Currently only supports batch=seq len== 1"
 
         lengths = x[1]
 
@@ -101,21 +103,27 @@ class PredNN:
             return out, lengths
 
 
-class DummyTransducerEncoder:
-    r"""Class to replicate Transducer ``encoder`` API."""
+class DummyTransducerEncoder(RNNTEncoder):
+    r"""An :py:class:`RNNTEncoder` with overridden forward method.
+
+    This is necessary because in this worked example the audio inputs are
+    simply returned as-is (with the dimension change required by the
+    :py:class:`Transducer` API).
+    """
 
     def __init__(self):
-        pass
+        rnn1_not_used_except_in_init = torch.nn.RNN(2, 2)
+        super().__init__(rnn1=rnn1_not_used_except_in_init)
 
-    def __call__(
+    def forward(
         self, x: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Replicates :py:meth:`TransducerEncoder.forward` API.
+        """Replicates :py:attr:`Transducer.encoder` API.
 
         Args:
-            See :py:meth:`TransducerEncoder.forward`.
+            See :py:attr:`Transducer.encoder`.
         Returns:
-            See :py:meth:`TransducerEncoder.forward`.
+            See :py:attr:`Transducer.encoder`.
         """
 
         h = x[0]  # B, C, H, T
@@ -130,42 +138,25 @@ class DummyTransducerEncoder:
         return h, x[1]
 
 
-class DummyTransducerModel(Transducer):
-    """Dummy Transducer for testing.
+class DummyJointNet(RNNTJointNet):
+    """A :py:class:`RNNTJointNet` with overridden forward method.
 
-    Note that the `joint_net` override takes place in
-    :py:class:`TransducerBeamDecoderDummy`'s :py:meth:`_joint_step` so
-    `joint_net=None` is used.
+    This is necessary as :py:class:`RNNTJointNet` concatenates the encoder
+    and decoder output, which breaks this worked example.
     """
 
-    def __init__(self, encoder, predict_net):
-        super().__init__(
-            encoder=encoder, predict_net=predict_net, joint_net=None
-        )
+    def __init__(self):
+        super().__init__(fc=None)
 
-    def forward(self):
-        r"""Override forward method as it should not be called."""
-        raise NotImplementedError
+    def forward(self, x):
+        """Replicates :py:attr:`Transducer.joint_net` API.
 
-
-class TransducerBeamDecoderDummy(TransducerBeamDecoder):
-    """Decoder class which overrides :py:meth:`_joint_step` method."""
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    def _joint_step(self, enc, pred):
-        """Overrrides :py:meth:`_joint_step()`.
-
-        This is necessary as :py:meth:`TransducerDecoderBase._joint_step()`
-        concatenates `encoder` and `predict_net` outputs and also performs
-        a :py:meth:`log_softmax` on results both of which which break this
-        worked example.
+        Args:
+            See :py:attr:`Transducer.joint_net`.
+        Returns:
+            See :py:attr:`Transducer.joint_net`.
         """
-
-        f, f_lens = enc
-        g, g_lens = pred
-
+        (f, f_lens), (g, g_lens) = x
         T, B1, H1 = f.shape
         B2, U_, H2 = g.shape
 
@@ -178,13 +169,29 @@ class TransducerBeamDecoderDummy(TransducerBeamDecoder):
 
         g = g.unsqueeze(dim=1)  # (B, 1, U_, H)
 
-        return (f + g).squeeze()
+        return (f + g), f_lens
+
+
+class TransducerBeamDecoderDummy(TransducerBeamDecoder):
+    """A Decoder class which overrides :py:meth:`_joint_step` method."""
+
+    def _joint_step(self, enc, pred):
+        """Overrrides :py:meth:`_joint_step()`.
+
+        This is necessary as :py:meth:`TransducerDecoderBase._joint_step()`
+        performs a :py:meth:`log_softmax` which breaks this worked example.
+        """
+        logits, _ = self._model.joint_net((enc, pred))
+        return logits.squeeze()
 
 
 def get_dummy_transducer(hidden_size=3):
     encoder = DummyTransducerEncoder()
     predict_net = DummyPredictNet(pred_nn=PredNN(hidden_size=hidden_size))
-    model = DummyTransducerModel(encoder=encoder, predict_net=predict_net)
+    joint_net = DummyJointNet()
+    model = Transducer(
+        encoder=encoder, predict_net=predict_net, joint_net=joint_net
+    )
     model.eval()
     return model
 
