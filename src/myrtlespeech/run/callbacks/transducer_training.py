@@ -13,9 +13,9 @@ class TransducerForward(Callback):
 
     .. note::
 
-        User **should not** initialise this callback. If the
-        :py:class:`CallbackHandler` class is used, this will be handled
-        interneally.
+        **Do not** initialise this callback directly. If you are using the
+        :py:func:`fit` API, this callback is auto-added to the list of
+        callbacks.
     """
 
     def __init__(self):
