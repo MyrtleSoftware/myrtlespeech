@@ -199,9 +199,6 @@ class RNN(torch.nn.Module):
             total_length=total_length,
         )
 
-        del inp
-
         if return_tuple:
             return (out, hid), lengths
-        del hid
         return out, lengths

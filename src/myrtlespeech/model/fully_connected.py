@@ -161,6 +161,4 @@ class FullyConnected(torch.nn.Module):
 
         result = self.fully_connected(x_inp)
 
-        del x_inp, x
-
         return result, x_len

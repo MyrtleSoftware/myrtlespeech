@@ -254,7 +254,7 @@ class ClearMemory(Callback):
         self.__clear_memory(kwargs)
 
     def __clear_memory(self, kwargs: Dict) -> None:
-        r"""Performs explicit garbage collection to prevent cuda oom error."""
+        r"""Performs explicit garbage collection to help avoid OOM error."""
         to_delete = ["last_input", "last_target", "last_output", "last_loss"]
         for key in to_delete:
             if kwargs.get(key) is not None:
