@@ -1,6 +1,7 @@
 from typing import Tuple
 
 import torch
+from myrtlespeech.run.callbacks.transducer_training import TransducerForward
 
 
 class Transducer(torch.nn.Module):
@@ -77,6 +78,11 @@ class Transducer(torch.nn.Module):
 
             It is possible **but not necessary** to use an initialized
             :py:class:`TransducerJointNet` class as `joint_net`.
+
+    Attributes:
+        callbacks: A collection of :py:class:`Callback`\s that will be
+            automatically added to the :py:class:`CallbackHandler` if an
+            instance of this class is passed as the ``model`` argument.
     """
 
     def __init__(
@@ -90,6 +96,7 @@ class Transducer(torch.nn.Module):
         self.encode = encoder
         self.predict_net = predict_net
         self.joint_net = joint_net
+        self.callbacks = self._get_callbacks()
         self.use_cuda = torch.cuda.is_available()
         if self.use_cuda:
             self.cuda()
@@ -138,9 +145,8 @@ class Transducer(torch.nn.Module):
             (x, x_lens), (y, y_lens) = inp
         except ValueError as e:
             print(
-                "Unable to unpack inputs to Transducer. Are you using the \
-            `TransducerTraining()` callback \
-            found in `myrtlespeech.run.callbacks.rnn_t_training`?"
+                "Unable to unpack inputs to Transducer. Are you passing \
+            the Transducer module to the CallbackHandler as `model` arg?"
             )
             raise e
         B1, C, I, T = x.shape
@@ -161,3 +167,7 @@ class Transducer(torch.nn.Module):
                 f"y_lens must be less than or equal to max number of output \
                 symbols but {y_lens.max()} > {U}"
             )
+
+    def _get_callbacks(self):
+        """Returns a list of required callbacks."""
+        return [TransducerForward()]
