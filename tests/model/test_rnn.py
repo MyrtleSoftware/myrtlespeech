@@ -327,7 +327,7 @@ def test_rnn_forward_pass_hidden_passed(
 ) -> None:
     """Tests forward rnn pass.
 
-    Test both hidden=None and hidden=(h_0, c_0)."""
+    Test both hidden=None and hidden={(h_0, c_0), h_0}."""
 
     rnn = RNN(
         rnn_type=rnn_type,
@@ -369,29 +369,28 @@ def test_rnn_forward_pass_hidden_passed(
 
     out_shape = hidden_size * num_directions
     exp_shape = (max_seq_len, batch_size, out_shape)
+    expected_hid_size = (num_layers * num_directions, batch_size, hidden_size)
     if batch_first:
         tensor = tensor.transpose(1, 0)
         exp_shape = (batch_size, max_seq_len, out_shape)
 
     res = rnn(((tensor, hidden), in_seq_lens))
 
-    assert isinstance(res, tuple) and len(res) == 2
-    assert isinstance(res[0], tuple)
-    assert res[0][0].shape == exp_shape
-    assert torch.allclose(res[1].int(), in_seq_lens)
-
-    # check hidden
-    hid = res[0][1]
+    (out, hid), out_seq_lens = res
+    # get h_0 (and c_0 if present)
     if rnn_type in [RNNType.BASIC_RNN, RNNType.GRU]:
-        assert isinstance(hid, torch.Tensor)
+        h_0 = hid
+        c_0 = None
     elif rnn_type == RNNType.LSTM:
-        assert isinstance(hid, tuple)
-        assert len(hid) == 2
-        assert isinstance(hid[0], torch.Tensor) and isinstance(
-            hid[1], torch.Tensor
-        )
+        h_0, c_0 = hid
     else:
         raise TypeError(f"RNNType={rnn_type} was not expected")
+
+    assert out.shape == exp_shape
+    assert torch.allclose(out_seq_lens.int(), in_seq_lens)
+    assert h_0.shape == expected_hid_size
+    if c_0 is not None:
+        assert c_0.shape == expected_hid_size
 
 
 @given(rnn_type=st.integers(min_value=100, max_value=300))
