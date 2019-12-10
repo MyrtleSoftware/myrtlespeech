@@ -40,37 +40,47 @@ def get_fixed_decoder(max_symbols_per_step=100):
 
 
 def test_beam_search_single_step(decoder=get_fixed_decoder()):
+    """Worked example single step."""
     indata = torch.tensor([[[0.3, 0.6, 0.1]]])  # (1, 1, 3)
     indata = indata.unsqueeze(3)  # B, C, F, T = (1, 1, 3, 1)
     lengths = torch.IntTensor([1])
     inp = (indata, lengths)
-    assert decoder.decode(inp) == [1, 1]
+
+    expected = [1, 1]
+
+    assert decoder.decode(inp) == expected
 
 
 def test_beam_search_multi_step(decoder=get_fixed_decoder()):
+    """Worked example multiple steps."""
     indata = torch.tensor(
         [[[[0.3, 0.6, 0.1], [0.3, 0.6, 0.1]]]]
     )  # (1, 1, 2, 3)
-    indata = indata.transpose(2, 3)
-    assert indata.shape == (1, 1, 3, 2)  # B, C, F, T = (1, 1, 3, 2)
+    indata = indata.transpose(2, 3)  # B, C, F, T = (1, 1, 3, 2)
     lengths = torch.IntTensor([2])
-    assert decoder.decode((indata, lengths)) == [1, 1, 1, 1, 1]
+
+    expected = [1, 1, 1, 1, 1]
+
+    assert decoder.decode((indata, lengths)) == expected
 
 
 def test_beam_search_limit_symbols_per_step(
     decoder=get_fixed_decoder(max_symbols_per_step=1),
 ):
+    """Worked example limit number of symbols."""
     indata = torch.tensor(
         [[[[0.3, 0.6, 0.1], [0.3, 0.6, 0.1]]]]
     )  # (1, 1, 2, 3)
-    indata = indata.transpose(2, 3)
-    assert indata.shape == (1, 1, 3, 2)  # B, C, F, T = (1, 1, 3, 2)
+    indata = indata.transpose(2, 3)  # B, C, F, T = (1, 1, 3, 2)
     lengths = torch.IntTensor([2])
-    assert decoder.decode((indata, lengths)) == [1, 1]
+
+    expected = [1, 1]
+
+    assert decoder.decode((indata, lengths)) == expected
 
 
 def test_multi_element_batch(decoder=get_fixed_decoder()):
-
+    """Worked example multi element batch."""
     indata = torch.tensor(
         [
             [[[0.3, 0.6, 0.1], [0.3, 0.6, 0.1]]],
@@ -78,13 +88,15 @@ def test_multi_element_batch(decoder=get_fixed_decoder()):
         ]
     )  # (2, 1, 2, 3)
     indata = indata.transpose(2, 3)
-
-    assert indata.shape == (2, 1, 3, 2)  # B, C, F, T = (2, 1, 3, 2)
     lengths = torch.IntTensor([2, 1])
-    assert decoder((indata, lengths)) == [[1, 1, 1, 1, 1], [1, 1]]
+
+    expected = [[1, 1, 1, 1, 1], [1, 1]]
+
+    assert decoder((indata, lengths)) == expected
 
 
 def test_preserves_training_state(decoder=get_fixed_decoder()):
+    """Checks training state is preserved."""
     indata = torch.tensor([[[0.3, 0.6, 0.1]]])  # (1, 1, 3)
     indata = indata.unsqueeze(3)  # B, C, F, T = (1, 1, 3, 1)
     lengths = torch.IntTensor([1])
