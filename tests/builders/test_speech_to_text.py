@@ -23,8 +23,8 @@ def test_build_returns_speech_to_text(
         stt = build(stt_cfg)
     except AttributeError:
         warnings.warn(
-            "This test has been (partially) disabled. TODO: remove this \
-            exception catching."
+            "This test has been (partially) disabled. "
+            "TODO: remove this exception catching."
         )
     if stt is not None:
         assert isinstance(stt, SpeechToText)

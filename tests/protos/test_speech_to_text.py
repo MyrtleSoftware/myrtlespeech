@@ -145,9 +145,10 @@ def speech_to_texts(
     except TypeError:
         speech_to_text = None
         warnings.warn(
-            "This test has (effectively) been disabled. TODO: prevent networks"
-            f"that are trained with transducer being built with"
-            f"ctc-loss and vice versa"
+            "Attempting to build a transducer with CTCLoss or ctc-trained "
+            "network with TransducerLoss. "
+            "TODO: edit protos + builders so that this crossover is not "
+            "permitted"
         )
 
     if not return_kwargs:
