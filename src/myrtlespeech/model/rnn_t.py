@@ -344,8 +344,6 @@ class RNNTPredictNet(torch.nn.Module):
 
         out = (self.embedding(y_0), y_1)
 
-        del y, y_0, y_1
-
         return out
 
     @staticmethod
@@ -357,10 +355,7 @@ class RNNTPredictNet(torch.nn.Module):
         B, _, H = y_0.shape
         # preprend blank
         start = torch.zeros((B, 1, H)).type(y_0.dtype).to(y_0.device)
-        y_0 = torch.cat([start, y_0], dim=1)  # (B, U + 1, H)
-        y_0 = y_0.contiguous()
-
-        del start, y
+        y_0 = torch.cat([start, y_0], dim=1).contiguous()  # (B, U + 1, H)
 
         return (y_0, y_1)
 
@@ -435,7 +430,5 @@ class RNNTJointNet(torch.nn.Module):
 
         # return to 4D shape
         h = h[0].view(B1, T, U_, -1), h[1]
-
-        del concat_inp, f, g, x
 
         return h
