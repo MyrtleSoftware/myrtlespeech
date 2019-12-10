@@ -420,14 +420,12 @@ class RNNTJointNet(torch.nn.Module):
 
         f = f.transpose(1, 0)  # (T, B, H1) -> (B, T, H1)
         f = f.unsqueeze(dim=2)  # (B, T, 1, H)
-        f = f.expand((B1, T, U_, H1)).contiguous()
+        f = f.expand((B1, T, U_, H1))
 
         g = g.unsqueeze(dim=1)  # (B, 1, U_, H)
-        g = g.expand((B1, T, U_, H2)).contiguous()
+        g = g.expand((B1, T, U_, H2))
 
-        concat_inp = torch.cat(
-            [f, g], dim=3
-        ).contiguous()  # (B, T, U_, H1 + H2)
+        concat_inp = torch.cat([f, g], dim=3)  # (B, T, U_, H1 + H2)
 
         # reshape input to give 3 dimensions instead of 4 as required by fc API
         concat_inp = concat_inp.view(B1, T * U_, -1)
