@@ -2,6 +2,7 @@ import warnings
 from typing import Union
 
 from hypothesis import given
+from hypothesis import settings
 from myrtlespeech.builders.speech_to_text import build
 from myrtlespeech.model.seq_to_seq import SeqToSeq
 from myrtlespeech.model.speech_to_text import SpeechToText
@@ -14,6 +15,7 @@ from tests.protos.test_speech_to_text import speech_to_texts
 
 
 @given(stt_cfg=speech_to_texts())
+@settings(deadline=4000)
 def test_build_returns_speech_to_text(
     stt_cfg: speech_to_text_pb2.SpeechToText,
 ) -> None:

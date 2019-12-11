@@ -66,7 +66,9 @@ def speech_to_texts(
         )
         assume(input_features > 200)
     elif model_str == "transducer":
-        kwargs[model_str] = draw(transducer())
+        kwargs[model_str] = draw(
+            transducer(time_reduction=draw(st.booleans()))
+        )
     else:
         raise ValueError(f"unknown model type {model_str}")
 
