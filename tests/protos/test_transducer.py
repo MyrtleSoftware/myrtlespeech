@@ -24,13 +24,13 @@ def transducer(
     """Returns a SearchStrategy for Transducer plus maybe the kwargs."""
     kwargs: Dict = {}
 
-    kwargs["transducer_encoder"], _ = draw(
+    _, kwargs["transducer_encoder"] = draw(
         transducer_encoder(return_kwargs=True)
     )
-    kwargs["transducer_predict_net"], _ = draw(
+    _, kwargs["transducer_predict_net"] = draw(
         transducer_predict_net(return_kwargs=True)
     )
-    kwargs["transducer_joint_net"], _ = draw(
+    _, kwargs["transducer_joint_net"] = draw(
         transducer_joint_net(return_kwargs=True)
     )
 
