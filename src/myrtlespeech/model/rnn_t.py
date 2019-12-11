@@ -146,9 +146,6 @@ class RNNTEncoder(torch.nn.Module):
                 time_reduction_factor > 1
             ), f"time_reduction_factor must be > 1 \
                 but = {time_reduction_factor}"
-        assert rnn1.rnn.batch_first is False
-        if rnn2:
-            assert rnn2.rnn.batch_first is False
 
         super().__init__()
 
