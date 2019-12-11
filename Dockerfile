@@ -3,17 +3,13 @@ FROM continuumio/miniconda3
 # fix https://github.com/conda/conda/issues/7267
 RUN chown -R 1000:1000 /opt/conda/
 
-# install headers to build regex as part of Black
-# https://github.com/psf/black/issues/1112
-# and also install required components for
-# warp-transducer build (make, cmake gcc-6)
-RUN apt-get update && apt-get install \
-    build-essential  \
-    python3-dev cmake make \
-    software-properties-common -y && \
-    echo "deb  http://deb.debian.org/debian  stretch main" >> /etc/apt/sources.list && \
-    apt-get update && \
-    apt-get install gcc-6 g++-6 -y
+# install required components for the
+# warp-transducer build (make, cmake gcc-7)
+RUN apt-get update && apt-get install -y \
+    cmake \
+    g++-7 \
+    gcc-7 \
+    make
 
 # create non-root user
 RUN useradd --create-home --shell /bin/bash user
@@ -42,8 +38,8 @@ RUN git clone https://github.com/NVIDIA/apex && \
     rm -rf apex
 
 # install warp-transducer
-ENV CXX=/usr/bin/g++-6
-ENV CC=/usr/bin/gcc-6
+ENV CXX=/usr/bin/g++-7
+ENV CC=/usr/bin/gcc-7
 RUN make deps/warp-transducer
 
 # use CI Hypothesis profile, see ``tests/__init__.py``

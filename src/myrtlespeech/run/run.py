@@ -6,6 +6,7 @@ tested.
 import argparse
 import time
 import warnings
+from enum import Enum
 from pathlib import Path
 from typing import Dict
 from typing import List
@@ -26,6 +27,11 @@ from myrtlespeech.run.callbacks.report_mean_batch_loss import (
 from myrtlespeech.run.callbacks.stop_epoch_after import StopEpochAfter
 from myrtlespeech.run.train import fit
 from torch.utils.tensorboard import SummaryWriter
+
+
+class Metric(Enum):
+    WER = 0
+    CER = 1
 
 
 class WordSegmentor:
@@ -70,8 +76,7 @@ class ReportDecoderBase(Callback):
         word_segmentor: groups sequences of symbols into sequences of words.
             By default this splits words on the space symbol.
 
-        eval_every: WER/CER is cacluated every ``eval_every``th epoch. Default
-            is 1.
+        eval_every: WER/CER is cacluated every ``eval_every``th epoch.
 
         calc_quantities: Iterable of strings of error quantities to calculate.
             The strings can take the following values:
@@ -79,8 +84,6 @@ class ReportDecoderBase(Callback):
                 'wer': Word-error rate is calculated.
 
                 'cer': Character-error rate is calculated.
-
-            ``calc_quantities`` defaults to ('cer', 'wer').
     """
 
     def __init__(
@@ -89,30 +92,21 @@ class ReportDecoderBase(Callback):
         alphabet,
         word_segmentor=WordSegmentor(" "),
         eval_every=1,
-        calc_quantities=("cer", "wer"),
+        calc_quantities=[Metric.WER, Metric.CER],
     ):
+        assert len(calc_quantities) > 0, "calc_quantities cannot be empty!."
         self.decoder = decoder
         self.alphabet = alphabet
         self.word_segmentor = word_segmentor
         self.eval_every = eval_every
-
-        for idx, error_rate in enumerate(calc_quantities):
-            assert error_rate in [
-                "cer",
-                "wer",
-            ], f"calc_quantities[{idx}]={error_rate} is not in ['cer', 'wer']."
-        assert (
-            list(set(calc_quantities)).sort() == list(calc_quantities).sort()
-        ), f"Repeated error rate in {calc_quantities}"
-        assert len(calc_quantities) > 0, "calc_quantities cannot be empty!."
-        self.calc_quantities = list(calc_quantities)
+        self.calc_quantities = list(set(calc_quantities))
 
     def _reset(self, **kwargs):
-        decoder_report = {quant: -1 for quant in self.calc_quantities}
+        decoder_report = {metric.name: -1 for metric in self.calc_quantities}
         decoder_report["transcripts"] = []
         kwargs["reports"][self.decoder.__class__.__name__] = decoder_report
-        self.distances = {quant: [] for quant in self.calc_quantities}
-        self.lengths = {quant: [] for quant in self.calc_quantities}
+        self.distances = {metric.name: [] for metric in self.calc_quantities}
+        self.lengths = {metric.name: [] for metric in self.calc_quantities}
 
     def on_train_begin(self, **kwargs):
         self._reset(**kwargs)
@@ -145,27 +139,29 @@ class ReportDecoderBase(Callback):
             exp_words = self.word_segmentor(exp_chars)
             transcripts.append((act_words, exp_words))
 
-            for error_rate in self.calc_quantities:
-                if error_rate == "wer":
+            for metric in self.calc_quantities:
+                if metric is Metric.WER:
                     distance = levenshtein(act_words, exp_words)
-                    self.lengths[error_rate].append(len(exp_words))
-                elif error_rate == "cer":
+                    self.lengths[metric.name].append(len(exp_words))
+                elif metric is Metric.CER:
                     distance = levenshtein(act_chars, exp_chars)
-                    self.lengths[error_rate].append(len(exp_chars))
+                    self.lengths[metric.name].append(len(exp_chars))
                 else:
-                    raise ValueError("error_rate is not in ['cer', 'wer'].")
+                    raise ValueError(
+                        "metric is not in ['Metric.CER', 'Metric.WER']."
+                    )
 
-                self.distances[error_rate].append(distance)
+                self.distances[metric.name].append(distance)
 
     def on_epoch_end(self, **kwargs):
         if self.training or kwargs["epoch"] % self.eval_every != 0:
             return
-        for error_rate in self.calc_quantities:
-            lengths = sum(self.lengths[error_rate])
+        for metric in self.calc_quantities:
+            lengths = sum(self.lengths[metric.name])
             if lengths != 0:
                 err = (
-                    float(sum(self.distances[error_rate]))
-                    / sum(self.lengths[error_rate])
+                    float(sum(self.distances[metric.name]))
+                    / sum(self.lengths[metric.name])
                     * 100
                 )
             else:
@@ -176,7 +172,7 @@ class ReportDecoderBase(Callback):
                 err = -1  # return infeasible value
 
             kwargs["reports"][self.decoder.__class__.__name__][
-                error_rate
+                metric.name
             ] = err
 
 
@@ -193,7 +189,7 @@ class ReportCTCDecoder(ReportDecoderBase):
         alphabet,
         word_segmentor,
         eval_every=1,
-        calc_quantities=("cer", "wer"),
+        calc_quantities=(Metric.WER, Metric.CER),
     ):
         super().__init__(
             ctc_decoder, alphabet, word_segmentor, eval_every, calc_quantities
@@ -207,8 +203,8 @@ class ReportTransducerDecoder(ReportDecoderBase):
     """Transducer Decoder Callback.
 
     Args:
-        skip_first_epoch: bool. Default = False. If True, the first eval epoch
-            is skipped. This is useful as the decoding is *very* slow with an
+        skip_first_epoch: If :py:data:`True`, the first eval epoch
+            is skipped. This is useful since decoding is **very** slow with an
             un-trained model (i.e. inference is considerably faster when the
             model is more confident in its predictions).
 
@@ -221,7 +217,7 @@ class ReportTransducerDecoder(ReportDecoderBase):
         alphabet,
         word_segmentor=WordSegmentor(" "),
         eval_every=1,
-        calc_quantities=("cer", "wer"),
+        calc_quantities=(Metric.WER, Metric.CER),
         skip_first_epoch=False,
     ):
         super().__init__(
@@ -248,7 +244,7 @@ class ReportTransducerDecoder(ReportDecoderBase):
 class ClearMemory(Callback):
     r"""Callback to perform explicit garbage collection at end of each batch.
 
-    This should be used to help reduce memory usage.
+    This can be used to help reduce memory usage.
     """
 
     def __init__(self):
@@ -258,7 +254,7 @@ class ClearMemory(Callback):
         self.__clear_memory(kwargs)
 
     def __clear_memory(self, kwargs: Dict) -> None:
-        r"""Performs explicit garbage collection to prevent cuda oom error. """
+        r"""Performs explicit garbage collection to help avoid OOM error."""
         to_delete = ["last_input", "last_target", "last_output", "last_loss"]
         for key in to_delete:
             if kwargs.get(key) is not None:
@@ -289,7 +285,7 @@ class TensorBoardLogger(ModelCallback):
             location.
         model: A :py:class:`torch.nn.Module`.
         histograms: If True, gradient and parameter histograms are saved.
-            Defaults to False as this adds *substantial* overhead.
+            Defaults to False as this adds **substantial** overhead.
     """
 
     def __init__(

@@ -36,7 +36,7 @@ def build(
                 {max_symbols_per_step} but this must be >= 1"
             )
     else:
-        max_symbols_per_step = None
+        max_symbols_per_step = 100
 
     return TransducerGreedyDecoder(
         blank_index=decoder_cfg.blank_index,

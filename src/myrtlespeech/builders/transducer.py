@@ -7,11 +7,13 @@ from myrtlespeech.builders.fully_connected import (
 )
 from myrtlespeech.builders.rnn import build as build_rnn
 from myrtlespeech.data.stack import StackTime
+from myrtlespeech.model.rnn_t import RNNTEncoder
+from myrtlespeech.model.rnn_t import RNNTJointNet
+from myrtlespeech.model.rnn_t import RNNTPredictNet
 from myrtlespeech.model.transducer import Transducer
-from myrtlespeech.model.transducer import TransducerEncoder
-from myrtlespeech.model.transducer import TransducerPredictNet
 from myrtlespeech.model.utils import Lambda
 from myrtlespeech.protos import transducer_encoder_pb2
+from myrtlespeech.protos import transducer_joint_net_pb2
 from myrtlespeech.protos import transducer_pb2
 from myrtlespeech.protos import transducer_predict_net_pb2
 from torch import nn
@@ -25,8 +27,13 @@ def build(
 ) -> Transducer:
     r"""Returns a :py:class:`.Transducer` based on the config.
 
+    .. note::
+
+        This Transducer builder currently supports RNN-Transducers **only**
+        and will initialise the classes in ``model/rnn_t.py``.
+
     Args:
-        transducer_cfg: An ``Transducer`` protobuf object containing
+        transducer_cfg: A ``Transducer`` protobuf object containing
             the config for the desired :py:class:`torch.nn.Module`.
 
         input_features: The number of features for the input.
@@ -40,11 +47,12 @@ def build(
 
     Example:
         >>> from google.protobuf import text_format
-        >>> cfg_text = '''
+        >>> cfg_txt = '''
         ... transducer_encoder {
-        ...    fc1 {
+        ...       fc1 {
         ...       num_hidden_layers: 1;
         ...       hidden_size: 1152;
+        ...       dropout: {value: 0.25}
         ...       activation {
         ...         hardtanh {
         ...           min_val: 0.0;
@@ -52,59 +60,63 @@ def build(
         ...           }
         ...         }
         ...       }
-        ...     rnn1 {
+        ...       rnn1 {
         ...         rnn_type: LSTM;
         ...         hidden_size: 1152;
         ...         num_layers: 2;
         ...         bias: true;
         ...         bidirectional: false;
+        ...         forget_gate_bias: {value: 1.0}
         ...             }
         ...
-        ...      fc2 {
-        ...        num_hidden_layers: 1;
-        ...         hidden_size: 1152;
+        ...       fc2 {
+        ...       num_hidden_layers: 1;
+        ...       hidden_size: 1152;
+        ...       dropout: {value: 0.25}
+        ...       activation {
+        ...         hardtanh {
+        ...           min_val: 0.0;
+        ...           max_val: 20.0;
+        ...           }
+        ...         }
+        ...       }
+        ...     }
+        ...     transducer_predict_net {
+        ...       pred_nn {
+        ...         rnn {
+        ...           rnn_type: LSTM;
+        ...           hidden_size: 256;
+        ...           num_layers: 2;
+        ...           bias: true;
+        ...           bidirectional: false;
+        ...           forget_gate_bias: {value: 1.0}
+        ...         }
+        ...       }
+        ...     }
+        ...     transducer_joint_net {
+        ...       fc {
+        ...         num_hidden_layers: 1;
+        ...         hidden_size: 512;
+        ...         dropout: {value: 0.25}
         ...         activation {
         ...           hardtanh {
         ...             min_val: 0.0;
         ...             max_val: 20.0;
-        ...             }
         ...           }
-        ...         }
-        ...     }
-        ... transducer_predict_net {
-        ...   pred_nn {
-        ...     rnn {
-        ...       rnn_type: LSTM;
-        ...       hidden_size: 256;
-        ...       num_layers: 2;
-        ...       bias: true;
-        ...       bidirectional: false;
-        ...     }
-        ...    }
-        ... }
-        ... joint_net {
-        ...     num_hidden_layers: 1;
-        ...     hidden_size: 512;
-        ...     activation {
-        ...       hardtanh {
-        ...         min_val: 0.0;
-        ...         max_val: 20.0;
         ...         }
         ...       }
         ...     }
         ... '''
-        >>> cfg = text_format.Merge(
-        ...             cfg_text,
-        ...             transducer_pb2.Transducer()
-        ... )
+        >>> cfg = text_format.Merge(cfg_txt, transducer_pb2.Transducer())
         >>> build(cfg, input_features=80, input_channels=5, vocab_size=28)
         Transducer(
-          (encode): TransducerEncoder(
+          (encode): RNNTEncoder(
             (fc1): FullyConnected(
               (fully_connected): Sequential(
                 (0): Linear(in_features=400, out_features=1152, bias=True)
                 (1): Hardtanh(min_val=0.0, max_val=20.0)
-                (2): Linear(in_features=1152, out_features=1152, bias=True)
+                (2): Dropout(p=0.25, inplace=False)
+                (3): Linear(in_features=1152, out_features=1152, bias=True)
               )
             )
             (rnn1): RNN(
@@ -114,24 +126,29 @@ def build(
               (fully_connected): Sequential(
                 (0): Linear(in_features=1152, out_features=1152, bias=True)
                 (1): Hardtanh(min_val=0.0, max_val=20.0)
-                (2): Linear(in_features=1152, out_features=512, bias=True)
+                (2): Dropout(p=0.25, inplace=False)
+                (3): Linear(in_features=1152, out_features=512, bias=True)
               )
             )
           )
-          (predict_net): TransducerPredictNet(
+          (predict_net): RNNTPredictNet(
             (embedding): Embedding(28, 256)
             (pred_nn): RNN(
               (rnn): LSTM(256, 256, num_layers=2, batch_first=True)
             )
           )
-          (joint_net): FullyConnected(
-            (fully_connected): Sequential(
-              (0): Linear(in_features=768, out_features=512, bias=True)
-              (1): Hardtanh(min_val=0.0, max_val=20.0)
-              (2): Linear(in_features=512, out_features=29, bias=True)
+          (joint_net): RNNTJointNet(
+            (fc): FullyConnected(
+              (fully_connected): Sequential(
+                (0): Linear(in_features=768, out_features=512, bias=True)
+                (1): Hardtanh(min_val=0.0, max_val=20.0)
+                (2): Dropout(p=0.25, inplace=False)
+                (3): Linear(in_features=512, out_features=29, bias=True)
+              )
             )
           )
         )
+
     """
     # encoder output size is only required for build_transducer_enc_cfg if fc2
     # layer is present
@@ -141,9 +158,9 @@ def build(
     out_enc_size = None
     if (
         transducer_cfg.transducer_encoder.HasField("fc2")
-        and transducer_cfg.joint_net.hidden_size > 0
+        and transducer_cfg.transducer_joint_net.fc.hidden_size > 0
     ):
-        out_enc_size = transducer_cfg.joint_net.hidden_size
+        out_enc_size = transducer_cfg.transducer_joint_net.fc.hidden_size
     encoder, encoder_out = build_transducer_enc_cfg(
         transducer_cfg.transducer_encoder,
         input_features * input_channels,
@@ -158,13 +175,14 @@ def build(
 
     joint_in_dim = encoder_out + predict_net_out  # features are concatenated
 
-    joint_net_fc = build_fully_connected(
-        transducer_cfg.joint_net,
+    joint_net = build_joint_net(
+        transducer_cfg.transducer_joint_net,
         input_features=joint_in_dim,
         output_features=vocab_size + 1,
     )
+
     return Transducer(
-        encoder=encoder, predict_net=predict_net, joint_net=joint_net_fc
+        encoder=encoder, predict_net=predict_net, joint_net=joint_net
     )
 
 
@@ -172,8 +190,8 @@ def build_transducer_enc_cfg(
     transducer_enc_cfg: transducer_encoder_pb2.TransducerEncoder,
     input_features: int,
     output_features: Optional[int] = None,
-) -> Tuple[TransducerEncoder, int]:
-    """Returns a :py:class:`.TransducerEncoder` based on the config.
+) -> Tuple[torch.nn.Module, int]:
+    """Returns a transducer encoder based on the config.
 
     Args:
         transducer_enc_cfg: An ``TransducerEncoder`` protobuf object containing
@@ -187,10 +205,10 @@ def build_transducer_enc_cfg(
             the hidden size of ``rnn1``.
 
     Returns:
-        A Tuple where the first element is an :py:class:`TransducerEncoder`
+        A Tuple where the first element is a :py:class:`torch.nn.Module`
         based on the config and the second element is the encoder output
-        feature size. See :py:class:`TransducerEncoder` docstrings for more
-        information.
+        feature size. See :py:class:`Transducer` docstring for description of
+        the encoder API.
 
     Example:
         >>> from google.protobuf import text_format
@@ -230,7 +248,7 @@ def build_transducer_enc_cfg(
         ... )
         >>> encoder, out = build_transducer_enc_cfg(cfg, input_features=400)
         >>> encoder
-        TransducerEncoder(
+        RNNTEncoder(
           (fc1): FullyConnected(
             (fully_connected): Sequential(
               (0): Linear(in_features=400, out_features=1152, bias=True)
@@ -319,7 +337,7 @@ def build_transducer_enc_cfg(
     else:
         output_features = rnn_out_features
 
-    encoder = TransducerEncoder(
+    encoder = RNNTEncoder(
         rnn1=rnn1,
         fc1=fc1,
         time_reducer=time_reducer,
@@ -334,10 +352,10 @@ def build_transducer_enc_cfg(
 def build_transducer_predict_net(
     predict_net_cfg: transducer_predict_net_pb2.TransducerPredictNet,
     input_features: int,
-) -> Tuple[TransducerEncoder, int]:
-    """Returns a :py:class:`TransducerPredictNet` based on the config.
+) -> Tuple[torch.nn.Module, int]:
+    """Returns a Transducer predict net based on the config.
 
-    Currently only supports prediction network variant where pred_nn is
+    Currently only supports prediction network variant in which ``pred_nn`` is
     an RNN.
 
     Args:
@@ -347,10 +365,10 @@ def build_transducer_predict_net(
         input_features: The input feature size.
 
     Returns:
-        A Tuple where the first element is an :py:class:`TransducerEncoder`
-        based on the config and the second element is the encoder output
-        feature size. See :py:class:`TransducerEncoder` docstrings for more
-        information.
+        A Tuple where the first element is a :py:class:`torch.nn.Module`
+        based on the config and the second element is the prediction output
+        feature size. See :py:class:`Transducer` docstring for description of
+        the prediction net API.
     """
     if not predict_net_cfg.pred_nn.HasField("rnn"):
         raise NotImplementedError(
@@ -366,5 +384,34 @@ def build_transducer_predict_net(
     )
     # Set hidden_size attribute
     pred_nn.hidden_size = hidden_size
-    predict_net = TransducerPredictNet(embedding=embedding, pred_nn=pred_nn)
+    predict_net = RNNTPredictNet(embedding=embedding, pred_nn=pred_nn)
     return predict_net, predict_net_out
+
+
+def build_joint_net(
+    transducer_joint_net_cfg: transducer_joint_net_pb2.TransducerJointNet,
+    input_features: int,
+    output_features: int,
+) -> Tuple[torch.nn.Module, int]:
+    """Returns a Transducer joint net based on the config.
+
+    Currently only supports joint network variant with a single fc layer.
+
+    Args:
+        transducer_joint_net_cfg: a ``TransducerJointNet`` protobuf object
+            containing the config for the desired :py:class:`torch.nn.Module`.
+
+        input_features: The input feature size.
+
+        output_features: The output feature size.
+
+    Returns:
+        A :py:class:`torch.nn.Module` based on the config. See
+        :py:class:`Transducer` docstring for description of the joint net API.
+    """
+    fc = build_fully_connected(
+        transducer_joint_net_cfg.fc,
+        input_features=input_features,
+        output_features=output_features,
+    )
+    return RNNTJointNet(fc=fc)

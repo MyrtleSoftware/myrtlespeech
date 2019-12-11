@@ -26,8 +26,8 @@ class FullyConnected(torch.nn.Module):
         hidden_activation_fn: The activation function applied after each hidden
             layer, if any.
 
-        dropout: The dropout probability to be applied between hidden layers. A
-            float in [0., 1.]. Defualts to None.
+        dropout: The dropout probability to be applied between hidden layers.
+            An Optional float in ``[0., 1.]``.
 
     Attributes:
         fully_connected: A :py:class:`torch.nn.Module` that implements the
@@ -160,7 +160,5 @@ class FullyConnected(torch.nn.Module):
             x_len = x_len.cuda()
 
         result = self.fully_connected(x_inp)
-
-        del x_inp, x
 
         return result, x_len

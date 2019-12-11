@@ -82,7 +82,7 @@ the package can be easily deployed to a cluster. To build the container:
 
 .. code-block:: bash
 
-   $ sudo docker build . -t myrtlespeech
+   sudo docker build . -t myrtlespeech
 
 The default Docker ``CMD`` is to run the full test suite under the ``ci``
 Hypothesis profile (see :ref:`hypothesis-label`).

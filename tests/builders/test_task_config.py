@@ -18,21 +18,17 @@ def test_build_returns(task_cfg: task_config_pb2.TaskConfig) -> None:
     """Test that build returns when called."""
     try:
         model, epochs, train_loader, eval_loader = build(task_cfg)
-        if model is not None:
-            assert isinstance(model, torch.nn.Module)
-        else:
-            warnings.warn(
-                "Not checking if model is returned. Remove above `if` \
-            statement once tests/protos/test_speech_to_text.py has had \
-            exception handling removed"
-            )
-
+        assert isinstance(model, torch.nn.Module)
         assert isinstance(epochs, int)
         assert isinstance(train_loader, torch.utils.data.DataLoader)
         assert isinstance(eval_loader, torch.utils.data.DataLoader)
         warnings.warn("TaskConfig only built and not checked if correct")
     except ValueError as e:
         if str(e) == "unsupported model None":
-            warnings.warn(f"Caught error {e}.")
+            warnings.warn(
+                "model=None due to tests/protos/test_speech_to_text.py hack. "
+                "TOD0: Remove this exception handling once the hack in "
+                "tests/protos/test_speech_to_text.py has been removed."
+            )
         else:
             raise e
