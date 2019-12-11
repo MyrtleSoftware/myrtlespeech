@@ -1,8 +1,8 @@
 ========================
- rnn_t_training
+ transducer_forward
 ========================
 
-.. automodule:: myrtlespeech.run.callbacks.rnn_t_training
+.. automodule:: myrtlespeech.run.callbacks.transducer_forward
     :members:
     :undoc-members:
     :show-inheritance:
