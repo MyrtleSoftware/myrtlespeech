@@ -1,9 +1,10 @@
+import math
+
 import hypothesis.strategies as st
 import torch
 from hypothesis import given
 from hypothesis import settings
 from myrtlespeech.builders.transducer import build as build_transducer
-from myrtlespeech.protos import transducer_pb2
 
 from tests.protos.test_transducer import transducer
 
@@ -13,22 +14,25 @@ from tests.protos.test_transducer import transducer
 
 @given(
     data=st.data(),
-    transducer_cfg=transducer(),
     input_features=st.integers(min_value=2, max_value=12),
     input_channels=st.integers(min_value=1, max_value=5),
     vocab_size=st.integers(min_value=2, max_value=32),
+    time_reduction=st.booleans(),
 )
 @settings(deadline=5000)
 def test_all_gradients_computed_for_all_parameters_and_size_as_expected(
     data,
-    transducer_cfg: transducer_pb2.Transducer,
     input_features: int,
     input_channels: int,
     vocab_size: int,
+    time_reduction: bool,
 ) -> None:
     """Tests that gradients are computed and output shape is as expected."""
     # create network
-    transducer = build_transducer(
+    transducer_cfg, kwargs = data.draw(
+        transducer(time_reduction=time_reduction, return_kwargs=True)
+    )
+    model = build_transducer(
         transducer_cfg, input_features, input_channels, vocab_size
     )
 
@@ -63,14 +67,25 @@ def test_all_gradients_computed_for_all_parameters_and_size_as_expected(
         input = ((x, seq_lens), (y, label_seq_lens))
 
     # forward pass
-    out = transducer(input)
+    out = model(input)
 
     # backward pass using mean as proxy for an actual loss function
     loss = out[0].mean()
     loss.backward()
 
-    assert out[0].shape == (batch, seq_len, label_seq_len + 1, vocab_size + 1)
+    expected_seq_len = seq_len
+    if time_reduction:
+        factor = kwargs["transducer_encoder"]["time_reduction_factor"]
+        expected_seq_len = math.ceil(seq_len / factor)
+    expected_shape = (
+        batch,
+        expected_seq_len,
+        label_seq_len + 1,
+        vocab_size + 1,
+    )
+
+    assert out[0].shape == expected_shape
 
     # check all parameters have gradient
-    for name, p in transducer.named_parameters():
+    for name, p in model.named_parameters():
         assert p.grad is not None, f"{name} has no gradient"

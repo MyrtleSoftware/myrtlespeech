@@ -16,7 +16,7 @@ from tests.protos.utils import all_fields_set
 
 @st.composite
 def transducer(
-    draw, return_kwargs: bool = False
+    draw, time_reduction: bool, return_kwargs: bool = False,
 ) -> Union[
     st.SearchStrategy[transducer_pb2.Transducer],
     st.SearchStrategy[Tuple[transducer_pb2.Transducer, Dict]],
@@ -25,7 +25,7 @@ def transducer(
     kwargs: Dict = {}
 
     _, kwargs["transducer_encoder"] = draw(
-        transducer_encoder(return_kwargs=True)
+        transducer_encoder(time_reduction=time_reduction, return_kwargs=True)
     )
     _, kwargs["transducer_predict_net"] = draw(
         transducer_predict_net(return_kwargs=True)

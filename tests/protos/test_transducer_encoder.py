@@ -16,7 +16,7 @@ from tests.protos.utils import all_fields_set
 
 @st.composite
 def transducer_encoder(
-    draw, return_kwargs: bool = False
+    draw, time_reduction: bool, return_kwargs: bool = False
 ) -> Union[
     st.SearchStrategy[transducer_encoder_pb2.TransducerEncoder],
     st.SearchStrategy[Tuple[transducer_encoder_pb2.TransducerEncoder, Dict]],
@@ -27,7 +27,7 @@ def transducer_encoder(
     kwargs["rnn1"] = draw(rnns())
 
     # maybe add time_reduction layer:
-    if draw(st.booleans()):
+    if time_reduction:
         kwargs["time_reduction_factor"] = draw(st.integers(2, 3))
         kwargs["rnn2"] = draw(rnns())
     else:
