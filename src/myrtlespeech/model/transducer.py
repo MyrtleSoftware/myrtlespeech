@@ -1,7 +1,7 @@
 from typing import Tuple
 
 import torch
-from myrtlespeech.run.callbacks.transducer_training import TransducerForward
+from myrtlespeech.run.callbacks.transducer_forward import TransducerForward
 
 
 class Transducer(torch.nn.Module):
