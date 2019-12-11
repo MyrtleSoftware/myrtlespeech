@@ -167,14 +167,14 @@ class Sequence:
     Args:
         seq (Sequence): If not :py:data:`None`, an existing Sequence to
             initialize from. If not :py:data:`None`, ``pred_hidden`` must be
-            :py:data:`None` else a :py:exception:`ValueError` is raised.
+            :py:data:`None` else :py:data:`ValueError` is raised.
 
         pred_hidden: Predict net hidden state for the Sequence.
 
     Attributes:
         pred_log: A list containing the prediction network output
-            :py:class:`torch.Tensor`s. ``pred_log[i]`` is the predict
-            net output that was used when computing the ``i``th symbol
+            :py:class:`torch.Tensor` s. ``pred_log[i]`` is the predict
+            net output that was used when computing the ``i`` th symbol
             in ``labels``.
 
         labels: A List of ints containing the label indexes.

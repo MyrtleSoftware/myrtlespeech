@@ -7,7 +7,6 @@
     :caption: Contents:
 
     callbacks/index
-    eval
     run
     stage
     train
