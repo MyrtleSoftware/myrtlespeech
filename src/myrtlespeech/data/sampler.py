@@ -1,22 +1,19 @@
 import random
-from typing import Dict
-from typing import List
+from typing import Iterable
 from typing import Optional
-from typing import Set
-from typing import Union
 
 
 class SequentialRandomSampler:
-    """A sequential or random iterable over batches.
+    """A sequential or random iterable over batches of indices.
 
     The iterator used each time this iterable is iterated over will yield
-    batches either sequentially (i.e. in-order) or randomly (uniform without
-    replacement) from `batches`.
+    batches of indices either sequentially (i.e. in-order) or randomly (uniform
+    without replacement).
     This iterable records the number of times it has returned an iterator. A
     sequential iterator is returned if the current count is in `sequential`.
 
     Args:
-        indices: data with which batches are created.
+        indices: Data with which batches are created.
         batch_size: Batch dimension.
         shuffle: Set to True to have the data reshuffled at every epoch if a
             random iterator is used.
@@ -33,19 +30,19 @@ class SequentialRandomSampler:
 
     def __init__(
         self,
-        indices: Union[range, List],
+        indices: Iterable[int],
         batch_size: int,
         shuffle: bool,
-        drop_last: Optional[bool] = False,
-        n_iterators: Optional[int] = 0,
+        drop_last: bool = False,
+        n_iterators: int = 0,
         sequential: Optional[set] = None,
     ):
         self.shuffle = shuffle
         self.batch_indices = self._batch_indices(
             indices, batch_size, drop_last
         )
-        self._n_iterators: Optional[int] = n_iterators
-        self._sequential: Union[Set, Dict] = sequential or {}
+        self._n_iterators = n_iterators
+        self._sequential = sequential or set()
 
     def _batch_indices(self, indices, batch_size, drop_last):
         batches = []
@@ -76,11 +73,11 @@ class SortaGrad(SequentialRandomSampler):
 
     The SortaGrad curriculum learning strategy iterates over batches from the
     batched dataset sequentially for the first pass and then randomly for all
-    other passes. See Deep Speech 2 paper for more information on this:
-    `Deep Speech 2 <https://arxiv.org/abs/1512.02595>`_
+    other passes. See `Deep Speech 2 <https://arxiv.org/abs/1512.02595>`_ paper
+    for more information.
 
     Args:
-        indices: data with which batches are created.
+        indices: Data with which batches are created.
         batch_size: Batch dimension.
         shuffle: Set to True to have the data reshuffled at every epoch if a
             random iterator is used.
@@ -96,11 +93,11 @@ class SortaGrad(SequentialRandomSampler):
 
     def __init__(
         self,
-        indices: Union[range, List],
+        indices: Iterable[int],
         batch_size: int,
         shuffle: bool,
-        drop_last: Optional[bool] = False,
-        start_epoch: Optional[int] = 0,
+        drop_last: bool = False,
+        start_epoch: int = 0,
     ):
         super().__init__(
             indices,
