@@ -1,4 +1,3 @@
-import random
 from typing import Dict
 from typing import List
 from typing import Tuple
@@ -96,17 +95,21 @@ def test_sorta_grad_first_pass_sequential_remaining_random(
 @given(
     dataset_kwargs=dataset_gen(return_kwargs=True),
     n_iterators=st.integers(min_value=1, max_value=10),
+    sequential=st.lists(
+        range(st.integers(min_value=11, max_value=20)),
+        min_size=1,
+        max_size=st.integers(min_value=1, max_value=10),
+        unique=True,
+    ),
     n_sequential=st.integers(min_value=1, max_value=10),
     max_sequential=st.integers(min_value=11, max_value=20),
 )
 def test_sequential_strategy_seq_iter_when_epoch_in_seq_epochs(
-    dataset_kwargs: Tuple[List, Dict],
-    n_iterators: int,
-    n_sequential: int,
-    max_sequential: int,
+    dataset_kwargs: Tuple[List, Dict], n_iterators: int, sequential: list
 ):
     dataset, kwargs = dataset_kwargs
-
+    print("type(sequential):", type(sequential))
+    print("sequential:", sequential)
     dataset_batches = []
     batch = []
     for elem in dataset:
@@ -116,16 +119,14 @@ def test_sequential_strategy_seq_iter_when_epoch_in_seq_epochs(
             batch = []
     if batch and not kwargs["full_last_batch"]:
         dataset_batches.append(batch)
-    sequential = set(
-        sorted(random.sample(range(max_sequential), n_sequential))
-    )
+    sequential_epochs = set(sorted(sequential))
 
     seq_strat = SequentialRandomSampler(
         dataset,
         batch_size=kwargs["batch_size"],
         shuffle=True,
         n_iterators=n_iterators,
-        sequential=sequential,
+        sequential=sequential_epochs,
     )
 
     for epoch in range(n_iterators, max(sequential) + 2):
