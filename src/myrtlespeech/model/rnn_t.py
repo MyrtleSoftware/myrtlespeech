@@ -412,21 +412,55 @@ class RNNTJointNet(torch.nn.Module):
         ), "Batch size from prediction network and transcription must be equal"
 
         f = f.transpose(1, 0)  # (T, B, H1) -> (B, T, H1)
-        f = f.unsqueeze(dim=2)  # (B, T, 1, H)
-        f = f.expand((B1, T, U_, H1))
-
-        g = g.unsqueeze(dim=1)  # (B, 1, U_, H)
-        g = g.expand((B1, T, U_, H2))
-
-        concat_inp = torch.cat([f, g], dim=3)  # (B, T, U_, H1 + H2)
-
-        # reshape input to give 3 dimensions instead of 4 as required by fc API
-        concat_inp = concat_inp.view(B1, T * U_, -1)
+        h = self.memory_efficient_combine(((f, f_lens), (g, g_lens)))
+        # reshape input to give 3 dimensions instead of 2 as required by fc API
+        h = h[0].view(-1, 1, H1 + H2), h[1]
 
         # drop g_lens (see :py:class:`Transducer` docstrings)
-        h = self.fc((concat_inp, f_lens))
-
+        h = self.fc(h)
+        h = h[0].squeeze(1), h[1]  # (sum of all sizes, 1, vocab + 1) ->
+        # (sum of all sizes, vocab + 1)
         # return to 4D shape
-        h = h[0].view(B1, T, U_, -1), h[1]
+        return self.reverse_efficient_combine(h, g_lens)
 
-        return h
+    def memory_efficient_combine(self, x):
+        (f, f_lens), (g, g_lens) = x
+        B, T, H1 = f.shape
+        _, U_, H2 = g.shape
+
+        out_tensors = []
+        for b in range(B):
+            f_seq = f[b, : f_lens[b]]
+            f_seq = f_seq.unsqueeze(dim=1)  # (T, H1) -> (T, 1, H1)
+            f_seq = f_seq.expand((T, U_, H1))
+
+            # TODO: remove this +1 and do not -1 in the predicition network.
+            # And update docs to reflect this:
+            g_seq = g[b, : g_lens[b] + 1]
+            g_seq = g_seq.unsqueeze(dim=0)  # (U_, H) -> (1, U_, H)
+            g_seq = g_seq.expand((T, U_, H2))
+            out_tensors.append(
+                torch.cat([f_seq, g_seq], dim=2)
+            )  # (T, U_, H1 + H2)
+
+        return torch.stack(out_tensors, dim=0), f_lens
+
+    def reverse_efficient_combine(self, h, g_lens):
+        out, f_lens = h
+
+        T = f_lens.max()
+        U_ = g_lens.max() + 1  # TODO: remove this + 1
+        V_ = out.shape[1]  # Vocab + 1
+        B = len(g_lens)
+        out_expanded = torch.zeros(B, T, U_, V_)
+
+        idx = 0
+        for b in range(B):
+            out_len = f_lens[b] * (g_lens[b] + 1)
+            data = out[idx : idx + out_len, :]  # (t * u_, V_)
+            out_expanded[b, : f_lens[b], : g_lens[b], :] = data.view(
+                f_lens[b], g_lens[b], V_
+            )
+            idx += out_len
+
+        return out_expanded, f_lens
