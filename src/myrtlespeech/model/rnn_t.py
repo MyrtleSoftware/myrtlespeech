@@ -458,8 +458,8 @@ class RNNTJointNet(torch.nn.Module):
         for b in range(B):
             out_len = f_lens[b] * (g_lens[b] + 1)
             data = out[idx : idx + out_len, :]  # (t * u_, V_)
-            out_expanded[b, : f_lens[b], : g_lens[b], :] = data.view(
-                f_lens[b], g_lens[b], V_
+            out_expanded[b, : f_lens[b], : g_lens[b] + 1, :] = data.view(
+                f_lens[b], g_lens[b] + 1, V_
             )
             idx += out_len
 
