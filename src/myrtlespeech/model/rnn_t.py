@@ -410,7 +410,6 @@ class RNNTJointNet(torch.nn.Module):
         assert (
             B1 == B2
         ), "Batch size from prediction network and transcription must be equal"
-        print(f"T={T}, U + 1={U_}, H1={H1}, H2={H2}, B={B1}")
         f = f.transpose(1, 0)  # (T, B, H1) -> (B, T, H1)
         h = self.memory_efficient_combine(((f, f_lens), (g, g_lens)))
         # reshape input to give 3 dimensions instead of 2 as required by fc API
