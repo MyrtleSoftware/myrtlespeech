@@ -410,13 +410,11 @@ class RNNTJointNet(torch.nn.Module):
         assert (
             B1 == B2
         ), "Batch size from prediction network and transcription must be equal"
-
+        print(f"T={T}, U + 1={U_}, H1={H1}, H2={H2}, B={B1}")
         f = f.transpose(1, 0)  # (T, B, H1) -> (B, T, H1)
         h = self.memory_efficient_combine(((f, f_lens), (g, g_lens)))
         # reshape input to give 3 dimensions instead of 2 as required by fc API
         h = h[0].view(-1, 1, H1 + H2), h[1]
-
-        # drop g_lens (see :py:class:`Transducer` docstrings)
         h = self.fc(h)
         h = h[0].squeeze(1), h[1]  # (sum of all sizes, 1, vocab + 1) ->
         # (sum of all sizes, vocab + 1)
@@ -427,23 +425,30 @@ class RNNTJointNet(torch.nn.Module):
         (f, f_lens), (g, g_lens) = x
         B, T, H1 = f.shape
         _, U_, H2 = g.shape
-
+        assert (
+            f_lens.max() == T
+        ), f"seq len must equal T but {f_lens.max()} != {T}"
+        assert (
+            g_lens.max() + 1 == U_
+        ), f"label seq len + 1 must equal U_ but {g_lens.max() + 1} != {U_}"
         out_tensors = []
         for b in range(B):
-            f_seq = f[b, : f_lens[b]]
-            f_seq = f_seq.unsqueeze(dim=1)  # (T, H1) -> (T, 1, H1)
-            f_seq = f_seq.expand((T, U_, H1))
+            t = f_lens[b]
+            u_ = g_lens[b] + 1
+            # TODO: remove above +1 and do not -1 in the prediction network.
+            # And update docs to reflect this
 
-            # TODO: remove this +1 and do not -1 in the predicition network.
-            # And update docs to reflect this:
-            g_seq = g[b, : g_lens[b] + 1]
-            g_seq = g_seq.unsqueeze(dim=0)  # (U_, H) -> (1, U_, H)
-            g_seq = g_seq.expand((T, U_, H2))
+            f_seq = f[b, :t]
+            f_seq = f_seq.unsqueeze(dim=1)  # (t, H1) -> (t, 1, H1)
+            f_seq = f_seq.expand((t, u_, H1))
+            g_seq = g[b, :u_]
+            g_seq = g_seq.unsqueeze(dim=0)  # (u_, H2) -> (1, u_, H2)
+            g_seq = g_seq.expand((t, u_, H2))
             out_tensors.append(
-                torch.cat([f_seq, g_seq], dim=2)
-            )  # (T, U_, H1 + H2)
+                torch.cat([f_seq, g_seq], dim=2).view(-1, H1 + H2)
+            )  # (t * u_, H1 + H2)
 
-        return torch.stack(out_tensors, dim=0), f_lens
+        return torch.cat(out_tensors, dim=0), f_lens
 
     def reverse_efficient_combine(self, h, g_lens):
         out, f_lens = h
@@ -456,11 +461,12 @@ class RNNTJointNet(torch.nn.Module):
 
         idx = 0
         for b in range(B):
-            out_len = f_lens[b] * (g_lens[b] + 1)
+            t = f_lens[b]
+            u_ = g_lens[b] + 1
+            out_len = t * u_
+
             data = out[idx : idx + out_len, :]  # (t * u_, V_)
-            out_expanded[b, : f_lens[b], : g_lens[b] + 1, :] = data.view(
-                f_lens[b], g_lens[b] + 1, V_
-            )
+            out_expanded[b, :t, :u_, :] = data.view(t, u_, V_)
             idx += out_len
 
         return out_expanded, f_lens
