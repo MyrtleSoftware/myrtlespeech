@@ -1,6 +1,8 @@
 from enum import IntEnum
 from typing import Optional
 from typing import Tuple
+from typing import TypeVar
+from typing import Union
 
 import torch
 
@@ -9,6 +11,13 @@ class RNNType(IntEnum):
     LSTM = 0
     GRU = 1
     BASIC_RNN = 2
+
+
+RNNState = TypeVar("RNNState", torch.Tensor, Tuple[torch.Tensor, torch.Tensor])
+
+RNNLengths = TypeVar("RNNLengths", bound=torch.Tensor)
+
+RNNInput = Union[torch.Tensor, Tuple[torch.Tensor, Optional[RNNState]]]
 
 
 class RNN(torch.nn.Module):
@@ -103,49 +112,93 @@ class RNN(torch.nn.Module):
             self.rnn = self.rnn.cuda()
 
     def forward(
-        self, x: Tuple[torch.Tensor, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self, x: Tuple[RNNInput, RNNLengths]
+    ) -> Tuple[RNNInput, RNNLengths]:
         r"""Returns the result of applying the rnn to ``x[0]``.
 
-        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
-        :py:func:`torch.cuda.is_available` was :py:data:`True` on
+        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda`
+        if :py:func:`torch.cuda.is_available` was :py:data:`True` on
         initialisation.
 
-        Args
-            x: A tuple where the first element is the network input (a
+        Args:
+            x: A Tuple ``(x[0], x[1])``. ``x[0]`` can take two forms: either it
+                is a tuple ``x[0] = (inp, hid)`` or it is a torch tensor
+                ``x[0] = inp``. ``inp`` is the network input (a
                 :py:class:`torch.Tensor`) with size ``[seq_len, batch,
-                in_features]`` or ``[batch, seq_len, in_features]`` if
-                ``batch_first=True`` and the second element is
-                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-                represents the sequence length of the corresponding *input*
-                sequence.
+                in_features]``. ``hid`` is the RNN hidden state which is
+                either a length 2 Tuple of :py:class:`torch.Tensor`s or
+                a single :py:class:`torch.Tensor` depending on the ``RNNType``
+                (see :py:class:`torch.nn` documentation for more information).
+
+                The return type `res[0]` will be the same as the `x[0]` type so
+                you should pass `hid = None` if you would like the hidden state
+                returned and it is the start-of-sequence. In this case, the
+                hidden state(s) will be initialised to zero in PyTorch.
+
+                ``x[1]`` is a :py:class:`torch.Tensor` where each entry
+                represents the sequence length of the corresponding network
+                *input* sequence.
 
         Returns:
-            The first element of the Tuple return value is the result after
-            applying the RNN to ``x[0]``. It must have size ``[seq_len,
-            batch, out_features]`` or ``[batch, seq_len, out_features]`` if
-            ``batch_first=True``.
+            A Tuple ``(res[0], res[1])``. ``res[0]`` will take the same form as
+            ``x[0]``: either a tuple ``res[0] = (out, hid)`` or a
+            :py:class:`torch.Tensor``. ``res[0] = out``. ``out`` is the
+            result after applying the RNN to ``inp``. It will have size
+            ``[seq_len, batch, out_features]``. ``hid`` is the
+            returned RNN hidden state which is either a length 2 Tuple of
+            :py:class:`torch.Tensor`s or a single :py:class:`torch.Tensor`
+            depending on the ``RNNType`` (see :py:class:`torch.nn`
+            documentation for more information).
 
-            The second element of the Tuple return value is a
-            :py:class:`torch.Tensor` with size ``[batch]`` where each entry
-            represents the sequence length of the corresponding *output*
-            sequence. This will be equal to ``x[1]`` as this layer does not
-            currently change sequence length.
+            ``res[1]`` is a :py:class:`torch.Tensor` where each entry
+            represents the sequence length of the corresponding network
+            *output* sequence. This will be equal to ``x[1]`` as this layer
+            does not change sequence length.
         """
+
+        if isinstance(x[0], torch.Tensor):
+            inp = x[0]
+            hid = None
+            return_tuple = False
+        elif isinstance(x[0], tuple) and len(x[0]) == 2:
+            inp, hid = x[0]
+            return_tuple = True
+        else:
+            raise ValueError(
+                "`x[0]` must be of form (input, hidden) or (input)."
+            )
+
         if self.use_cuda:
-            x = (x[0].cuda(), x[1].cuda())
+            inp = inp.cuda()
+            if hid is not None:
+                if isinstance(hid, tuple):  # LSTM/GRU
+                    hid = hid[0].cuda(), hid[1].cuda()
+                elif isinstance(hid, torch.Tensor):  # Vanilla RNN
+                    hid = hid.cuda()
+                else:
+                    raise ValueError(
+                        "hid must be an instance of class in \
+                        [torch.Tensor, tuple]"
+                    )
 
         # Record sequence length to enable DataParallel
         # https://pytorch.org/docs/stable/notes/faq.html#pack-rnn-unpack-with-data-parallelism
-        total_length = x[0].size(0 if not self.batch_first else 1)
-        input = torch.nn.utils.rnn.pack_padded_sequence(
-            input=x[0],
+        total_length = inp.size(0 if not self.batch_first else 1)
+        inp = torch.nn.utils.rnn.pack_padded_sequence(
+            input=inp,
             lengths=x[1],
             batch_first=self.batch_first,
             enforce_sorted=False,
         )
-        h, _ = self.rnn(input)
-        h, lengths = torch.nn.utils.rnn.pad_packed_sequence(
-            sequence=h, batch_first=self.batch_first, total_length=total_length
+
+        out, hid = self.rnn(inp, hx=hid)
+
+        out, lengths = torch.nn.utils.rnn.pad_packed_sequence(
+            sequence=out,
+            batch_first=self.batch_first,
+            total_length=total_length,
         )
-        return h, lengths
+
+        if return_tuple:
+            return (out, hid), lengths
+        return out, lengths
