@@ -151,16 +151,17 @@ def build(
 
     """
     # encoder output size is only required for build_transducer_enc_cfg if fc2
-    # layer is present
-    # (else it is necessarily specified by the encoder's rnn hidden size).
-    # If fc2 layer *is* present, output size will be equal to joint
-    # network hidden size:
+    # layer is present (otherwise it is necessarily specified by the encoder's
+    # rnn hidden size).
+    # If fc2 layer *is* present, output size will be equal to min of joint
+    # network hidden size and (fc2 hidden_size // 2):
     out_enc_size = None
-    if (
-        transducer_cfg.transducer_encoder.HasField("fc2")
-        and transducer_cfg.transducer_joint_net.fc.hidden_size > 0
-    ):
-        out_enc_size = transducer_cfg.transducer_joint_net.fc.hidden_size
+    if transducer_cfg.transducer_encoder.HasField("fc2"):
+        enc_out_joint = transducer_cfg.transducer_joint_net.fc.hidden_size
+        enc_out_joint = max(enc_out_joint, 1)
+        enc_out_fc2 = transducer_cfg.transducer_encoder.fc2.hidden_size // 2
+        enc_out_fc2 = max(enc_out_fc2, 1)
+        out_enc_size = min(enc_out_joint, enc_out_fc2)
     encoder, encoder_out = build_transducer_enc_cfg(
         transducer_cfg.transducer_encoder,
         input_features * input_channels,
