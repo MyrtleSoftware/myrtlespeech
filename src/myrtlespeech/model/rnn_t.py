@@ -352,7 +352,7 @@ class RNNTPredictNet(torch.nn.Module):
 
         B, _, H = y_0.shape
         # preprend blank
-        start = torch.zeros((B, 1, H)).type(y_0.dtype).to(y_0.device)
+        start = torch.zeros((B, 1, H), device=y_0.device, dtype=y_0.dtype)
         y_0 = torch.cat([start, y_0], dim=1).contiguous()  # (B, U + 1, H)
 
         return (y_0, y_1)
