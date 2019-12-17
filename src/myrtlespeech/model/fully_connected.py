@@ -26,6 +26,9 @@ class FullyConnected(torch.nn.Module):
         hidden_activation_fn: The activation function applied after each hidden
             layer, if any.
 
+        dropout: The dropout probability to be applied between hidden layers.
+            An Optional float in ``[0., 1.]``.
+
     Attributes:
         fully_connected: A :py:class:`torch.nn.Module` that implements the
             network specified by the class arguments. It is be an instance of
@@ -36,14 +39,21 @@ class FullyConnected(torch.nn.Module):
 
         out_features: See Args.
 
+        dropout: See Args.
+
     Raises:
         :py:class:`ValueError`: If ``num_hidden_layers < 0``.
+
+        :py:class:`ValueError`: If ``dropout is < 0 or > 1``.
 
         :py:class:`ValueError`: If ``num_hidden_layers == 0 and hidden_size is
             not None``.
 
         :py:class:`ValueError`: If ``num_hidden_layers == 0 and
-        hidden_activation_fn is not None``.
+            hidden_activation_fn is not None``.
+
+        :py:class:`ValueError`: If ``num_hidden_layers == 0 and dropout
+            != 0.0``.
     """
 
     def __init__(
@@ -53,9 +63,15 @@ class FullyConnected(torch.nn.Module):
         num_hidden_layers: int,
         hidden_size: Optional[int],
         hidden_activation_fn: Optional[torch.nn.Module],
+        dropout: Optional[float] = None,
     ):
         if num_hidden_layers < 0:
             raise ValueError("num_hidden_layers must be >= 0")
+
+        if dropout and (dropout < 0 or dropout > 1):
+            raise ValueError(
+                f"dropout must be >= 0. and <= 1. but dropout={dropout}"
+            )
 
         if num_hidden_layers == 0:
             if hidden_size is not None:
@@ -66,16 +82,22 @@ class FullyConnected(torch.nn.Module):
                 raise ValueError(
                     "num_hidden_layers==0 but hidden_activation_fn is not None"
                 )
+            if dropout:
+                raise ValueError(
+                    "num_hidden_layers==0 so dropout must be None."
+                )
 
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
+        self.dropout = dropout
         self.fully_connected = self._build_fully_connected(
             in_features,
             out_features,
             num_hidden_layers,
             hidden_size,
             hidden_activation_fn,
+            dropout,
         )
 
         self.use_cuda = torch.cuda.is_available()
@@ -89,12 +111,15 @@ class FullyConnected(torch.nn.Module):
         num_hidden_layers: int,
         hidden_size: Optional[int],
         hidden_activation_fn: Optional[torch.nn.Module],
+        dropout: Optional[float] = None,
     ) -> Union[torch.nn.Linear, torch.nn.Sequential]:
         hidden_layers = []
         for _ in range(num_hidden_layers):
             hidden_layers.append(torch.nn.Linear(in_features, hidden_size))
             if hidden_activation_fn:
                 hidden_layers.append(hidden_activation_fn)
+            if dropout:
+                hidden_layers.append(torch.nn.Dropout(p=dropout))
             assert hidden_size is not None
             in_features = hidden_size
 
@@ -130,8 +155,12 @@ class FullyConnected(torch.nn.Module):
             represents the sequence length of the corresponding *output*
             sequence.
         """
-        if self.use_cuda:
-            x = (x[0].cuda(), x[1].cuda())
+        x_inp, x_len = x
 
-        result = self.fully_connected(x[0])
-        return result, x[1]
+        if self.use_cuda:
+            x_inp = x_inp.cuda()
+            x_len = x_len.cuda()
+
+        result = self.fully_connected(x_inp)
+
+        return result, x_len

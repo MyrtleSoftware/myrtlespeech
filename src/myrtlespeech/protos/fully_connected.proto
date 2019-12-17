@@ -2,8 +2,9 @@ syntax = "proto3";
 
 package myrtlespeech.protos;
 
-import "myrtlespeech/protos/activation.proto";
+import "google/protobuf/wrappers.proto";
 
+import "myrtlespeech/protos/activation.proto";
 
 // Configuration for a fully connected decoder.
 message FullyConnected {
@@ -21,4 +22,11 @@ message FullyConnected {
   // ``activation_fn`` has no meaning when ``num_hidden_layers: 0`` as there is
   // only an output layer and no hidden layers!
   Activation activation = 3;
+
+  // The dropout value to apply after each hidden layer activation
+  //
+  // Dropout is not applied if ``dropout: 0.`` and is only applied between
+  // hidden layers (i.e. is not applied when ``num_hidden_layers: 0``)
+  google.protobuf.FloatValue dropout = 4;
+
 }
