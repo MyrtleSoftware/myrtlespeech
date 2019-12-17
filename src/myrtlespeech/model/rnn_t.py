@@ -385,6 +385,11 @@ class RNNTJointNet(torch.nn.Module):
         super().__init__()
         self.fc = fc
 
+        self.use_cuda = torch.cuda.is_available()
+        if self.use_cuda:
+            self.fc.cuda()
+        self._device = "cuda:0" if self.use_cuda else "cpu"
+
     def forward(
         self,
         x: Tuple[
@@ -403,51 +408,47 @@ class RNNTJointNet(torch.nn.Module):
             :py:class:`.Transducer`'s :py:meth:`forward` docstring.
         """
         (f, f_lens), (g, g_lens) = x
+        if self.use_cuda:
+            f_lens = f_lens.cuda()
+            g_lens = g_lens.cuda()
 
-        T, B1, H1 = f.shape
-        B2, U_, H2 = g.shape
+        # Get masks of lengths
+        self.f_mask = self._get_mask(f_lens)
+        self.g_mask = self._get_mask(g_lens + 1)
+        self.mask = self.f_mask.unsqueeze(2) * self.g_mask.unsqueeze(1)
 
-        assert (
-            B1 == B2
-        ), "Batch size from prediction network and transcription must be equal"
         f = f.transpose(1, 0)  # (T, B, H1) -> (B, T, H1)
+
         h = self.memory_efficient_combine(((f, f_lens), (g, g_lens)))
         # reshape input to give 3 dimensions instead of 2 as required by fc API
-        h = h[0].view(-1, 1, H1 + H2), h[1]
+        h = h[0].unsqueeze(1), h[1]
         h = self.fc(h)
-        h = h[0].squeeze(1), h[1]  # (sum of all sizes, 1, vocab + 1) ->
-        # (sum of all sizes, vocab + 1)
-        # return to 4D shape
+        h = h[0].squeeze(1), h[1]
+
         return self.reverse_efficient_combine(h, g_lens)
 
     def memory_efficient_combine(self, x):
         (f, f_lens), (g, g_lens) = x
         B, T, H1 = f.shape
-        _, U_, H2 = g.shape
+        B2, U_, H2 = g.shape
+        assert B == B2
         assert (
             f_lens.max() == T
         ), f"seq len must equal T but {f_lens.max()} != {T}"
         assert (
             g_lens.max() + 1 == U_
         ), f"label seq len + 1 must equal U_ but {g_lens.max() + 1} != {U_}"
-        out_tensors = []
-        for b in range(B):
-            t = f_lens[b]
-            u_ = g_lens[b] + 1
-            # TODO: remove above +1 and do not -1 in the prediction network.
-            # And update docs to reflect this
 
-            f_seq = f[b, :t]
-            f_seq = f_seq.unsqueeze(dim=1)  # (t, H1) -> (t, 1, H1)
-            f_seq = f_seq.expand((t, u_, H1))
-            g_seq = g[b, :u_]
-            g_seq = g_seq.unsqueeze(dim=0)  # (u_, H2) -> (1, u_, H2)
-            g_seq = g_seq.expand((t, u_, H2))
-            out_tensors.append(
-                torch.cat([f_seq, g_seq], dim=2).view(-1, H1 + H2)
-            )  # (t * u_, H1 + H2)
+        f = f.unsqueeze(dim=2).expand((B, T, U_, H1))[self.mask]
+        g = g.unsqueeze(dim=1).expand((B, T, U_, H2))[self.mask]
 
-        return torch.cat(out_tensors, dim=0), f_lens
+        return torch.cat([f, g], dim=1), f_lens
+
+    def _get_mask(self, lens):
+        max_len = lens.max()
+        return torch.arange(
+            max_len, dtype=lens.dtype, device=self._device
+        ).expand(len(lens), max_len) < lens.unsqueeze(1)
 
     def reverse_efficient_combine(self, h, g_lens):
         out, f_lens = h
@@ -456,16 +457,8 @@ class RNNTJointNet(torch.nn.Module):
         U_ = g_lens.max() + 1  # TODO: remove this + 1
         V_ = out.shape[1]  # Vocab + 1
         B = len(g_lens)
-        out_expanded = torch.zeros(B, T, U_, V_)
 
-        idx = 0
-        for b in range(B):
-            t = f_lens[b]
-            u_ = g_lens[b] + 1
-            out_len = t * u_
+        res = torch.zeros(B, T, U_, V_, device=self._device, dtype=out.dtype)
 
-            data = out[idx : idx + out_len, :]  # (t * u_, V_)
-            out_expanded[b, :t, :u_, :] = data.view(t, u_, V_)
-            idx += out_len
-
-        return out_expanded, f_lens
+        res[self.mask] = out
+        return res, f_lens

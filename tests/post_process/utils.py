@@ -62,7 +62,8 @@ class DummyJointNet(RNNTJointNet):
     """
 
     def __init__(self):
-        super().__init__(fc=None)
+        fc_not_used = torch.nn.Linear(1, 1)
+        super().__init__(fc=fc_not_used)
 
     def forward(self, x):
         """Replicates :py:attr:`Transducer.joint_net` API.
