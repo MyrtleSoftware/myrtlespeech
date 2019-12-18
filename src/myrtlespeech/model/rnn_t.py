@@ -463,7 +463,7 @@ class RNNTJointNet(torch.nn.Module):
         memory_efficient: See Args.
     """
 
-    def __init__(self, fc: torch.nn.Module, memory_efficient: bool):
+    def __init__(self, fc: torch.nn.Module, memory_efficient: bool = True):
         super().__init__()
         self.fc = fc
         self.memory_efficient = True
