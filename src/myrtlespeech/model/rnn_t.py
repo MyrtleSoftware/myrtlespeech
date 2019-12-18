@@ -428,19 +428,18 @@ class RNNTJointNet(torch.nn.Module):
             of the Transducer joint net.
 
             Must accept as input a tuple where the first element is the network
-            input (a :py`torch.Tensor`) with size ``[batch, max_seq_len
-            * max_label_len, encoder_out_feat + pred_net_out_feat]`` and the
+            input (a :py`torch.Tensor`) with size ``[-1, -1,
+            encoder_out_feat + pred_net_out_feat]`` and the
             second element is a :py:class:`torch.Tensor` of size ``[batch]``
             where each entry represents the sequence length of the
             corresponding *input* sequence to the fc layer.
 
             It must return a tuple where the first element is the result after
             applying this fc layer over the final dimension only meaning it
-            has size ``[batch, max_seq_len * max_label_len,
-            joint_net_out_feat]``. The second element of the tuple return
-            value is a :py:class:`torch.Tensor` with size ``[batch]`` where
-            each entry represents the sequence length of the corresponding
-            *output* sequence.
+            has size ``[-1, -1, joint_net_out_feat]``. The second element of
+            the tuple return value is a :py:class:`torch.Tensor` with size
+            ``[batch]`` where each entry represents the sequence length of the
+            corresponding *output* sequence.
     """
 
     def __init__(self, fc: torch.nn.Module):
@@ -461,6 +460,21 @@ class RNNTJointNet(torch.nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Returns the result of applying the Transducer joint network.
 
+        This method combines the encoder and decoder input in a memory
+        efficient way by removing all padding in the audio sequences and label
+        sequences as proposed in `Improving RNN Transducer Modeling for
+        End-to-End Speech Recognition <https://arxiv.org/abs/1909.12415>`_
+        instead of broadcasting to the full hidden-size
+        :py:class:`torch.Tensor` of size ``[batch, max_seq_len,
+        max_label_length, encoder_out_feat + pred_net_out_feat]``.
+
+        .. note::
+
+            This memory efficient combination adds substantial forward
+            pass overhead. However, in our experience, this is more than offset
+            in terms of total training time **iff the modification allows
+            a doubling of batch size**.
+
         Args:
             x: A Tuple where the first element is the ``encoder`` output and
                 the second is the ``predict_net`` output.
@@ -474,22 +488,23 @@ class RNNTJointNet(torch.nn.Module):
             f_lens = f_lens.cuda()
             g_lens = g_lens.cuda()
 
-        # Get masks of lengths
-        self.f_mask = self._get_mask(f_lens)
-        self.g_mask = self._get_mask(g_lens)
-        self.mask = self.f_mask.unsqueeze(2) * self.g_mask.unsqueeze(1)
+        # Get masks of lengths for memory efficient combine
+        f_mask = self._get_mask(f_lens)
+        g_mask = self._get_mask(g_lens)
+        self.mask = f_mask.unsqueeze(2) * g_mask.unsqueeze(1)
 
         f = f.transpose(1, 0)  # (T, B, H1) -> (B, T, H1)
 
-        h = self.memory_efficient_combine(((f, f_lens), (g, g_lens)))
+        h = self._memory_efficient_combine(((f, f_lens), (g, g_lens)))
         # reshape input to give 3 dimensions instead of 2 as required by fc API
         h = h[0].unsqueeze(1), h[1]
         h = self.fc(h)
         h = h[0].squeeze(1), h[1]
 
-        return self.reverse_efficient_combine(h, g_lens)
+        return self._reverse_efficient_combine(h, g_lens)
 
-    def memory_efficient_combine(self, x):
+    def _memory_efficient_combine(self, x):
+        """Combines encoder and decoder output in a memory efficient way."""
         (f, f_lens), (g, g_lens) = x
         B, T, H1 = f.shape
         B2, U_, H2 = g.shape
@@ -507,12 +522,14 @@ class RNNTJointNet(torch.nn.Module):
         return torch.cat([f, g], dim=1), f_lens
 
     def _get_mask(self, lens):
+        """Returns a boolean-mask based on lens."""
         max_len = lens.max()
         return torch.arange(
             max_len, dtype=lens.dtype, device=self._device
         ).expand(len(lens), max_len) < lens.unsqueeze(1)
 
-    def reverse_efficient_combine(self, h, g_lens):
+    def _reverse_efficient_combine(self, h, g_lens):
+        """Reverses :py:meth:`_memory_efficient_combine`."""
         out, f_lens = h
 
         T = f_lens.max()
