@@ -44,8 +44,8 @@ class Transducer(torch.nn.Module):
             start-of-sequence token is prepended to the label sequence.
             The second element of the returned Tuple is a
             :py:class:`torch.Tensor` of size ``[batch]`` with the containing
-            the lengths of the target label sequence. These should be
-            unchanged from the input lengths.
+            the lengths of the target label sequence. These should be ``+ 1``
+            greater than the input label sequence lengths.
 
             It is possible **but not necessary** to use an initialized
             :py:class:`TransducerPredictNet` class as `predict_net`.
