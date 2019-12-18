@@ -294,9 +294,8 @@ class RNNTPredictNet(torch.nn.Module):
 
             The length of the sequence is increased by one as the
             start-of-sequence embedded state (all zeros) is prepended to the
-            start of the label sequence. Note that this change *is not*
-            reflected in the output lengths as the :py:class:`TransducerLoss`
-            requires the true label lengths.
+            start of the label sequence. This change is reflected in the
+            output lengths.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
@@ -369,17 +368,10 @@ class RNNTPredictNet(torch.nn.Module):
 
         if not decoding:
             pred_inp = self._prepend_SOS(y)
-            # Update the lengths by adding one before inputing to the pred_nn
-            pred_inp = (pred_inp[0], pred_inp[1] + 1)
         else:
             pred_inp = (y[0], hidden_state), y[1]
 
         out = self.pred_nn(pred_inp)
-
-        if not decoding:
-            # Revert the lengths to 'true' values (i.e. not including SOS)
-            # by subtracting one
-            out = (out[0], out[1] - 1)
 
         return out
 
@@ -416,8 +408,7 @@ class RNNTPredictNet(torch.nn.Module):
 
     @staticmethod
     def _prepend_SOS(y):
-        r"""Prepends the SOS embedding (all zeros) to the target tensor.
-        """
+        r"""Prepends the SOS embedding (all zeros) to the target tensor."""
         y_0, y_1 = y
 
         B, _, H = y_0.shape
@@ -425,7 +416,8 @@ class RNNTPredictNet(torch.nn.Module):
         start = torch.zeros((B, 1, H), device=y_0.device, dtype=y_0.dtype)
         y_0 = torch.cat([start, y_0], dim=1).contiguous()  # (B, U + 1, H)
 
-        return (y_0, y_1)
+        # Update the lengths by adding one:
+        return y_0, y_1 + 1
 
 
 class RNNTJointNet(torch.nn.Module):
@@ -455,6 +447,11 @@ class RNNTJointNet(torch.nn.Module):
         super().__init__()
         self.fc = fc
 
+        self.use_cuda = torch.cuda.is_available()
+        if self.use_cuda:
+            self.fc.cuda()
+        self._device = "cuda:0" if self.use_cuda else "cpu"
+
     def forward(
         self,
         x: Tuple[
@@ -473,30 +470,57 @@ class RNNTJointNet(torch.nn.Module):
             :py:class:`.Transducer`'s :py:meth:`forward` docstring.
         """
         (f, f_lens), (g, g_lens) = x
+        if self.use_cuda:
+            f_lens = f_lens.cuda()
+            g_lens = g_lens.cuda()
 
-        T, B1, H1 = f.shape
-        B2, U_, H2 = g.shape
-
-        assert (
-            B1 == B2
-        ), "Batch size from prediction network and transcription must be equal"
+        # Get masks of lengths
+        self.f_mask = self._get_mask(f_lens)
+        self.g_mask = self._get_mask(g_lens)
+        self.mask = self.f_mask.unsqueeze(2) * self.g_mask.unsqueeze(1)
 
         f = f.transpose(1, 0)  # (T, B, H1) -> (B, T, H1)
-        f = f.unsqueeze(dim=2)  # (B, T, 1, H)
-        f = f.expand((B1, T, U_, H1))
 
-        g = g.unsqueeze(dim=1)  # (B, 1, U_, H)
-        g = g.expand((B1, T, U_, H2))
+        h = self.memory_efficient_combine(((f, f_lens), (g, g_lens)))
+        # reshape input to give 3 dimensions instead of 2 as required by fc API
+        h = h[0].unsqueeze(1), h[1]
+        h = self.fc(h)
+        h = h[0].squeeze(1), h[1]
 
-        concat_inp = torch.cat([f, g], dim=3)  # (B, T, U_, H1 + H2)
+        return self.reverse_efficient_combine(h, g_lens)
 
-        # reshape input to give 3 dimensions instead of 4 as required by fc API
-        concat_inp = concat_inp.view(B1, T * U_, -1)
+    def memory_efficient_combine(self, x):
+        (f, f_lens), (g, g_lens) = x
+        B, T, H1 = f.shape
+        B2, U_, H2 = g.shape
+        assert B == B2
+        assert (
+            f_lens.max() == T
+        ), f"seq len must equal T but {f_lens.max()} != {T}"
+        assert (
+            g_lens.max() == U_
+        ), f"label seq len  must equal U_ but {g_lens.max()} != {U_}"
 
-        # drop g_lens (see :py:class:`Transducer` docstrings)
-        h = self.fc((concat_inp, f_lens))
+        f = f.unsqueeze(dim=2).expand((B, T, U_, H1))[self.mask]
+        g = g.unsqueeze(dim=1).expand((B, T, U_, H2))[self.mask]
 
-        # return to 4D shape
-        h = h[0].view(B1, T, U_, -1), h[1]
+        return torch.cat([f, g], dim=1), f_lens
 
-        return h
+    def _get_mask(self, lens):
+        max_len = lens.max()
+        return torch.arange(
+            max_len, dtype=lens.dtype, device=self._device
+        ).expand(len(lens), max_len) < lens.unsqueeze(1)
+
+    def reverse_efficient_combine(self, h, g_lens):
+        out, f_lens = h
+
+        T = f_lens.max()
+        U_ = g_lens.max()
+        V_ = out.shape[1]  # V_ = Vocab + 1
+        B = len(g_lens)
+
+        res = torch.zeros(B, T, U_, V_, device=self._device, dtype=out.dtype)
+
+        res[self.mask] = out
+        return res, f_lens
