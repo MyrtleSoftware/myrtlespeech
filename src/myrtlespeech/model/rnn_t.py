@@ -440,12 +440,33 @@ class RNNTJointNet(torch.nn.Module):
             the tuple return value is a :py:class:`torch.Tensor` with size
             ``[batch]`` where each entry represents the sequence length of the
             corresponding *output* sequence.
+
+        memory_efficient: If :py:data:`True`, the joint network combines the
+            encoder and decoder input in a memory efficient way. It does this
+            by removing all padding in the audio sequences and label
+            sequences as proposed in `Improving RNN Transducer Modeling for
+            End-to-End Speech Recognition <https://arxiv.org/abs/1909.12415>`_
+            instead of broadcasting to the full hidden-size
+            :py:class:`torch.Tensor` of size ``[batch, max_seq_len,
+            max_label_length, encoder_out_feat + pred_net_out_feat]``.
+
+            .. note::
+
+                This memory efficient combination adds substantial overhead.
+                It should only be :py:data:`True` if the modification enables
+                a doubling of batch size as in our experience, this more than
+                offsets the added overhead. **In particular,
+                ``memory_efficient = True`` is not likely to be appropriate
+                for low batch-size inference**.
+
+    Attributes:
+        memory_efficient: See Args.
     """
 
-    def __init__(self, fc: torch.nn.Module):
+    def __init__(self, fc: torch.nn.Module, memory_efficient: bool):
         super().__init__()
         self.fc = fc
-
+        self.memory_efficient = True
         self.use_cuda = torch.cuda.is_available()
         if self.use_cuda:
             self.fc.cuda()
@@ -460,20 +481,8 @@ class RNNTJointNet(torch.nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Returns the result of applying the Transducer joint network.
 
-        This method combines the encoder and decoder input in a memory
-        efficient way by removing all padding in the audio sequences and label
-        sequences as proposed in `Improving RNN Transducer Modeling for
-        End-to-End Speech Recognition <https://arxiv.org/abs/1909.12415>`_
-        instead of broadcasting to the full hidden-size
-        :py:class:`torch.Tensor` of size ``[batch, max_seq_len,
-        max_label_length, encoder_out_feat + pred_net_out_feat]``.
-
-        .. note::
-
-            This memory efficient combination adds substantial forward
-            pass overhead. However, in our experience, this is more than offset
-            in terms of total training time **iff the modification allows
-            a doubling of batch size**.
+        If ``self.memory_efficient`` is :py:data:`True`, the method will
+        take a memory efficient (but slower) path (see initialisation Args.)
 
         Args:
             x: A Tuple where the first element is the ``encoder`` output and
@@ -484,24 +493,42 @@ class RNNTJointNet(torch.nn.Module):
             :py:class:`.Transducer`'s :py:meth:`forward` docstring.
         """
         (f, f_lens), (g, g_lens) = x
-        if self.use_cuda:
-            f_lens = f_lens.cuda()
-            g_lens = g_lens.cuda()
 
-        # Get masks of lengths for memory efficient combine
-        f_mask = self._get_mask(f_lens)
-        g_mask = self._get_mask(g_lens)
-        self.mask = f_mask.unsqueeze(2) * g_mask.unsqueeze(1)
+        T, B, H1 = f.shape
+        B2, U_, H2 = g.shape
+
+        assert (
+            B == B2
+        ), "Batch size from prediction network and transcription must be equal"
 
         f = f.transpose(1, 0)  # (T, B, H1) -> (B, T, H1)
 
-        h = self._memory_efficient_combine(((f, f_lens), (g, g_lens)))
-        # reshape input to give 3 dimensions instead of 2 as required by fc API
-        h = h[0].unsqueeze(1), h[1]
-        h = self.fc(h)
-        h = h[0].squeeze(1), h[1]
+        if not self.memory_efficient:
+            f = f.unsqueeze(dim=2)  # (B, T, 1, H)
+            f = f.expand((B, T, U_, H1))
 
-        return self._reverse_efficient_combine(h, g_lens)
+            g = g.unsqueeze(dim=1)  # (B, 1, U_, H)
+            g = g.expand((B, T, U_, H2))
+
+            h = torch.cat([f, g], dim=3)  # (B, T, U_, H1 + H2)
+
+            # reshape input to 3 dimensions instead of 4 as required by fc
+            h = h.view(B, T * U_, -1), f_lens
+            h = self.fc(h)
+            h = h[0].view(B, T, U_, -1), h[1]
+        else:
+            # Get masks of lengths for memory efficient combine
+            f_mask = self._get_mask(f_lens)
+            g_mask = self._get_mask(g_lens)
+            self.mask = f_mask.unsqueeze(2) * g_mask.unsqueeze(1)
+
+            h = self._memory_efficient_combine(((f, f_lens), (g, g_lens)))
+            # reshape input to give 3 dimensions instead of 2
+            h = h[0].unsqueeze(1), h[1]
+            h = self.fc(h)
+            h = h[0].squeeze(1), h[1]
+            h = self._reverse_efficient_combine(h, g_lens)
+        return h
 
     def _memory_efficient_combine(self, x):
         """Combines encoder and decoder output in a memory efficient way."""
@@ -523,6 +550,9 @@ class RNNTJointNet(torch.nn.Module):
 
     def _get_mask(self, lens):
         """Returns a boolean-mask based on lens."""
+        # Ensure lens are on gpu if available
+        if self.use_cuda:
+            lens = lens.cuda()
         max_len = lens.max()
         return torch.arange(
             max_len, dtype=lens.dtype, device=self._device
