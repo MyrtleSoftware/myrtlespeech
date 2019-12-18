@@ -98,19 +98,19 @@ def test_build_rnn_rnn_forward_output_correct_size(
 ) -> None:
     """Ensures returned RNN forward produces output with correct size."""
     rnn, rnn_cfg, tensor, batch_first = rnn_cfg_tensor
-    if not batch_first:
-        seq_len, batch, input_features = tensor.size()
-    else:
+    if batch_first:
         batch, seq_len, input_features = tensor.size()
+    else:
+        seq_len, batch, input_features = tensor.size()
 
     in_seq_lens = torch.randint(low=1, high=1 + seq_len, size=(batch,))
 
     out, out_seq_lens = rnn((tensor, in_seq_lens))
 
-    if not batch_first:
-        out_seq_len, out_batch, out_features = out.size()
-    else:
+    if batch_first:
         out_batch, out_seq_len, out_features = out.size()
+    else:
+        out_seq_len, out_batch, out_features = out.size()
 
     assert out_seq_len == seq_len
     assert out_batch == batch
