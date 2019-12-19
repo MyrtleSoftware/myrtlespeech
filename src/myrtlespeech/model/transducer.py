@@ -52,20 +52,15 @@ class Transducer(torch.nn.Module):
 
         joint_net: A :py:class:`torch.nn.Module` to use as the the transducer
             joint network. It must accept as input a Tuple where the first
-            element is a :py:class:`torch.Tensor` with size
-            ``[batch, max_seq_len, max_label_length + 1, hidden_dim]``
-            where ``hidden_dim = encoder_out_feat + pred_net_out_feat`` as
-            the ``encoder`` and ``predict_net`` ouputs are concatenated.
-            The second element is a :py:class:`torch.Tensor` of size
-            ``[batch]`` where each entry represents the sequence length of
-            the ``encoder`` output sequences.
+            element is the ``encoder`` output and the second is the
+            ``predict_net`` output.
 
             It must return a tuple where the first element is the result after
-            applying the module to the input. It must have size ``[batch,
+            applying the module to the input and must have size ``[batch,
             max_seq_len, max_label_length + 1, vocab_size + 1]``.
             ``max_seq_len`` is the length of the longest sequence in
             the batch that is output from ``encoder`` while
-            ``max_label_length`` is the length of the longest *label*
+            ``max_label_length`` is the length of the longest **label**
             sequence in the batch that is output from ``predict_net``. Note
             that the dimension at index 2 is ``max_label_length + 1`` since
             the start-of-sequence label is prepended to the label sequence and
