@@ -171,14 +171,13 @@ class RNN(torch.nn.Module):
         if self.use_cuda:
             inp = inp.cuda()
             if hid is not None:
-                if isinstance(hid, tuple):  # LSTM/GRU
+                if isinstance(hid, tuple) and len(hid) == 2:  # LSTM
                     hid = hid[0].cuda(), hid[1].cuda()
-                elif isinstance(hid, torch.Tensor):  # Vanilla RNN
+                elif isinstance(hid, torch.Tensor):  # Vanilla RNN/GRU
                     hid = hid.cuda()
                 else:
                     raise ValueError(
-                        "hid must be an instance of class in \
-                        [torch.Tensor, tuple]"
+                        "hid must be a length 2 tuple or a torch.Tensor."
                     )
 
         # Record sequence length to enable DataParallel
