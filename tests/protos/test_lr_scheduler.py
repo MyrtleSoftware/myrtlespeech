@@ -31,6 +31,24 @@ def constant_lrs(
 
 
 @st.composite
+def polynomial_lrs(
+    draw, return_kwargs: bool = False
+) -> Union[
+    st.SearchStrategy[lr_scheduler_pb2.PolynomialLR],
+    st.SearchStrategy[Tuple[lr_scheduler_pb2.PolynomialLR, Dict]],
+]:
+    """Returns a SearchStrategy for an PolynomialLR plus maybe the kwargs."""
+    kwargs: Dict = {}
+
+    # initialise and return
+    all_fields_set(lr_scheduler_pb2.PolynomialLR, kwargs)
+    polynomial_lr = lr_scheduler_pb2.PolynomialLR(**kwargs)
+    if not return_kwargs:
+        return polynomial_lr
+    return polynomial_lr, kwargs
+
+
+@st.composite
 def step_lrs(
     draw, return_kwargs: bool = False
 ) -> Union[
@@ -99,3 +117,23 @@ def cosine_annealing_lrs(
     if not return_kwargs:
         return cosine_annealing_lr
     return cosine_annealing_lr, kwargs
+
+
+@st.composite
+def lr_warmups(
+    draw, return_kwargs: bool = False
+) -> Union[
+    st.SearchStrategy[lr_scheduler_pb2.LRWarmup],
+    st.SearchStrategy[Tuple[lr_scheduler_pb2.LRWarmup, Dict]],
+]:
+    """Returns a SearchStrategy for an LRWarmup plus maybe the kwargs."""
+    kwargs: Dict = {}
+
+    kwargs["num_warmup_steps"] = draw(st.integers(1, 200))
+
+    # initialise and return
+    all_fields_set(lr_scheduler_pb2.LRWarmup, kwargs)
+    lr_warmup = lr_scheduler_pb2.LRWarmup(**kwargs)
+    if not return_kwargs:
+        return lr_warmup
+    return lr_warmup, kwargs

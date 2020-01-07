@@ -1,4 +1,5 @@
 from typing import Dict
+from typing import List
 from typing import Tuple
 from typing import Union
 
@@ -9,6 +10,8 @@ from tests.protos.test_dataset import datasets
 from tests.protos.test_lr_scheduler import constant_lrs
 from tests.protos.test_lr_scheduler import cosine_annealing_lrs
 from tests.protos.test_lr_scheduler import exponential_lrs
+from tests.protos.test_lr_scheduler import lr_warmups
+from tests.protos.test_lr_scheduler import polynomial_lrs
 from tests.protos.test_lr_scheduler import step_lrs
 from tests.protos.test_optimizer import adams
 from tests.protos.test_optimizer import sgds
@@ -67,6 +70,8 @@ def train_configs(
         kwargs[lr_scheduler_str] = draw(exponential_lrs())
     elif lr_scheduler_str == "cosine_annealing_lr":
         kwargs[lr_scheduler_str] = draw(cosine_annealing_lrs())
+    elif lr_scheduler_str == "polynomial_lr":
+        kwargs[lr_scheduler_str] = draw(polynomial_lrs())
     else:
         raise ValueError(f"unknown lr_scheduler type {lr_scheduler_str}")
 
@@ -86,8 +91,15 @@ def train_configs(
     else:
         raise ValueError(f"unknown shuffle type {shuffle_str}")
 
+    # lr warmup
+    to_ignore: List = []
+    if draw(st.booleans()):
+        kwargs["lr_warmup"] = draw(lr_warmups())
+    else:
+        to_ignore.append("lr_warmup")
+
     # initialise and return
-    all_fields_set(train_config_pb2.TrainConfig, kwargs)
+    all_fields_set(train_config_pb2.TrainConfig, kwargs, to_ignore=to_ignore)
     train_config = train_config_pb2.TrainConfig(**kwargs)
     if not return_kwargs:
         return train_config
