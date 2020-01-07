@@ -7,6 +7,7 @@ from myrtlespeech.builders.speech_to_text import build as build_stt
 from myrtlespeech.data.batch import seq_to_seq_collate_fn
 from myrtlespeech.data.sampler import RandomBatchSampler
 from myrtlespeech.lr_scheduler.constant import ConstantLR
+from myrtlespeech.lr_scheduler.poly import PolynomialLR
 from myrtlespeech.lr_scheduler.warmup import _LRSchedulerWarmup
 from myrtlespeech.model.seq_to_seq import SeqToSeq
 from myrtlespeech.protos import task_config_pb2
@@ -142,7 +143,10 @@ def build(
 
     # create learning rate scheduler
     seq_to_seq.lr_scheduler = _create_lr_scheduler(
-        task_config, seq_to_seq.optim, len(train_loader)
+        task_config,
+        seq_to_seq.optim,
+        batches_per_epoch=len(train_loader),
+        epochs=task_config.train_config.epochs,
     )
 
     return (
@@ -157,6 +161,7 @@ def _create_lr_scheduler(
     task_config: task_config_pb2.TaskConfig,
     optimizer: torch.optim,
     batches_per_epoch: int,
+    epochs: int,
 ) -> torch.optim.lr_scheduler._LRScheduler:
     """Builds a ``learning rate scheduler`` and returns it.
 
@@ -169,12 +174,15 @@ def _create_lr_scheduler(
 
         batches_per_epoch: Number of batches in a single epoch.
 
+        epochs: Total number of epochs.
+
     Returns:
         A :py:class:`torch.optim.lr_scheduler._LRScheduler` instance.
 
     Raises:
         :py:class:`ValueError`: On invalid configuration.
     """
+
     lr_scheduler_str = task_config.train_config.WhichOneof(
         "supported_lr_scheduler"
     )
@@ -208,25 +216,33 @@ def _create_lr_scheduler(
         lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer=optimizer, **kwargs
         )
+    elif lr_scheduler_str == "polynomial_lr":
+        if epochs < 1:
+            raise ValueError(f"Cannot have < 1 epochs for polynomial_lr.")
+        total_steps = batches_per_epoch * epochs
+        lr_scheduler = PolynomialLR(
+            optimizer=optimizer, total_steps=total_steps
+        )
+
     else:
         raise ValueError(
             f"unsupported learning rate scheduler {lr_scheduler_str}"
         )
 
-    # get scheduler step frequency
-    if lr_scheduler_str in [
-        "step_lr",
-        "exponential_lr",
-        "cosine_annealing_lr",
-    ]:
-        step_freq = batches_per_epoch  # Step at end of each epoch
-    elif lr_scheduler_str in []:
-        step_freq = 1  # Step after every batch
-    elif lr_scheduler_str == "constant_lr":
-        step_freq = batches_per_epoch * 100  # Arbitrary large value
-
     # Maybe add lr warmup
     if task_config.train_config.HasField("lr_warmup"):
+        # get existing scheduler step frequency
+        if lr_scheduler_str in [
+            "step_lr",
+            "exponential_lr",
+            "cosine_annealing_lr",
+        ]:
+            step_freq = batches_per_epoch  # Step at end of each epoch
+        elif lr_scheduler_str in ["polynomial_lr"]:
+            step_freq = 1  # Step after every batch
+        elif lr_scheduler_str == "constant_lr":
+            step_freq = batches_per_epoch * 100  # Arbitrary large value
+
         warmup_cfg = task_config.train_config.lr_warmup
         lr_scheduler = _LRSchedulerWarmup(
             lr_scheduler, step_freq, warmup_cfg.num_warmup_steps
