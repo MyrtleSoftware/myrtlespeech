@@ -245,7 +245,9 @@ def _create_lr_scheduler(
 
         warmup_cfg = task_config.train_config.lr_warmup
         lr_scheduler = _LRSchedulerWarmup(
-            lr_scheduler, step_freq, warmup_cfg.num_warmup_steps
+            scheduler=lr_scheduler,
+            scheduler_step_freq=step_freq,
+            num_warmup_steps=warmup_cfg.num_warmup_steps,
         )
 
     return lr_scheduler

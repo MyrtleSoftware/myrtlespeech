@@ -17,13 +17,20 @@ class _LRSchedulerWarmup(_LRScheduler):
             taken.
 
         num_warmup_steps: The number of warmup steps.
+
+    Raises:
+        :py:class:`ValueError`: if ``num_warmup_steps < 1``.
+
     """
 
     def __init__(self, scheduler, scheduler_step_freq, num_warmup_steps):
+        if num_warmup_steps < 1:
+            raise ValueError("num_warmup_steps must be > 0.")
+
         self._scheduler = scheduler
-        self._optimizer = self._scheduler.optimizer
+        self.optimizer = self._scheduler.optimizer
         self.step_freq = scheduler_step_freq
-        self._num_warmup_steps = num_warmup_steps
+        self.num_warmup_steps = num_warmup_steps
         self.step(self._scheduler.last_epoch)
 
     def step(self, epoch=None):
@@ -32,13 +39,11 @@ class _LRSchedulerWarmup(_LRScheduler):
         This is a no-op if ``optimizer.step()`` has not been called as the
         implementation uses the ``optimizer._step_count`` variable.
         """
-        optim_step = self._optimizer._step_count
+        optim_step = self.optimizer._step_count
         if optim_step % self.step_freq == 0 and optim_step != 0:
             self._scheduler.step()
 
-        for param_group, lr in zip(
-            self._optimizer.param_groups, self.get_lr()
-        ):
+        for param_group, lr in zip(self.optimizer.param_groups, self.get_lr()):
             param_group["lr"] = lr
 
     def get_lr(self):
@@ -46,12 +51,12 @@ class _LRSchedulerWarmup(_LRScheduler):
 
         The existing schedule is applied before the warmup schedule.
         """
-        optim_step = self._optimizer._step_count
+        optim_step = self.optimizer._step_count
         pre_warm_lrs = self._scheduler.get_lr()
         return [lr * self._warmup(optim_step) for lr in pre_warm_lrs]
 
     def _warmup(self, step):
-        return min(1, (step / self._num_warmup_steps))
+        return min(1, (step / self.num_warmup_steps))
 
     def state_dict(self):
         """Returns the state of the scheduler as a :py:class:`dict`.
@@ -62,7 +67,7 @@ class _LRSchedulerWarmup(_LRScheduler):
         state_dict = {
             key: value
             for key, value in self.__dict__.items()
-            if key not in ("_optimizer", "_scheduler")
+            if key not in ("optimizer", "_scheduler")
         }
         state_dict["_scheduler"] = self._scheduler.state_dict()
 
