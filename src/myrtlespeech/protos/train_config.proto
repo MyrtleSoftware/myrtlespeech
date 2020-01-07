@@ -25,9 +25,10 @@ message TrainConfig {
     StepLR step_lr = 6;
     ExponentialLR exponential_lr = 7;
     CosineAnnealingLR cosine_annealing_lr = 8;
+    PolynomialLR polynomial_lr = 11;
   }
 
-  LRWarmup lr_warmup = 11;
+  LRWarmup lr_warmup = 12;
 
   Dataset dataset = 9;
 

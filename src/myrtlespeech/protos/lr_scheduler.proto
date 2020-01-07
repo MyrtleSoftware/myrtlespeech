@@ -44,3 +44,8 @@ message LRWarmup {
   // Minimum multiple of the initial lr. Defaults to 0.1.
   google.protobuf.FloatValue min_multiple_of_lr = 2;
 }
+
+// Polynomial decay learning rate of power 2.
+// See ``myrtlespeech.lr_schedule.poly.PolynomialLR``.
+message PolynomialLR {
+}
