@@ -6,8 +6,8 @@ from myrtlespeech.builders.dataset import build as build_dataset
 from myrtlespeech.builders.speech_to_text import build as build_stt
 from myrtlespeech.data.batch import seq_to_seq_collate_fn
 from myrtlespeech.data.sampler import RandomBatchSampler
-from myrtlespeech.lr.scheduler import _LRSchedulerWarmup
-from myrtlespeech.lr.scheduler import ConstantLR
+from myrtlespeech.lr_scheduler.constant import ConstantLR
+from myrtlespeech.lr_scheduler.warmup import _LRSchedulerWarmup
 from myrtlespeech.model.seq_to_seq import SeqToSeq
 from myrtlespeech.protos import task_config_pb2
 

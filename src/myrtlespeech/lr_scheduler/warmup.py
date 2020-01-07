@@ -1,5 +1,4 @@
 from torch.optim.lr_scheduler import _LRScheduler
-from torch.optim.lr_scheduler import LambdaLR
 
 
 class _LRSchedulerWarmup(_LRScheduler):
@@ -80,12 +79,3 @@ class _LRSchedulerWarmup(_LRScheduler):
 
         self.__dict__.update(state_dict)
         self._scheduler.__dict__.update(_scheduler_dict)
-
-
-class ConstantLR(LambdaLR):
-    """A constant learning rate scheduler."""
-
-    def __init__(self, optimizer, last_epoch=-1):
-        super().__init__(
-            optimizer, lr_lambda=lambda x: x, last_epoch=last_epoch
-        )
