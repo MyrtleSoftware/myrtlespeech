@@ -6,5 +6,5 @@ class ConstantLR(LambdaLR):
 
     def __init__(self, optimizer, last_epoch=-1):
         super().__init__(
-            optimizer, lr_lambda=lambda x: x, last_epoch=last_epoch
+            optimizer, lr_lambda=lambda _: 1, last_epoch=last_epoch
         )
