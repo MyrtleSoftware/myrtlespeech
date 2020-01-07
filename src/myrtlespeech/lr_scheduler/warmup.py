@@ -1,5 +1,4 @@
 from torch.optim.lr_scheduler import _LRScheduler
-from torch.optim.lr_scheduler import LambdaLR
 
 
 class _LRSchedulerWarmup(_LRScheduler):
@@ -54,11 +53,29 @@ class _LRSchedulerWarmup(_LRScheduler):
     def _warmup(self, step):
         return min(1, (step / self._num_warmup_steps))
 
+    def state_dict(self):
+        """Returns the state of the scheduler as a :py:class:`dict`.
 
-class ConstantLR(LambdaLR):
-    """A constant learning rate scheduler."""
+        It contains an entry for every variable in :py:meth:`self.__dict__`
+        which is not the optimizer.
+        """
+        state_dict = {
+            key: value
+            for key, value in self.__dict__.items()
+            if key not in ("_optimizer", "_scheduler")
+        }
+        state_dict["_scheduler"] = self._scheduler.state_dict()
 
-    def __init__(self, optimizer, last_epoch=-1):
-        super().__init__(
-            optimizer, lr_lambda=lambda x: x, last_epoch=last_epoch
-        )
+        return state_dict
+
+    def load_state_dict(self, state_dict):
+        """Loads the schedulers state.
+
+        Arguments:
+            state_dict: Scheduler state. Should be an object returned
+                from a call to :py:meth:`state_dict`.
+        """
+        _scheduler_dict = state_dict.pop("_scheduler")
+
+        self.__dict__.update(state_dict)
+        self._scheduler.__dict__.update(_scheduler_dict)
