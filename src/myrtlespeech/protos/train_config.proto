@@ -27,6 +27,8 @@ message TrainConfig {
     CosineAnnealingLR cosine_annealing_lr = 8;
   }
 
+  LRWarmup lr_warmup = 11;
+
   Dataset dataset = 9;
 
   oneof supported_shuffles {

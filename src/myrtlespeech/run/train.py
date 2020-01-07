@@ -88,15 +88,13 @@ def fit(
                         if seq_to_seq.optim is not None:
                             if not cb_handler.on_backward_end():
                                 seq_to_seq.optim.step()
+                                seq_to_seq.lr_scheduler.step()
 
                             if not cb_handler.on_step_end():
                                 seq_to_seq.optim.zero_grad()
 
                     if cb_handler.on_batch_end():
                         break
-
-                if is_training and seq_to_seq.lr_scheduler is not None:
-                    seq_to_seq.lr_scheduler.step()
 
             if cb_handler.on_epoch_end():
                 break

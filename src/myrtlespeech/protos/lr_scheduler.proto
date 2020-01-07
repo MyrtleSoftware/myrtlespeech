@@ -35,3 +35,12 @@ message CosineAnnealingLR {
   // Minimum learning rate.
   google.protobuf.FloatValue eta_min = 2;
 }
+
+// LR linear warmup as described in https://arxiv.org/abs/1910.04209.
+message LRWarmup {
+  // Number of steps over which warmup is performed
+  uint32 num_warmup_steps = 1;
+
+  // Minimum multiple of the initial lr. Defaults to 0.1.
+  google.protobuf.FloatValue min_multiple_of_lr = 2;
+}
