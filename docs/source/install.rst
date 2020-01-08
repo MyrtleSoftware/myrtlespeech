@@ -68,6 +68,7 @@ Development
   .. code-block:: bash
 
     export CUDA_HOME=/usr/local/cuda
+    sudo apt-get install cmake -y
     make deps/warp-transducer
 
   .. note::
