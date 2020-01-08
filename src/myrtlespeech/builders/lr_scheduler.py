@@ -1,7 +1,7 @@
 import torch
+from myrtlespeech.lr_scheduler.base import LRSchedulerBase
 from myrtlespeech.lr_scheduler.constant import ConstantLR
 from myrtlespeech.lr_scheduler.poly import PolynomialLR
-from myrtlespeech.lr_scheduler.warmup import _LRSchedulerWarmup
 from myrtlespeech.protos import train_config_pb2
 
 
@@ -74,25 +74,25 @@ def build(
             f"unsupported learning rate scheduler {lr_scheduler_str}"
         )
 
-    # Maybe add lr warmup
+    # get scheduler step frequency
+    if lr_scheduler_str in [
+        "step_lr",
+        "exponential_lr",
+        "cosine_annealing_lr",
+    ]:
+        step_freq = batches_per_epoch  # Step at end of each epoch
+    elif lr_scheduler_str in ["polynomial_lr"]:
+        step_freq = 1  # Step after every batch
+    elif lr_scheduler_str == "constant_lr":
+        step_freq = batches_per_epoch * 100  # Arbitrary large value
+
+    # Add lr warmup iff num_warmup_steps is not None
+    num_warmup_steps = None
     if train_config.HasField("lr_warmup"):
-        # get existing scheduler step frequency
-        if lr_scheduler_str in [
-            "step_lr",
-            "exponential_lr",
-            "cosine_annealing_lr",
-        ]:
-            step_freq = batches_per_epoch  # Step at end of each epoch
-        elif lr_scheduler_str in ["polynomial_lr"]:
-            step_freq = 1  # Step after every batch
-        elif lr_scheduler_str == "constant_lr":
-            step_freq = batches_per_epoch * 100  # Arbitrary large value
+        num_warmup_steps = train_config.lr_warmup.num_warmup_steps
 
-        warmup_cfg = train_config.lr_warmup
-        lr_scheduler = _LRSchedulerWarmup(
-            scheduler=lr_scheduler,
-            scheduler_step_freq=step_freq,
-            num_warmup_steps=warmup_cfg.num_warmup_steps,
-        )
-
-    return lr_scheduler
+    return LRSchedulerBase(
+        scheduler=lr_scheduler,
+        scheduler_step_freq=step_freq,
+        num_warmup_steps=num_warmup_steps,
+    )

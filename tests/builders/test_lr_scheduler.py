@@ -5,9 +5,9 @@ import pytest
 import torch
 from hypothesis import given
 from myrtlespeech.builders.lr_scheduler import build
+from myrtlespeech.lr_scheduler.base import LRSchedulerBase
 from myrtlespeech.lr_scheduler.constant import ConstantLR
 from myrtlespeech.lr_scheduler.poly import PolynomialLR
-from myrtlespeech.lr_scheduler.warmup import _LRSchedulerWarmup
 from myrtlespeech.protos import train_config_pb2
 
 from tests.protos.test_train_config import train_configs
@@ -27,12 +27,12 @@ def lr_scheduler_match_cfg(
     assert isinstance(lr_scheduler.optimizer, torch.optim.Optimizer)
 
     step_freq: Optional[int] = None
-    if isinstance(lr_scheduler, _LRSchedulerWarmup):
-        assert train_config.HasField("lr_warmup")
-        assert (
-            train_config.lr_warmup.num_warmup_steps
-            == lr_scheduler.num_warmup_steps
-        )
+    if isinstance(lr_scheduler, LRSchedulerBase):
+        if train_config.HasField("lr_warmup"):
+            assert (
+                train_config.lr_warmup.num_warmup_steps
+                == lr_scheduler.num_warmup_steps
+            )
         step_freq = lr_scheduler.step_freq
         lr_scheduler = lr_scheduler._scheduler
 
