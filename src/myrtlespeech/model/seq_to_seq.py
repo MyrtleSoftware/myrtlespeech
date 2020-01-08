@@ -59,3 +59,21 @@ class SeqToSeq(torch.nn.Module):
             return x
 
         return process
+
+    def state_dict(self):
+        """Returns state dict."""
+        state = {
+            "model": self.model.state_dict(),
+            "optim": self.optim.state_dict(),
+            "lr_scheduler": self.lr_scheduler.state_dict(),
+        }
+        return state
+
+    def load_state_dict(self, state_dict):
+        """Loads state_dict"""
+        self.model.load_state_dict(state_dict["model"])
+        self.optim.load_state_dict(state_dict["optim"])
+
+        if self.lr_scheduler is not None:
+            self.lr_scheduler.load_state_dict(state_dict["lr_scheduler"])
+            self.lr_scheduler.step(epoch=self.lr_scheduler.last_epoch)
