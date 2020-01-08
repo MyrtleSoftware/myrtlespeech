@@ -1,7 +1,7 @@
-from torch.optim.lr_scheduler import LambdaLR
+from myrtlespeech.lr_scheduler.base import _LambdaLR
 
 
-class PolynomialLR(LambdaLR):
+class PolynomialLR(_LambdaLR):
     """A polynomial decay learning rate scheduler.
 
     Follows the 'poly' decay rate described in `DeepLab: Semantic Image

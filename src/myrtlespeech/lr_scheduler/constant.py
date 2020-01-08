@@ -1,7 +1,7 @@
-from torch.optim.lr_scheduler import LambdaLR
+from myrtlespeech.lr_scheduler.base import _LambdaLR
 
 
-class ConstantLR(LambdaLR):
+class ConstantLR(_LambdaLR):
     """A constant learning rate scheduler."""
 
     def __init__(self, optimizer, last_epoch=-1):

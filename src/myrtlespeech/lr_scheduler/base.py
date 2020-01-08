@@ -1,30 +1,46 @@
+import copy
+from typing import Optional
+
+import torch
 from torch.optim.lr_scheduler import _LRScheduler
+from torch.optim.lr_scheduler import LambdaLR
 
 
-class _LRSchedulerWarmup(_LRScheduler):
-    """Adds linear LR warmup to existing `lr_scheduler`.
+class LRSchedulerBase(_LRScheduler):
+    """Provides lr schedule at ``scheduler_step_freq`` with optional warmup.
 
-    Follows `On the adequacy of untuned warmup for adaptive optimization
-    <https://arxiv.org/abs/1910.04209>`_.
+    This enables the calling of :py:meth:`scheduler.step()` after every batch
+    **for all schedulers** including those that only update lrs after each
+    epoch.
+
+    Warmup, if present, is linear and follows `On the adequacy of untuned
+    warmup for adaptive optimization <https://arxiv.org/abs/1910.04209>`_.
 
     Args:
         scheduler: An existing
             :py:class:`torch.optim.lr_scheduler._LRScheduler` learning-rate
-            scheduler. If the desired schedule is constant after the warmup
-            period, the :py:class:`ConstantLR` should be used.
+            scheduler. If the desired schedule is constant after the
+            (optional) warmup period, the :py:class:`ConstantLR` should be
+            used.
 
-        scheduler_step_freq: The frequency at which `scheduler` steps are
+        scheduler_step_freq: The frequency at which ``scheduler`` steps are
             taken.
 
-        num_warmup_steps: The number of warmup steps.
+        num_warmup_steps: The number of warmup steps. If None, no warmup is
+            perfomed.
 
     Raises:
         :py:class:`ValueError`: if ``num_warmup_steps < 1``.
 
     """
 
-    def __init__(self, scheduler, scheduler_step_freq, num_warmup_steps):
-        if num_warmup_steps < 1:
+    def __init__(
+        self,
+        scheduler: torch.optim.lr_scheduler._LRScheduler,
+        scheduler_step_freq: int,
+        num_warmup_steps: Optional[int] = None,
+    ):
+        if num_warmup_steps is not None and num_warmup_steps < 1:
             raise ValueError("num_warmup_steps must be > 0.")
 
         self._scheduler = scheduler
@@ -34,10 +50,10 @@ class _LRSchedulerWarmup(_LRScheduler):
         self.step(self._scheduler.last_epoch)
 
     def step(self, epoch=None):
-        """Performs a step of the scheduler.
+        """Performs a step of the lr scheduler.
 
-        This is a no-op if ``optimizer.step()`` has not been called as the
-        implementation uses the ``optimizer._step_count`` variable.
+        This is a no-op if ``optimizer.step()`` has not been called since this
+        uses the ``optimizer._step_count`` variable.
         """
         optim_step = self.optimizer._step_count
         if optim_step % self.step_freq == 0 and optim_step != 0:
@@ -47,13 +63,15 @@ class _LRSchedulerWarmup(_LRScheduler):
             param_group["lr"] = lr
 
     def get_lr(self):
-        """Returns the scheduler lr.
+        """Returns the lr schedule.
 
-        The existing schedule is applied before the warmup schedule.
+        The existing schedule is applied before the (optional) warmup schedule.
         """
         optim_step = self.optimizer._step_count
-        pre_warm_lrs = self._scheduler.get_lr()
-        return [lr * self._warmup(optim_step) for lr in pre_warm_lrs]
+        lrs = self._scheduler.get_lr()
+        if self.num_warmup_steps is not None:
+            lrs = [lr * self._warmup(optim_step) for lr in lrs]
+        return lrs
 
     def _warmup(self, step):
         return min(1, (step / self.num_warmup_steps))
@@ -80,7 +98,16 @@ class _LRSchedulerWarmup(_LRScheduler):
             state_dict: Scheduler state. Should be an object returned
                 from a call to :py:meth:`state_dict`.
         """
+        state_dict = copy.deepcopy(state_dict)
         _scheduler_dict = state_dict.pop("_scheduler")
-
         self.__dict__.update(state_dict)
         self._scheduler.__dict__.update(_scheduler_dict)
+
+
+class _LambdaLR(LambdaLR):
+    """Overrides :py:meth:`state_dict` method to remove ``lr_lambdas``."""
+
+    def state_dict(self):
+        state_d = super().state_dict()
+        state_d.pop("lr_lambdas")
+        return state_d
