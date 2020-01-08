@@ -113,6 +113,8 @@ class CallbackHandler:
         callbacks: Optional[Collection[Callback]] = None,
         training: bool = True,
         model: torch.nn.Module = None,
+        epoch: Optional[int] = None,
+        total_train_batches: Optional[int] = None,
     ):
         self.callbacks: List = []
         if model and hasattr(model, "callbacks"):
@@ -120,6 +122,10 @@ class CallbackHandler:
         self.callbacks.extend(list(callbacks) if callbacks is not None else [])
         self.state_dict: Dict = {}
         self.training = training
+        self.epoch = epoch if epoch is not None else 0
+        self.total_train_batches = (
+            total_train_batches if total_train_batches is not None else 0
+        )
 
     def __call__(self, stage_name: str) -> None:
         r"""Runs the ``stage_name`` method of all :py:class:`Callback`\s.
@@ -201,13 +207,16 @@ class CallbackHandler:
         """
         self.state_dict.update(
             dict(
-                epoch=0,
+                epoch=self.epoch,
                 epochs=epochs,
-                total_train_batches=0,
+                total_train_batches=self.total_train_batches,
                 epoch_batches=0,
                 reports={},
             )
         )
+        # delete training state as this will quickly be out of date:
+        del self.epoch
+        del self.total_train_batches
         self("on_train_begin")
 
     def on_epoch_begin(self) -> None:
