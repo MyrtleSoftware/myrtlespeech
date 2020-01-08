@@ -9,6 +9,7 @@
     configs/index
     data/index
     loss/index
+    lr_scheduler/index
     model/index
     post_process/index
     run/index
