@@ -34,4 +34,10 @@ def load_state_dict(
     total_train_batches = dict_.pop("total_train_batches", None)
     seq_to_seq.load_state_dict(dict_)
 
-    return {"epoch": epoch, "total_train_batches": total_train_batches}
+    training_state = {}
+    if epoch is not None:
+        training_state["epoch"] = epoch
+    if total_train_batches is not None:
+        training_state["total_train_batches"] = total_train_batches
+
+    return training_state
