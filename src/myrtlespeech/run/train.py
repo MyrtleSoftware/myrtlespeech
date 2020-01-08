@@ -1,5 +1,6 @@
 from contextlib import ExitStack
 from typing import Collection
+from typing import Dict
 from typing import Optional
 
 import torch
@@ -16,6 +17,7 @@ def fit(
     train_loader: Optional[DataLoader] = None,
     eval_loader: Optional[DataLoader] = None,
     callbacks: Optional[Collection[Callback]] = None,
+    training_state: Dict = {},
 ) -> None:
     r"""Fit ``seq_to_seq`` for ``epochs`` ``train_loader`` iters.
 
@@ -37,18 +39,28 @@ def fit(
             the validation data.
 
         callbacks: A collection of :py:class:`.Callback`\s.
+
+        training_state: A dictionary containing the training state returned
+            by :py:func:`load_state_dict`.
     """
     assert (
         train_loader or eval_loader
     ), "Can't have both train_loader==None and eval_loader==None"
     if train_loader is None:
         assert epochs == 1, "If train_loader is None, epochs must be 1 "
-
+    start_epoch = training_state.get("epoch", 0)
+    if start_epoch > epochs:
+        raise ValueError(
+            f'training_state["epoch"] is greater than ``epochs``'
+            f"so no training can occur."
+        )
     # sphinx-doc-start-after
-    cb_handler = CallbackHandler(callbacks, model=seq_to_seq.model)
+    cb_handler = CallbackHandler(
+        callbacks, model=seq_to_seq.model, **training_state
+    )
     cb_handler.on_train_begin(epochs)
 
-    for epoch in range(epochs):
+    for epoch in range(start_epoch, epochs):
         stages = []
         if train_loader is not None:
             if epoch == 0 and eval_loader is not None:
