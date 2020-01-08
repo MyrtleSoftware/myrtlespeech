@@ -357,7 +357,19 @@ class TensorBoardLogger(ModelCallback):
 
 
 class Saver(ModelCallback):
-    """TODO"""
+    """Saves ``model``'s ``state_dict`` each epoch.
+
+    Note that this callback will save both a :py:class:`SeqToSeq` instance or
+    ``seq_to_seq.model``. If, you would like to resume training after a crash,
+    the former should be passed as ``model``.
+
+    Args:
+        log_dir: A pathlike object giving the logging directory.
+
+        model: A :py:class:`torch.nn.Module` to be saved each epoch. To enable
+            resumption of training after a crash, the user should pass a
+            :py:class:`SeqToSeq` instance.
+    """
 
     def __init__(self, log_dir: Union[str, Path], *args, **kwargs):
         self.log_dir = Path(log_dir)
