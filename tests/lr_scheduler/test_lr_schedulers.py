@@ -1,4 +1,5 @@
 import copy
+from typing import Dict
 from typing import Optional
 from typing import Tuple
 
@@ -32,15 +33,18 @@ def lr_scheduler_class() -> st.SearchStrategy[type]:
 
 @st.composite
 def _lr_scheduler_data(
-    draw, cls: Optional[type] = None,
+    draw, cls: Optional[type] = None, warmup: bool = False,
 ) -> st.SearchStrategy[
-    Tuple[torch.optim.lr_scheduler._LRScheduler, int, int, int],
+    Tuple[torch.optim.lr_scheduler._LRScheduler, Dict],
 ]:
     """Returns a search strategy for lr_scheduler.
     """
     batches_per_epoch = draw(st.integers(min_value=1, max_value=8))
     epochs = draw(st.integers(min_value=4, max_value=30))
     initial_lr = draw(st.floats(min_value=1e-5, max_value=1.0))
+    num_warmup_steps = None
+    if warmup:
+        num_warmup_steps = draw(st.integers(min_value=2, max_value=10))
     if cls is None:
         cls = draw(lr_scheduler_class())
     kwargs = {}
@@ -75,14 +79,16 @@ def _lr_scheduler_data(
     scheduler = LRSchedulerBase(
         scheduler=cls(optimizer=optimizer, **kwargs),
         scheduler_step_freq=step_freq,
-        num_warmup_steps=None,
+        num_warmup_steps=num_warmup_steps,
     )
-    return (
-        scheduler,
-        batches_per_epoch,
-        epochs,
-        initial_lr,
-    )
+    params = {
+        "batches_per_epoch": batches_per_epoch,
+        "epochs": epochs,
+        "initial_lr": initial_lr,
+        "num_warmup_steps": num_warmup_steps,
+        "min_lr_multiple": kwargs.get("min_lr_multiple"),
+    }
+    return scheduler, params
 
 
 # Utilities -------------------------------------------------------------------
@@ -104,13 +110,15 @@ def check_state_dicts_match(dict1, dict2):
 
 
 @given(lr_scheduler_data=_lr_scheduler_data(),)
-def test_lr_schedule_set_correctly_and_first_lr_correct(
-    lr_scheduler_data: Tuple[
-        torch.optim.lr_scheduler._LRScheduler, int, int, int
-    ]
+def test_lr_schedule_set_correctly_no_warmup(
+    lr_scheduler_data: Tuple[torch.optim.lr_scheduler._LRScheduler, Dict]
 ) -> None:
-    """Ensures lr_scheduler correctly sets optimizer lrs."""
-    scheduler, batches_per_epoch, epochs, initial_lr = lr_scheduler_data
+    """Ensures lr_scheduler correctly sets optimizer lrs w/o warmup."""
+    scheduler, kwargs = lr_scheduler_data
+    batches_per_epoch = kwargs["batches_per_epoch"]
+    epochs = kwargs["batches_per_epoch"]
+    initial_lr = kwargs["initial_lr"]
+    min_lr_multiple = kwargs.get("min_lr_multiple")
 
     results = check_lr_schedule_set(scheduler, batches_per_epoch, epochs)
 
@@ -141,20 +149,61 @@ def test_lr_schedule_set_correctly_and_first_lr_correct(
             assert step % expected_freq == 0
         prev_lr = data["lr"]
 
+        if scheduler._scheduler.__class__ == PolynomialLR:
+            assert data["lr"] + TOL > min_lr_multiple * initial_lr
 
-@given(data=st.data(), lr_scheduler_data=_lr_scheduler_data())
-def test_lr_schedule_state_dict_restores_correctly(
-    data,
-    lr_scheduler_data: Tuple[
-        torch.optim.lr_scheduler._LRScheduler, int, int, int
-    ],
+
+@given(lr_scheduler_data=_lr_scheduler_data(warmup=True),)
+def test_lr_schedule_set_correctly_with_warmup(
+    lr_scheduler_data: Tuple[torch.optim.lr_scheduler._LRScheduler, Dict]
 ) -> None:
-    """Ensures lr_scheduler state dict is correctly restored."""
-    scheduler, _, _, _ = lr_scheduler_data
+    """Ensures lr_scheduler correctly sets optimizer lrs with warmup."""
+    scheduler, kwargs = lr_scheduler_data
+    batches_per_epoch = kwargs["batches_per_epoch"]
+    epochs = kwargs["batches_per_epoch"]
+    num_warmup_steps = kwargs["num_warmup_steps"]
 
+    results = check_lr_schedule_set(scheduler, batches_per_epoch, epochs)
+    assert scheduler.num_warmup_steps == num_warmup_steps
+    # Check first lr is equal to zero (i.e. using warmup)
+    assert abs(results[0]["lr"] - 0.0) < TOL
+
+    # Check lr changes with desired frequency
+    if scheduler._scheduler.__class__ in [
+        torch.optim.lr_scheduler.StepLR,
+        torch.optim.lr_scheduler.ExponentialLR,
+        torch.optim.lr_scheduler.CosineAnnealingLR,
+    ]:
+        expected_freq = batches_per_epoch
+    elif scheduler._scheduler.__class__ in [PolynomialLR]:
+        expected_freq = 1
+    elif scheduler._scheduler.__class__ == ConstantLR:
+        expected_freq = -1
+    else:
+        raise ValueError(
+            f"unknown scheduler._scheduler.__class__="
+            f"{scheduler._scheduler.__class__}"
+        )
+
+    prev_lr = -1.0
+    for step, data in results.items():
+        lr_changed = abs(data["lr"] - prev_lr) > TOL
+        if step <= num_warmup_steps:
+            assert lr_changed
+        elif lr_changed:
+            assert step % expected_freq == 0
+        prev_lr = data["lr"]
+
+
+@given(data=st.data(), warmup=st.booleans())
+def test_lr_schedule_state_dict_restores_correctly(data, warmup,) -> None:
+    """Ensures lr_scheduler state dict is correctly restored."""
+
+    scheduler, _ = data.draw(_lr_scheduler_data(warmup=warmup))
     old_state_dict = copy.deepcopy(scheduler.state_dict())
-    scheduler2, _, _, _ = data.draw(
-        _lr_scheduler_data(cls=scheduler._scheduler.__class__)
+
+    scheduler2, _ = data.draw(
+        _lr_scheduler_data(cls=scheduler._scheduler.__class__, warmup=warmup)
     )
     scheduler2.load_state_dict(old_state_dict)
     new_state_dict = scheduler2.state_dict()
