@@ -9,6 +9,7 @@ from myrtlespeech.lr_scheduler.poly import PolynomialLR
 
 from tests.lr_scheduler.utils import check_lr_schedule_set
 
+
 # Fixtures and Strategies -----------------------------------------------------
 
 TOL = 1e-8
@@ -110,7 +111,25 @@ def test_lr_schedule_set_correctly_and_first_lr_correct(
     assert abs(results[0]["lr"] - initial_lr) < TOL
 
     # Check lr changes with desired frequency
-    # TODO
+    if scheduler.__class__ in [
+        torch.optim.lr_scheduler.StepLR,
+        torch.optim.lr_scheduler.ExponentialLR,
+        torch.optim.lr_scheduler.CosineAnnealingLR,
+    ]:
+        expected_freq = batches_per_epoch
+    elif scheduler.__class__ in [PolynomialLR]:
+        expected_freq = 1
+    elif scheduler.__class__ == ConstantLR:
+        return
+    else:
+        raise ValueError(f"unknown scheduler.__class__={scheduler.__class__}")
+
+    prev_lr = -1.0
+    for step, data in results.items():
+        lr_changed = abs(data["lr"] - prev_lr) < TOL
+        if lr_changed:
+            assert step % expected_freq == 0
+        prev_lr = data["lr"]
 
 
 @given(data=st.data(), lr_scheduler_data=_lr_scheduler_data())
