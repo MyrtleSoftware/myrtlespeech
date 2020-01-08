@@ -6,7 +6,7 @@ import torch
 from myrtlespeech.model.seq_to_seq import SeqToSeq
 
 
-def load_state_dict(
+def load_seq_to_seq(
     seq_to_seq: SeqToSeq, state_dict_fp: Union[str, Path]
 ) -> Dict:
     """Loads ``seq_to_seq`` state dict from path and returns training state.
