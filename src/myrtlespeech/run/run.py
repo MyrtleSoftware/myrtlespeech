@@ -173,14 +173,17 @@ class Saver(ModelCallback):
     """TODO"""
 
     def __init__(self, log_dir: Union[str, Path], *args, **kwargs):
-        self.log_dir = log_dir
+        self.log_dir = Path(log_dir)
         super().__init__(*args, **kwargs)
 
     def on_epoch_end(self, **kwargs):
         if not self.training:
             return
+        dict_ = self.model.state_dict()
+        dict_["epoch"] = kwargs["epoch"]
+        dict_["total_train_batches"] = kwargs["total_train_batches"]
         torch.save(
-            self.model.state_dict(),
+            dict_,
             str(self.log_dir.joinpath(f"state_dict_{kwargs['epoch']}.pt")),
         )
 
