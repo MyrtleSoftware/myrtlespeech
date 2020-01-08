@@ -366,8 +366,11 @@ class Saver(ModelCallback):
     def on_epoch_end(self, **kwargs):
         if not self.training:
             return
+        dict_ = self.model.state_dict()
+        dict_["epoch"] = kwargs["epoch"]
+        dict_["total_train_batches"] = kwargs["total_train_batches"]
         torch.save(
-            self.model.state_dict(),
+            dict_,
             str(self.log_dir.joinpath(f"state_dict_{kwargs['epoch']}.pt")),
         )
 
