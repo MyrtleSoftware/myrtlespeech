@@ -1,5 +1,6 @@
 from contextlib import ExitStack
 from typing import Collection
+from typing import Dict
 from typing import Optional
 
 import torch
@@ -16,6 +17,7 @@ def fit(
     train_loader: DataLoader,
     eval_loader: Optional[DataLoader] = None,
     callbacks: Optional[Collection[Callback]] = None,
+    training_state: Dict = {},
 ) -> None:
     r"""Fit ``seq_to_seq`` for ``epochs`` ``train_loader`` iters.
 
@@ -25,6 +27,7 @@ def fit(
         epochs: Maximum number of epochs to train ``seq_to_seq`` for. Note that
             the actual number of epochs may be less if
             :py:meth:`.CallbackHandler.on_epoch_end` returns :py:data:`True`.
+            if ``training_state['epochs'] > 0``,
 
         train_loader: A :py:class:`torch.utils.data.DataLoader` for the
             training data.
@@ -33,12 +36,21 @@ def fit(
             the validation data.
 
         callbacks: A collection of :py:class:`.Callback`\s.
+
+        training_state: A dictionary containing the training state returned
+            by :py:func:`load_state_dict`.
     """
+    start_epoch = training_state.get("epoch", 0)
+    if start_epoch > epochs:
+        raise ValueError(
+            f'training_state["epoch"] is greater than ``epochs``'
+            f"so no training can occur."
+        )
     # sphinx-doc-start-after
-    cb_handler = CallbackHandler(callbacks)
+    cb_handler = CallbackHandler(callbacks, **training_state)
     cb_handler.on_train_begin(epochs)
 
-    for epoch in range(epochs):
+    for epoch in range(start_epoch, epochs):
         stages = [Stage.TRAIN]  # always train for an epoch
         if eval_loader is not None:
             stages.append(Stage.EVAL)  # eval after every epoch
