@@ -27,7 +27,6 @@ def fit(
         epochs: Maximum number of epochs to train ``seq_to_seq`` for. Note that
             the actual number of epochs may be less if
             :py:meth:`.CallbackHandler.on_epoch_end` returns :py:data:`True`.
-            if ``training_state['epochs'] > 0``,
 
         train_loader: A :py:class:`torch.utils.data.DataLoader` for the
             training data.
