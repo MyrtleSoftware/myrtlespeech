@@ -23,7 +23,7 @@ class LogMelFB:
     """
 
     def __init__(self, **kwargs):
-        self.MelSpectrogram = MelSpectrogram(**kwargs)
+        self.MelSpectrogram = MelSpectrogram(**kwargs, n_fft=512)
 
     def __call__(self, waveform):
         r"""See initization docstring."""
