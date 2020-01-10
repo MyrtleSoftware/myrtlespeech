@@ -7,5 +7,6 @@
     :caption: Contents:
 
     alphabet
+    augment
     dataset/index
     preprocess

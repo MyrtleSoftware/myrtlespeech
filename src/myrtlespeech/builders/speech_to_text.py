@@ -22,10 +22,10 @@ from myrtlespeech.builders.transducer_loss import (
     build as build_transducer_loss,
 )
 from myrtlespeech.data.alphabet import Alphabet
+from myrtlespeech.data.augment import SpecAugment
 from myrtlespeech.data.preprocess import AddContextFrames
 from myrtlespeech.data.preprocess import Downsample
 from myrtlespeech.data.preprocess import LogMelFB
-from myrtlespeech.data.preprocess import SpecAugment
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.model.cnn import Conv1dTo2d
 from myrtlespeech.model.deep_speech_1 import DeepSpeech1

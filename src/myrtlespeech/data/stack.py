@@ -10,16 +10,16 @@ class StackTime:
     to reduce the computational cost.
 
     Args:
-        time_reduction_factor: An `int` > 0 which gives the factor by which the
+        time_reduction_factor: An int > 0 which gives the factor by which the
             input feature size increases. It is also approximately equal to the
             factor by which the time-sequence length is decreased. For example,
             if `time_reduction_factor` = 2, the input feature size is doubled
             and the sequence length will be approximately halved
-            ('approximately' as padding will be required if `input_seq_len %
-            time_reduction_factor != 0`.
+            ('approximately' as padding will be required if ``input_seq_len %
+            time_reduction_factor != 0``.
 
         padding_value: Optional integer, default = 0. The padding value that is
-            added if `input_seq_len % time_reduction_factor != 0`.
+            added if ``input_seq_len % time_reduction_factor != 0``.
     """
 
     def __init__(self, time_reduction_factor, padding_value=0):
