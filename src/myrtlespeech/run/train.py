@@ -59,7 +59,6 @@ def fit(
             f"so no training can occur."
         )
     callbacks = _extend_callbacks(callbacks, seq_to_seq.model, train_loader)
-    print(callbacks)
     # sphinx-doc-start-after
     cb_handler = CallbackHandler(callbacks, **training_state)
     cb_handler.on_train_begin(epochs)
@@ -94,9 +93,8 @@ def fit(
                     # loss
                     loss_out, loss_y = cb_handler.on_loss_begin(out, y)
                     loss = seq_to_seq.loss(loss_out, loss_y)
-                    print("on backwards begin...", loss.item())
                     loss, skip_bwd = cb_handler.on_backward_begin(loss)
-                    print("post on backwards begin...", loss.item())
+
                     # optim
                     if is_training:
                         if not skip_bwd:
@@ -104,12 +102,10 @@ def fit(
 
                         if seq_to_seq.optim is not None:
                             if not cb_handler.on_backward_end():
-                                print("stepping...", loss.item())
                                 seq_to_seq.optim.step()
                                 seq_to_seq.lr_scheduler.step()
 
                             if not cb_handler.on_step_end():
-                                print("zero grad...", loss.item())
                                 seq_to_seq.optim.zero_grad()
 
                     if cb_handler.on_batch_end():
