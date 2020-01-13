@@ -76,12 +76,9 @@ class SeqToSeq(torch.nn.Module):
 
         if self.lr_scheduler is not None:
             self.lr_scheduler.load_state_dict(state_dict["lr_scheduler"])
-            if hasattr(self.lr_scheduler, "last_epoch"):
-                last_epoch = self.lr_scheduler.last_epoch
-            elif hasattr(self.lr_scheduler, "_scheduler"):
-                last_epoch = self.lr_scheduler._scheduler.last_epoch
-            else:
-                raise ValueError(
-                    "Could not find `last_epoch` in" "lr_scheduler"
-                )
-            self.lr_scheduler.step(epoch=last_epoch)
+            # Update the optimizer lrs to reflect correct lr_scheduler value
+            for param_group, lr in zip(
+                self.lr_scheduler.optimizer.param_groups,
+                self.lr_scheduler.get_lr(),
+            ):
+                param_group["lr"] = lr
