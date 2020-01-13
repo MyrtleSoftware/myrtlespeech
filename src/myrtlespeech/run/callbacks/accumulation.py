@@ -5,7 +5,7 @@ class GradientAccumulation(Callback):
     """Performs gradient accumulation.
 
     Args:
-        model: See :py:class:`ModelCallback`.
+        accumulation_steps: Number of steps to perform before
     """
 
     def __init__(
