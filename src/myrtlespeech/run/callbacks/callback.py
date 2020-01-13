@@ -5,6 +5,7 @@ from typing import Optional
 from typing import Tuple
 
 import torch
+from myrtlespeech.run.callbacks.accumulation import GradientAccumulation
 
 
 class Callback:
@@ -115,6 +116,14 @@ class CallbackHandler:
         self.training = training
         self.epoch = epoch or 0
         self.total_train_batches = total_train_batches or 0
+        self.accumulation_steps = self._get_accumulation_steps()
+
+    def _get_accumulation_steps(self) -> int:
+        acc_steps = 1
+        for cb in self.callbacks:
+            if isinstance(cb, GradientAccumulation):
+                acc_steps = cb.accumulation_steps
+        return acc_steps
 
     def __call__(self, stage_name: str) -> None:
         r"""Runs the ``stage_name`` method of all :py:class:`Callback`\s.
@@ -182,6 +191,9 @@ class CallbackHandler:
                 :py:meth:`CallbackHandler.on_batch_end` since the last call to
                 :py:meth:`CallbackHandler.on_epoch_begin`.
 
+            epoch_minibatches:
+                TODO
+
             reports:
                 TODO
 
@@ -200,6 +212,7 @@ class CallbackHandler:
                 epochs=epochs,
                 total_train_batches=self.total_train_batches,
                 epoch_batches=0,
+                epoch_minibatches=0,
                 reports={},
             )
         )
@@ -223,6 +236,7 @@ class CallbackHandler:
             {'epoch_batches': 0}
         """
         self.state_dict["epoch_batches"] = 0
+        self.state_dict["epoch_minibatches"] = 0
         self("on_epoch_begin")
 
     def on_batch_begin(self, x: Any, y: Any) -> Tuple[Dict, Dict]:
@@ -433,9 +447,14 @@ class CallbackHandler:
         """
         self.state_dict["stop_epoch"] = False
         self("on_batch_end")
-        self.state_dict["epoch_batches"] += 1
-        if self.training:
+        take_accumulated_step = (
+            self.state_dict["epoch_minibatches"] + 1
+        ) % self.accumulation_steps == 0
+        if take_accumulated_step:
+            self.state_dict["epoch_batches"] += 1
+        if self.training and take_accumulated_step:
             self.state_dict["total_train_batches"] += 1
+        self.state_dict["epoch_minibatches"] += 1
 
         return self.state_dict["stop_epoch"]
 
