@@ -1,3 +1,4 @@
+import math
 import multiprocessing
 from typing import Tuple
 
@@ -9,10 +10,11 @@ from myrtlespeech.data.batch import seq_to_seq_collate_fn
 from myrtlespeech.data.sampler import RandomBatchSampler
 from myrtlespeech.model.seq_to_seq import SeqToSeq
 from myrtlespeech.protos import task_config_pb2
+from myrtlespeech.run.callbacks.accumulation import GradientAccumulation
 
 
 def build(
-    task_config: task_config_pb2.TaskConfig,
+    task_config: task_config_pb2.TaskConfig, accumulation_steps: int = 1,
 ) -> Tuple[
     SeqToSeq, int, torch.utils.data.DataLoader, torch.utils.data.DataLoader
 ]:
@@ -21,6 +23,9 @@ def build(
     Args:
         task_config: A :py:class:`task_config_pb2.TaskConfig` protobuf object
             containing the config for the desired task.
+
+        accumulation_steps: Number of steps to perform gradient accumulation
+            over.
 
     Returns:
         A tuple of ``(seq_to_seq, epochs, optim, train_loader, eval_loader)``
@@ -48,6 +53,15 @@ def build(
     else:
         raise ValueError(f"unsupported model {model_str}")
 
+    train_batch_size = task_config.train_config.batch_size
+    if train_batch_size % accumulation_steps != 0:
+        raise ValueError(
+            f"train_batch_size must be divisible by ",
+            f"accumulation_steps but train_batch_size="
+            f"{train_batch_size} and accumulation_steps="
+            f"{accumulation_steps}.",
+        )
+    train_batch_size = train_batch_size // accumulation_steps
     # create optimizer
     optim_str = task_config.train_config.WhichOneof("supported_optimizers")
     if optim_str == "sgd":
@@ -115,7 +129,7 @@ def build(
         dataset=train_dataset,
         batch_sampler=RandomBatchSampler(
             indices=range(len(train_dataset)),
-            batch_size=task_config.train_config.batch_size,
+            batch_size=train_batch_size,
             shuffle=shuffle,
             drop_last=False,
         ),
@@ -123,6 +137,11 @@ def build(
         collate_fn=seq_to_seq_collate_fn,
         pin_memory=torch.cuda.is_available(),
     )
+
+    # Add accumulation callback
+    train_loader.callbacks = [
+        GradientAccumulation(accumulation_steps=accumulation_steps)
+    ]
 
     # eval
     eval_dataset = build_dataset(
@@ -143,7 +162,7 @@ def build(
     seq_to_seq.lr_scheduler = build_lr_scheduler(
         train_config=task_config.train_config,
         optimizer=seq_to_seq.optim,
-        batches_per_epoch=len(train_loader),
+        batches_per_epoch=math.ceil(len(train_loader) / accumulation_steps),
         epochs=task_config.train_config.epochs,
     )
 

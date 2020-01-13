@@ -1,7 +1,6 @@
 from typing import Any
 from typing import Collection
 from typing import Dict
-from typing import List
 from typing import Optional
 from typing import Tuple
 
@@ -96,10 +95,6 @@ class CallbackHandler:
 
         training: See Attributes.
 
-        model: An optional :py:class:`torch.nn.Module`. If ``hasattr(model,
-            'callbacks')``, these callbacks are added to the ``callbacks``
-            collection **before the the provided ``callbacks``**.
-
     Attributes:
         state_dict: A dictionary containing the state of the
             :py:class:`CallbackHandler`.
@@ -112,20 +107,14 @@ class CallbackHandler:
         self,
         callbacks: Optional[Collection[Callback]] = None,
         training: bool = True,
-        model: torch.nn.Module = None,
         epoch: Optional[int] = None,
         total_train_batches: Optional[int] = None,
     ):
-        self.callbacks: List = []
-        if model and hasattr(model, "callbacks"):
-            self.callbacks = model.callbacks.copy()
-        self.callbacks.extend(list(callbacks) if callbacks is not None else [])
+        self.callbacks = callbacks or []
         self.state_dict: Dict = {}
         self.training = training
-        self.epoch = epoch if epoch is not None else 0
-        self.total_train_batches = (
-            total_train_batches if total_train_batches is not None else 0
-        )
+        self.epoch = epoch or 0
+        self.total_train_batches = total_train_batches or 0
 
     def __call__(self, stage_name: str) -> None:
         r"""Runs the ``stage_name`` method of all :py:class:`Callback`\s.

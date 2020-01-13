@@ -1,6 +1,7 @@
 from contextlib import ExitStack
 from typing import Collection
 from typing import Dict
+from typing import List
 from typing import Optional
 
 import torch
@@ -38,7 +39,10 @@ def fit(
         eval_loader: An optional :py:class:`torch.utils.data.DataLoader` for
             the validation data.
 
-        callbacks: A collection of :py:class:`.Callback`\s.
+        callbacks: A collection of :py:class:`.Callback`\s. If ``hasattr(
+            seq_to_seq.model, 'callbacks')``, or ``hasattr(train_loader,
+            'callbacks')`` these callbacks are added to the ``callbacks``
+            collection.
 
         training_state: A dictionary containing the training state returned
             by :py:func:`load_state_dict`.
@@ -54,10 +58,9 @@ def fit(
             f'training_state["epoch"] is greater than ``epochs``'
             f"so no training can occur."
         )
+    callbacks = _extend_callbacks(callbacks, seq_to_seq.model, train_loader)
     # sphinx-doc-start-after
-    cb_handler = CallbackHandler(
-        callbacks, model=seq_to_seq.model, **training_state
-    )
+    cb_handler = CallbackHandler(callbacks, **training_state)
     cb_handler.on_train_begin(epochs)
 
     for epoch in range(start_epoch, epochs):
@@ -113,3 +116,17 @@ def fit(
 
     cb_handler.on_train_end()
     # sphinx-doc-end-before
+
+
+def _extend_callbacks(
+    callbacks: Optional[Collection[Callback]],
+    model: torch.nn.Module,
+    train_loader: Optional[DataLoader],
+):
+    cbs: List = []
+    if hasattr(model, "callbacks"):
+        cbs = model.callbacks.copy()
+    cbs.extend(callbacks or [])
+    if train_loader and hasattr(train_loader, "callbacks"):
+        cbs.extend(train_loader.callbacks or [])
+    return cbs
