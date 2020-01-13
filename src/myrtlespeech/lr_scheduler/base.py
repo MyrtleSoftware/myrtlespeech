@@ -58,7 +58,7 @@ class LRSchedulerBase(_LRScheduler):
         optim_step = self.optimizer._step_count
         if optim_step % self.step_freq == 0 and optim_step != 0:
             self._scheduler.step()
-
+        self._step_count = optim_step
         for param_group, lr in zip(self.optimizer.param_groups, self.get_lr()):
             param_group["lr"] = lr
 
@@ -102,7 +102,8 @@ class LRSchedulerBase(_LRScheduler):
         _scheduler_dict = state_dict.pop("_scheduler")
         self.__dict__.update(state_dict)
         self._scheduler.__dict__.update(_scheduler_dict)
-        self._scheduler.step(epoch=self._scheduler.last_epoch)
+        for param_group, lr in zip(self.optimizer.param_groups, self.get_lr()):
+            param_group["lr"] = lr
 
 
 class _LambdaLR(LambdaLR):
