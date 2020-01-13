@@ -1,4 +1,3 @@
-import math
 import multiprocessing
 from typing import Tuple
 
@@ -62,6 +61,11 @@ def build(
             f"{accumulation_steps}.",
         )
     train_batch_size = train_batch_size // accumulation_steps
+    if train_batch_size == 0:
+        raise ValueError(
+            "task_config.train_config.batch_size "
+            "// accumulation_steps == 0."
+        )
     # create optimizer
     optim_str = task_config.train_config.WhichOneof("supported_optimizers")
     if optim_str == "sgd":
@@ -162,7 +166,7 @@ def build(
     seq_to_seq.lr_scheduler = build_lr_scheduler(
         train_config=task_config.train_config,
         optimizer=seq_to_seq.optim,
-        batches_per_epoch=math.ceil(len(train_loader) / accumulation_steps),
+        batches_per_epoch=len(train_loader) // accumulation_steps,
         epochs=task_config.train_config.epochs,
     )
 

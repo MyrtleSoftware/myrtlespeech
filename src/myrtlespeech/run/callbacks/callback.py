@@ -5,7 +5,6 @@ from typing import Optional
 from typing import Tuple
 
 import torch
-from myrtlespeech.run.callbacks.accumulation import GradientAccumulation
 
 
 class Callback:
@@ -119,6 +118,11 @@ class CallbackHandler:
         self.accumulation_steps = self._get_accumulation_steps()
 
     def _get_accumulation_steps(self) -> int:
+        # prevent circular import
+        from myrtlespeech.run.callbacks.accumulation import (
+            GradientAccumulation,
+        )
+
         acc_steps = 1
         for cb in self.callbacks:
             if isinstance(cb, GradientAccumulation):
@@ -447,14 +451,15 @@ class CallbackHandler:
         """
         self.state_dict["stop_epoch"] = False
         self("on_batch_end")
+        self.state_dict["epoch_minibatches"] += 1
+
         take_accumulated_step = (
-            self.state_dict["epoch_minibatches"] + 1
-        ) % self.accumulation_steps == 0
+            self.state_dict["epoch_minibatches"] % self.accumulation_steps == 0
+        )
         if take_accumulated_step:
             self.state_dict["epoch_batches"] += 1
         if self.training and take_accumulated_step:
             self.state_dict["total_train_batches"] += 1
-        self.state_dict["epoch_minibatches"] += 1
 
         return self.state_dict["stop_epoch"]
 
