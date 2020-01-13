@@ -5,7 +5,7 @@ from myrtlespeech.run.callbacks.callback import Callback
 
 
 class StopEpochAfter(Callback):
-    """Stops an epoch after ``epoch_batches`` have been processed.
+    """Stops an epoch after ``epoch_minibatches`` have been processed.
 
     This is a small class for convenience.
 
@@ -14,7 +14,7 @@ class StopEpochAfter(Callback):
         >>> from myrtlespeech.run.callbacks.callback import CallbackHandler
         >>>
         >>> # initialize
-        >>> stop_epoch_after = StopEpochAfter(epoch_batches=5)
+        >>> stop_epoch_after = StopEpochAfter(epoch_minibatches=5)
         >>> cb_handler = CallbackHandler(callbacks=[stop_epoch_after])
         >>>
         >>> # simulate training for 1 epoch containing 2 batches
@@ -31,11 +31,11 @@ class StopEpochAfter(Callback):
         4 True
     """
 
-    def __init__(self, epoch_batches: int = 1):
-        self.epoch_batches = epoch_batches
+    def __init__(self, epoch_minibatches: int = 1):
+        self.epoch_minibatches = epoch_minibatches
 
     def on_batch_end(self, **kwargs) -> Optional[Dict]:
-        """Returns ``{'stop_epoch': True}`` when ``epoch_batches`` are done."""
-        if kwargs["epoch_batches"] + 1 >= self.epoch_batches:
+        """Returns ``{'stop_epoch': True}`` after ``epoch_minibatches``."""
+        if kwargs["epoch_minibatches"] + 1 >= self.epoch_minibatches:
             return {"stop_epoch": True}
         return None  # keep mypy happy
