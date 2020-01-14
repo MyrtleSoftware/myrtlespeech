@@ -11,6 +11,31 @@ from torch.utils.data import Dataset
 
 
 class BaseDataset(Dataset):
+    r"""Base Dataset class.
+
+    Args:
+        root: Root directory of the dataset.
+
+        subsets: List of subsets to create the dataset from. These will be
+            specific to the dataset in question.
+
+        audio_transform: A function that returns a transformed piece of audio
+            data.
+
+        label_transform: A function that returns a transformed target.
+
+        download: If :py:data:`True`, dataset is extracted to the ``root``
+            directory.
+
+        skip_integrity_check: If :py:data:`True` the integrity check is
+            skipped.  This is useful when doing quick experiments on the larger
+            subsets that can take time to verify and may have been recently
+            checked.
+
+        max_duration: All samples with duration (in seconds) greater than this
+            will be dropped.
+    """
+
     def __init__(
         self,
         root: str,
@@ -38,6 +63,10 @@ class BaseDataset(Dataset):
             warnings.warn("skipping integrity check")
 
         self.load_data()
+
+    def download(self) -> None:
+        """Downloads dataset. Must be overridden."""
+        raise NotImplementedError
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, str]:
         r"""Returns the sample at ``index`` in the dataset.
