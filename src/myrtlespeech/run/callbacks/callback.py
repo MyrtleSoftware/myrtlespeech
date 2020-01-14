@@ -208,7 +208,7 @@ class CallbackHandler:
             {}
             >>> handler.on_train_begin(epochs=100)
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 100, 'total_train_batches': 0, 'epoch_batches': 0, 'reports': {}}
+            {'epoch': 0, 'epochs': 100, 'total_train_batches': 0, 'epoch_batches': 0, 'epoch_minibatches': 0, 'reports': {}}
         """
         self.state_dict.update(
             dict(
@@ -237,7 +237,7 @@ class CallbackHandler:
             >>> handler.on_epoch_begin()
             called
             >>> handler.state_dict
-            {'epoch_batches': 0}
+            {'epoch_batches': 0, 'epoch_minibatches': 0}
         """
         self.state_dict["epoch_batches"] = 0
         self.state_dict["epoch_minibatches"] = 0
@@ -443,11 +443,11 @@ class CallbackHandler:
             >>> handler = CallbackHandler(callbacks=[callback])
             >>> handler.on_train_begin(1)   # initialise state_dict
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 1, 'total_train_batches': 0, 'epoch_batches': 0, 'reports': {}}
+            {'epoch': 0, 'epochs': 1, 'total_train_batches': 0, 'epoch_batches': 0, 'epoch_minibatches': 0, 'reports': {}}
             >>> handler.on_batch_end()
             True
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 1, 'total_train_batches': 1, 'epoch_batches': 1, 'reports': {}, 'stop_epoch': True}
+            {'epoch': 0, 'epochs': 1, 'total_train_batches': 1, 'epoch_batches': 1, 'epoch_minibatches': 1, 'reports': {}, 'stop_epoch': True}
         """
         self.state_dict["stop_epoch"] = False
         self("on_batch_end")
@@ -494,7 +494,7 @@ class CallbackHandler:
             >>> handler = CallbackHandler(callbacks=[callback])
             >>> handler.on_train_begin(1)   # initialise state_dict
             >>> handler.state_dict
-            {'epoch': 0, 'epochs': 1, 'total_train_batches': 0, 'epoch_batches': 0, 'reports': {}}
+            {'epoch': 0, 'epochs': 1, 'total_train_batches': 0, 'epoch_batches': 0, 'epoch_minibatches': 0, 'reports': {}}
             >>> handler.on_epoch_end()
             True
             >>> handler.state_dict["epoch"]
