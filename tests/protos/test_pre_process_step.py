@@ -134,6 +134,10 @@ def _standardizes(
     """Returns a SearchStrategy for Standardizes plus maybe the kwargs."""
     kwargs: Dict = {}
 
+    kwargs["norm_type"] = draw(
+        st.sampled_from(pre_process_step_pb2.Standardize.NormType.values())
+    )
+
     # initialise and return
     all_fields_set(pre_process_step_pb2.Standardize, kwargs)
     std = pre_process_step_pb2.Standardize(**kwargs)  # type: ignore

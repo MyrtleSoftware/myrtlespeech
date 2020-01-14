@@ -36,6 +36,8 @@ class LogMelFB:
 
         return feat.log()
 
+EPS = 1e-8
+
 
 class AddSequenceLength:
     """Adds sequence length information to ``data``.
@@ -68,12 +70,23 @@ class AddSequenceLength:
 
 
 class Standardize:
-    """Standardize a tensor to have zero mean and one standard deviation.
+    """Normalises a tensor.
+
+    Args:
+        norm_type: Specifies the type of normalization:
+
+            per_feature: Normalize each sample on a per-feature basis over
+                all timesteps. In this case, input tensor must be of size
+                ``channels=1, features, seq_length.``.
+
+            all_features: Normalize each sample to have to have zero mean
+                and one standard deviation. Tensor can be of arbitrary shape.
+
 
     Example:
         >>> # Scale and shift standard normal distribution
         >>> x = 5*torch.empty(10000000).normal_() + 3
-        >>> standardize = Standardize()
+        >>> standardize = Standardize('all_features')
         >>> x_std = standardize(x)
         >>> bool(-0.001 <= x_std.mean() <= 0.001)
         True
@@ -81,16 +94,28 @@ class Standardize:
         True
     """
 
+    def __init__(self, norm_type: str = "per_feature"):
+        self.norm_type = norm_type
+
     def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
         """Returns a tensor after subtracting mean and dividing by std.
 
         Args:
-           tensor: A :py:class:`torch.Tensor` with any number of dimensions.
+            tensor: A :py:class:`torch.Tensor` with the size specified in the
+                initialization docstrings.
         """
-        return ((tensor - tensor.mean()) / tensor.std()).detach()
+        if self.norm_type == "all_features":
+            return ((tensor - tensor.mean()) / tensor.std()).detach()
+        elif self.norm_type == "per_feature":
+            assert len(tensor.shape) == 3
+            assert tensor.shape[0] == 1
+            std_ = (tensor.std(dim=2) + EPS).unsqueeze(2)
+            return (tensor - tensor.mean(dim=2).unsqueeze(2)) / std_
+        else:
+            raise ValueError(f"self.norm_type={self.norm_type} not recognised")
 
     def __repr__(self) -> str:
-        return self.__class__.__name__ + "()"
+        return self.__class__.__name__ + f"(norm_type='{self.norm_type}')"
 
 
 class AddContextFrames:
