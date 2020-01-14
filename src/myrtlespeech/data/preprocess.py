@@ -56,7 +56,7 @@ class Standardize:
     Example:
         >>> # Scale and shift standard normal distribution
         >>> x = 5*torch.empty(10000000).normal_() + 3
-        >>> standardize = Standardize()
+        >>> standardize = Standardize('all_features')
         >>> x_std = standardize(x)
         >>> bool(-0.001 <= x_std.mean() <= 0.001)
         True
@@ -85,7 +85,7 @@ class Standardize:
             raise ValueError(f"self.norm_type={self.norm_type} not recognised")
 
     def __repr__(self) -> str:
-        return self.__class__.__name__ + "()"
+        return self.__class__.__name__ + f"(norm_type='{self.norm_type}')"
 
 
 class AddContextFrames:

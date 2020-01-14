@@ -42,7 +42,9 @@ def build(
             n_time_masks=spec.n_time_masks,
         )
     elif step_type == "standardize":
-        step = Standardize()
+        norm_type_idx = pre_process_step_cfg.standardize.norm_type
+        norm_type_str = _norm_type_idx_to_str(norm_type_idx)
+        step = Standardize(norm_type=norm_type_str)
     elif step_type == "context_frames":
         step = AddContextFrames(
             n_context=pre_process_step_cfg.context_frames.n_context
@@ -51,3 +53,11 @@ def build(
         raise ValueError(f"unknown pre_process_step '{step_type}'")
 
     return step, Stage(pre_process_step_cfg.stage)
+
+
+def _norm_type_idx_to_str(idx):
+    """Converts ``norm_type`` idx to string representation."""
+    x = pre_process_step_pb2.Standardize.NormType.DESCRIPTOR.values_by_number[
+        idx
+    ]
+    return x.name.lower()

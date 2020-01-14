@@ -48,6 +48,12 @@ message SpecAugment {
 
 // Standardize the input.
 message Standardize {
+  // Type of normalization to apply.
+  enum NormType {
+    ALL_FEATURES = 0;
+    PER_FEATURE = 1;
+  }
+  NormType norm_type = 1;
 }
 
 
