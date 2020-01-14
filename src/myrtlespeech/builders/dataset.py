@@ -2,6 +2,8 @@ from typing import Callable
 from typing import Optional
 
 import torch
+from myrtlespeech.data.dataset.commonvoice import CommonVoice
+from myrtlespeech.data.dataset.composite import Composite
 from myrtlespeech.data.dataset.fake import FakeDataset
 from myrtlespeech.data.dataset.fake import speech_to_text
 from myrtlespeech.data.dataset.librispeech import LibriSpeech
@@ -68,44 +70,71 @@ def build(
         >>> bool(len(label) == label_len)
         True
     """
-    supported_dataset = dataset.WhichOneof("supported_datasets")
-
     if add_seq_len_to_transforms:
         transform = _add_seq_len(transform, len_fn=lambda x: x.size(-1))
         target_transform = _add_seq_len(target_transform, len_fn=len)
 
-    if supported_dataset == "fake_speech_to_text":
-        cfg = dataset.fake_speech_to_text
-        dataset = FakeDataset(
-            generator=speech_to_text(
-                audio_ms=(cfg.audio_ms.lower, cfg.audio_ms.upper),
-                label_symbols=cfg.label_symbols,
-                label_len=(cfg.label_len.lower, cfg.label_len.upper),
+    def _create_data_set(dset: dataset_pb2.Dataset):
+        supported_dataset = dset.WhichOneof("supported_datasets")
+
+        if supported_dataset == "fake_speech_to_text":
+            cfg = dset.fake_speech_to_text
+            dataset = FakeDataset(
+                generator=speech_to_text(
+                    audio_ms=(cfg.audio_ms.lower, cfg.audio_ms.upper),
+                    label_symbols=cfg.label_symbols,
+                    label_len=(cfg.label_len.lower, cfg.label_len.upper),
+                    audio_transform=transform,
+                    label_transform=target_transform,
+                ),
+                dataset_len=cfg.dataset_len,
+            )
+        elif supported_dataset == "librispeech":
+            cfg = dset.librispeech
+            max_duration = (
+                cfg.max_secs.value if cfg.HasField("max_secs") else None
+            )
+            dataset = LibriSpeech(
+                root=cfg.root,
+                subsets=[
+                    cfg.SUBSET.DESCRIPTOR.values_by_number[subset_idx]
+                    .name.lower()
+                    .replace("_", "-")
+                    for subset_idx in cfg.subset
+                ],
                 audio_transform=transform,
                 label_transform=target_transform,
-            ),
-            dataset_len=cfg.dataset_len,
-        )
-    elif supported_dataset == "librispeech":
-        cfg = dataset.librispeech
-        max_duration = cfg.max_secs.value if cfg.HasField("max_secs") else None
-        dataset = LibriSpeech(
-            root=cfg.root,
-            subsets=[
-                cfg.SUBSET.DESCRIPTOR.values_by_number[subset_idx]
-                .name.lower()
-                .replace("_", "-")
-                for subset_idx in cfg.subset
-            ],
-            audio_transform=transform,
-            label_transform=target_transform,
-            download=download,
-            max_duration=max_duration,
-        )
-    else:
-        raise ValueError(f"{supported_dataset} not supported")
+                download=download,
+                max_duration=max_duration,
+            )
+        elif supported_dataset == "commonvoice":
+            cfg = dset.commonvoice
+            max_duration = (
+                cfg.max_secs.value if cfg.HasField("max_secs") else None
+            )
+            dataset = CommonVoice(
+                root=cfg.root,
+                subsets=[
+                    cfg.SUBSET.DESCRIPTOR.values_by_number[
+                        subset_idx
+                    ].name.lower()
+                    for subset_idx in cfg.subset
+                ],
+                audio_transform=transform,
+                label_transform=target_transform,
+                download=download,
+                max_duration=max_duration,
+            )
+        elif supported_dataset == "composite":
+            cfg = dset.composite
+            children = [_create_data_set(child) for child in cfg.dataset]
+            dataset = Composite(*children)
+        else:
+            raise ValueError(f"{supported_dataset} not supported")
 
-    return dataset
+        return dataset
+
+    return _create_data_set(dataset)
 
 
 def _add_seq_len(transform: Optional[Callable], len_fn: Callable) -> Callable:
