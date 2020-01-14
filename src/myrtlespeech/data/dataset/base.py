@@ -10,7 +10,7 @@ import torchaudio
 from torch.utils.data import Dataset
 
 
-class LibriSpeech(Dataset):
+class BaseDataset(Dataset):
     def __init__(
         self,
         root: str,

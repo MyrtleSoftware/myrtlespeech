@@ -9,10 +9,10 @@ from typing import Sequence
 import requests
 import torchaudio
 from myrtlespeech.data.dataset import utils
-from torch.utils.data import Dataset
+from myrtlespeech.data.dataset.base import BaseDataset
 
 
-class LibriSpeech(Dataset):
+class LibriSpeech(BaseDataset):
     """LibriSpeech Dataset - http://openslr.org/12/
 
     Args:
