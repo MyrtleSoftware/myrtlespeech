@@ -11,7 +11,7 @@ from myrtlespeech.lr_scheduler.constant import ConstantLR
 from myrtlespeech.lr_scheduler.poly import PolynomialLR
 
 from tests.lr_scheduler.utils import check_lr_schedule_set
-
+from tests.utils.utils import check_state_dicts_match
 
 # Fixtures and Strategies -----------------------------------------------------
 
@@ -89,21 +89,6 @@ def _lr_scheduler_data(
         "min_lr_multiple": kwargs.get("min_lr_multiple"),
     }
     return scheduler, params
-
-
-# Utilities -------------------------------------------------------------------
-
-
-def check_state_dicts_match(dict1, dict2):
-    """Ensures state_dicts match."""
-    assert dict1.keys() == dict2.keys()
-    for key in dict1.keys():
-        val1 = dict1[key]
-        val2 = dict2[key]
-        if isinstance(val1, float) or isinstance(val2, float):
-            assert abs(val1 - val2) < TOL
-        else:
-            assert val1 == val2
 
 
 # Tests -----------------------------------------------------------------------
