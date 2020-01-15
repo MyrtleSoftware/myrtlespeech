@@ -5,23 +5,30 @@ from tempfile import NamedTemporaryFile
 import pytest
 import torch
 from hypothesis import given
-from myrtlespeech.builders.task_config import build
 from myrtlespeech.protos import task_config_pb2
 from myrtlespeech.run.load import load_seq_to_seq
 
+from tests.builders.test_task_config import build_and_check_task_config
 from tests.protos.test_task_config import task_configs
 from tests.utils.utils import check_state_dicts_match
+
+# Tests -----------------------------------------------------------------------
 
 
 @given(seq_to_seq_cfg=task_configs())
 def test_seq_to_seq_state_dict_correctly_saved_and_loaded(
     seq_to_seq_cfg: task_config_pb2.TaskConfig,
 ) -> None:
-    """Test that SeqToSeq task state_dict is correctly saved and loaded."""
-    if seq_to_seq_cfg is None or not seq_to_seq_cfg.HasField("speech_to_text"):
-        warnings.warn("Skipping test since invalid proto was drawn.")
+    """Test that SeqToSeq task state_dict is correctly saved and loaded.
+
+    This is also an end to end test for the task_config builder.
+    """
+    if seq_to_seq_cfg is None:
+        warnings.warn("Skipping test as invalid task_config proto drawn.")
         return
-    seq_to_seq, _, _, _ = build(seq_to_seq_cfg)
+    seq_to_seq = build_and_check_task_config(seq_to_seq_cfg)
+    if seq_to_seq is None:
+        return
     orig_state_dict = copy.deepcopy(seq_to_seq.state_dict())
 
     # save state_dict

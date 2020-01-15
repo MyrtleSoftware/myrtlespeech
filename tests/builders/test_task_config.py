@@ -1,34 +1,29 @@
 import warnings
+from typing import Optional
 
 import torch
-from hypothesis import given
-from hypothesis import settings
 from myrtlespeech.builders.task_config import build
 from myrtlespeech.protos import task_config_pb2
 
-from tests.protos.test_task_config import task_configs
+# Utilities -------------------------------------------------------------------
 
 
-# Tests -----------------------------------------------------------------------
-
-
-@given(task_cfg=task_configs())
-@settings(deadline=3000)
-def test_build_returns(task_cfg: task_config_pb2.TaskConfig) -> None:
-    """Test that build returns when called."""
-    try:
-        model, epochs, train_loader, eval_loader = build(task_cfg)
-        assert isinstance(model, torch.nn.Module)
+def build_and_check_task_config(
+    task_cfg: task_config_pb2.TaskConfig,
+) -> Optional[torch.nn.Module]:
+    """Helper to check TaskConfig is built correctly."""
+    seq_to_seq = None
+    if task_cfg.HasField("speech_to_text"):
+        seq_to_seq, epochs, train_loader, eval_loader = build(task_cfg)
+        assert isinstance(seq_to_seq, torch.nn.Module)
         assert isinstance(epochs, int)
         assert isinstance(train_loader, torch.utils.data.DataLoader)
         assert isinstance(eval_loader, torch.utils.data.DataLoader)
         warnings.warn("TaskConfig only built and not checked if correct")
-    except ValueError as e:
-        if str(e) == "unsupported model None":
-            warnings.warn(
-                "model=None due to tests/protos/test_speech_to_text.py hack. "
-                "TOD0: Remove this exception handling once the hack in "
-                "tests/protos/test_speech_to_text.py has been removed."
-            )
-        else:
-            raise e
+    else:
+        warnings.warn(
+            "Invalid proto drawn w/o a speech_to_text config."
+            "TOD0: Remove this exception handling once the hack in "
+            "tests/protos/test_speech_to_text.py has been removed."
+        )
+    return seq_to_seq
