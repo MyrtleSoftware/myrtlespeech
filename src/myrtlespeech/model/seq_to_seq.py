@@ -76,4 +76,9 @@ class SeqToSeq(torch.nn.Module):
 
         if self.lr_scheduler is not None:
             self.lr_scheduler.load_state_dict(state_dict["lr_scheduler"])
-            self.lr_scheduler.step(epoch=self.lr_scheduler.last_epoch)
+            # Update the optimizer lrs to reflect correct lr_scheduler value
+            for param_group, lr in zip(
+                self.lr_scheduler.optimizer.param_groups,
+                self.lr_scheduler.get_lr(),
+            ):
+                param_group["lr"] = lr
