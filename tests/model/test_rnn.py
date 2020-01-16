@@ -194,7 +194,7 @@ def test_rnn_forward_pass_hidden_passed(
     max_seq_len: int,
     hidden_is_none: bool,
 ) -> None:
-    """Tests forward rnn pass.
+    """Tests forward rnn pass when hidden state is returned.
 
     Test both hidden=None and hidden={(h_0, c_0), h_0}."""
 
