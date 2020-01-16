@@ -121,21 +121,22 @@ class RNN(torch.nn.Module):
         initialisation.
 
         Args:
-            x: A Tuple ``(x[0], x[1])``. ``x[0]`` can take two forms: either it
-                is a tuple ``x[0] = (inp, hid)`` or it is a torch tensor
-                ``x[0] = inp``. ``inp`` is the network input (a
-                :py:class:`torch.Tensor`) with size ``[seq_len, batch,
-                in_features]``. ``hid`` is the RNN hidden state which is
-                either a length 2 Tuple of :py:class:`torch.Tensor`s or
-                a single :py:class:`torch.Tensor` depending on the ``RNNType``
-                (see :py:class:`torch.nn` documentation for more information).
+            x: A Tuple ``(RNNInput, RNNLengths)``. ``RNNLengths`` can take two
+                forms: either it is a tuple ``RNNInput = (inp, hid)`` or it is
+                a :py:class:`torch.Tensor`: ``RNNInput = inp`` where ``inp``
+                is the network input (a :py:class:`torch.Tensor`) with size
+                ``[seq_len, batch, in_features]`` and ``hid`` is the RNN
+                hidden state which is either a length 2 Tuple of
+                :py:class:`torch.Tensor`s or a single :py:class:`torch.Tensor`
+                depending on the ``RNNType`` (see :py:class:`torch.nn`
+                documentation for more information).
 
-                The return type `res[0]` will be the same as the `x[0]` type so
-                you should pass `hid = None` if you would like the hidden state
-                returned and it is the start-of-sequence. In this case, the
+                The return type ``res[0]`` will be the same as the ``RNNInput``
+                type so user should pass ``hid = None`` to obtain the hidden
+                state at the start-of-sequence. In this case, the
                 hidden state(s) will be initialised to zero in PyTorch.
 
-                ``x[1]`` is a :py:class:`torch.Tensor` where each entry
+                ``RNNLengths`` is a :py:class:`torch.Tensor` where each entry
                 represents the sequence length of the corresponding network
                 *input* sequence.
 
@@ -152,8 +153,8 @@ class RNN(torch.nn.Module):
 
             ``res[1]`` is a :py:class:`torch.Tensor` where each entry
             represents the sequence length of the corresponding network
-            *output* sequence. This will be equal to ``x[1]`` as this layer
-            does not change sequence length.
+            *output* sequence. This will be equal to ``RNNLengths`` as this
+            layer does not change sequence length.
         """
 
         if isinstance(x[0], torch.Tensor):
