@@ -35,48 +35,42 @@ def fully_connected_module_match_cfg(
     # otherwise it will be a Sequential of layers
     assert isinstance(fully_connected, torch.nn.Sequential)
 
-    # configuration of each layer in Sequential depends on whether activation
-    # and dropout are present
+    # expected configuration of each layer in Sequential depends on whether
+    # both/either of {activation, dropout} are present.
     act_fn_is_none = fully_connected_cfg.activation.HasField("identity")
-    dropout_is_used = fully_connected_cfg.HasField("dropout")
+    dropout_is_none = not fully_connected_cfg.HasField("dropout")
     if act_fn_is_none:
         expected_len = fully_connected_cfg.num_hidden_layers + 1
     else:
         expected_len = 2 * fully_connected_cfg.num_hidden_layers + 1
 
-    if dropout_is_used:
+    if not dropout_is_none:
         expected_len += fully_connected_cfg.num_hidden_layers
 
     assert len(fully_connected) == expected_len
 
     # Now check that the linear/activation_fn/dropout layers appear in the
-    # expected order. We set the `module_idx` and then check for the
+    # expected order. We set the ``module_idx`` and then check for the
     # following condition:
     # if module_idx % total_types == <module_type>_idx:
     #     assert isinstance(module, <module_type>)
-    if act_fn_is_none and not dropout_is_used:
-        linear_idx = 0
-        activation_idx = -1  # infeasible value
-        dropout_idx = -1  # infeasible value
+    linear_idx = 0  # in all cases
+    activation_idx = -1  # infeasible value as default
+    dropout_idx = -1
+    if act_fn_is_none and dropout_is_none:
         total_types = 1  # (linear layers only)
-    elif not act_fn_is_none and not dropout_is_used:
-        linear_idx = 0
+    elif not act_fn_is_none and dropout_is_none:
+        total_types = 2  # (linear and activation)
         activation_idx = 1
-        dropout_idx = -1
-        total_types = 2  # (linear layers and activation)
-    elif act_fn_is_none and dropout_is_used:
-        linear_idx = 0
-        activation_idx = -1
-        dropout_idx = 1
+    elif act_fn_is_none and not dropout_is_none:
         total_types = 2
-    elif not act_fn_is_none and dropout_is_used:
-        linear_idx = 0
+        dropout_idx = 1
+    elif not act_fn_is_none and not dropout_is_none:
+        total_types = 3
         activation_idx = 1
         dropout_idx = 2
-        total_types = 3
 
     for module_idx, module in enumerate(fully_connected):
-
         if module_idx % total_types == linear_idx:
             assert isinstance(module, torch.nn.Linear)
             assert module.in_features == input_features
@@ -91,9 +85,9 @@ def fully_connected_module_match_cfg(
             assert isinstance(module, torch.nn.Dropout)
             assert abs(module.p - fully_connected_cfg.dropout.value) < 1e-8
         else:
-            raise NotImplementedError(
-                "Issue with implementation. This branch \
-                should not be hit!"
+            raise ValueError(
+                "Check module_idx and total_types assignment. It "
+                "**should not** be possible to hit this branch!"
             )
 
 
