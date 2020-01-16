@@ -35,6 +35,12 @@ def load_seq_to_seq(
     seq_to_seq.load_state_dict(dict_)
 
     training_state = {}
+    if epoch is None:
+        # attempt to parse epoch from filename
+        fname = Path(state_dict_fp).name
+        epoch_str = fname.replace("state_dict_", "").replace(".pt", "")
+        if epoch_str.isnumeric():
+            epoch = int(epoch_str)
     if epoch is not None:
         training_state["epoch"] = epoch
     if total_train_batches is not None:
