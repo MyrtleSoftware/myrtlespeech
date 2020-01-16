@@ -23,11 +23,11 @@ def load_seq_to_seq(
         state_dict_fp: A path to a ``seq_to_seq`` state dict.
 
     Returns:
-        A Dict containing the training state of the state_dict
-        if known. This state includes the number of epochs
-        completed and the total number of batches seen. This
-        dict can be passed as the ``training_state`` arg to
-        :py:func:`fit` to resume training from the same point.
+        A Dict containing the training state of the loaded state_dict
+        :py:class:`.SeqToSeq` if known. This state includes the number of
+        epochs completed and the total number of batches seen and should be
+        passed as ``training_state`` to :py:func:`fit` in order to resume
+        training from the same point.
     """
     dict_ = torch.load(state_dict_fp)
     epoch = dict_.pop("epoch", None)

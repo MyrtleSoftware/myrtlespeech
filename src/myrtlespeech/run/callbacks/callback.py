@@ -116,11 +116,11 @@ class CallbackHandler:
         epoch: Optional[int] = None,
         total_train_batches: Optional[int] = None,
     ):
-        self.callbacks = callbacks if callbacks is not None else []
+        self.callbacks = callbacks or []
         self.state_dict: Dict = {}
         self.training = training
-        self.epoch = epoch or 0
-        self.total_train_batches = total_train_batches or 0
+        self.initial_epoch = epoch or 0
+        self.initial_total_train_batches = total_train_batches or 0
 
     def __call__(self, stage_name: str) -> None:
         r"""Runs the ``stage_name`` method of all :py:class:`Callback`\s.
@@ -202,16 +202,13 @@ class CallbackHandler:
         """
         self.state_dict.update(
             dict(
-                epoch=self.epoch,
+                epoch=self.initial_epoch,
                 epochs=epochs,
-                total_train_batches=self.total_train_batches,
+                total_train_batches=self.initial_total_train_batches,
                 epoch_batches=0,
                 reports={},
             )
         )
-        # delete training state as this will quickly be out of date:
-        del self.epoch
-        del self.total_train_batches
         self("on_train_begin")
 
     def on_epoch_begin(self) -> None:
