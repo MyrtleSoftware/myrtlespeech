@@ -23,10 +23,10 @@ message FullyConnected {
   // only an output layer and no hidden layers!
   Activation activation = 3;
 
-  // The dropout value to apply after each hidden layer activation
+  // The dropout value to apply after each hidden layer activation.
   //
-  // Dropout is not applied if ``dropout: 0.`` and is only applied between
-  // hidden layers (i.e. is not applied when ``num_hidden_layers: 0``)
+  // Dropout is only applied between hidden layers (so is not applied when
+  // ``num_hidden_layers: 0``).
   google.protobuf.FloatValue dropout = 4;
 
 }
