@@ -6,6 +6,7 @@ import "myrtlespeech/protos/dataset.proto";
 import "myrtlespeech/protos/lr_scheduler.proto";
 import "myrtlespeech/protos/optimizer.proto";
 
+import "google/protobuf/wrappers.proto";
 
 // Configuration for training.
 message TrainConfig {
@@ -36,4 +37,21 @@ message TrainConfig {
     // Shuffle batches before every epoch.
     bool shuffle_batches_before_every_epoch = 10;
   }
+
+  // Label smoothing: https://arxiv.org/pdf/1512.00567.pdf
+  message LabelSmoothing {
+    // Type of smoothing
+    enum SmoothingType {
+      UNIFORM = 0;
+      UNIGRAM = 1;
+    }
+
+    SmoothingType type = 1;
+
+    google.protobuf.FloatValue probability = 2;
+  }
+
+  // If present, smooth labels
+  LabelSmoothing label_smoothing = 13;
+
 }

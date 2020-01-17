@@ -1,14 +1,17 @@
 import multiprocessing
+from typing import Callable
 from typing import Tuple
 
 import torch
 from myrtlespeech.builders.dataset import build as build_dataset
 from myrtlespeech.builders.lr_scheduler import build as build_lr_scheduler
 from myrtlespeech.builders.speech_to_text import build as build_stt
+from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.data.batch import seq_to_seq_collate_fn
 from myrtlespeech.data.sampler import RandomBatchSampler
 from myrtlespeech.model.seq_to_seq import SeqToSeq
 from myrtlespeech.protos import task_config_pb2
+from myrtlespeech.protos import train_config_pb2
 from myrtlespeech.run.callbacks.accumulation import GradientAccumulation
 
 
@@ -110,13 +113,15 @@ def build(
 
     seq_to_seq.optim = optim
 
-    # create dataloader
-    def target_transform(target):
-        return torch.tensor(
-            seq_to_seq.alphabet.get_indices(target),
-            dtype=torch.int32,
-            requires_grad=False,
-        )
+    # create learning rate scheduler
+    seq_to_seq.lr_scheduler = _create_lr_scheduler(
+        task_config, seq_to_seq.optim
+    )
+
+    # get target transforms
+    train_target_trans, eval_target_trans = _get_target_transform(
+        task_config.train_config, seq_to_seq.alphabet
+    )
 
     num_workers = multiprocessing.cpu_count() // 4
 
@@ -124,7 +129,7 @@ def build(
     train_dataset = build_dataset(
         task_config.train_config.dataset,
         transform=seq_to_seq.pre_process,
-        target_transform=target_transform,
+        target_transform=train_target_trans,
         add_seq_len_to_transforms=True,
     )
 
@@ -151,7 +156,7 @@ def build(
     eval_dataset = build_dataset(
         task_config.eval_config.dataset,
         transform=seq_to_seq.pre_process,
-        target_transform=target_transform,
+        target_transform=eval_target_trans,
         add_seq_len_to_transforms=True,
     )
     eval_loader = torch.utils.data.DataLoader(
@@ -176,3 +181,111 @@ def build(
         train_loader,
         eval_loader,
     )
+
+
+def _create_lr_scheduler(
+    task_config: task_config_pb2.TaskConfig, optimizer: torch.optim
+) -> torch.optim.lr_scheduler:
+    """Builds a ``learning rate scheduler`` and returns it.
+
+    Args:
+        task_config: A :py:class:`task_config_pb2.TaskConfig` protobuf object
+            containing the config for the desired task.
+
+        optimizer: A :py:class:`torch.optim` that is used in the learning rate
+            scheduler initialization.
+
+    Returns:
+        A :py:class:`torch.optim.lr_scheduler` instance.
+
+    Raises:
+        :py:class:`ValueError`: On invalid configuration.
+        """
+    lr_scheduler_str = task_config.train_config.WhichOneof(
+        "supported_lr_scheduler"
+    )
+
+    if lr_scheduler_str == "constant_lr":
+        lr_scheduler = None
+    elif lr_scheduler_str == "step_lr":
+        kwargs = {}
+
+        step_lr = task_config.train_config.step_lr
+        if step_lr.HasField("gamma"):
+            kwargs["gamma"] = step_lr.gamma.value
+        kwargs["step_size"] = step_lr.step_size
+
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer=optimizer, **kwargs
+        )
+    elif lr_scheduler_str == "exponential_lr":
+        lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer=optimizer,
+            gamma=task_config.train_config.exponential_lr.gamma,
+        )
+    elif lr_scheduler_str == "cosine_annealing_lr":
+        kwargs = {}
+
+        cosine_annealing_lr = task_config.train_config.cosine_annealing_lr
+        if cosine_annealing_lr.HasField("eta_min"):
+            kwargs["eta_min"] = cosine_annealing_lr.eta_min.value
+        kwargs["T_max"] = cosine_annealing_lr.t_max
+
+        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer=optimizer, **kwargs
+        )
+    else:
+        raise ValueError(
+            f"unsupported learning rate scheduler {lr_scheduler_str}"
+        )
+
+    return lr_scheduler
+
+
+def _get_target_transform(
+    train_config: train_config_pb2.TrainConfig, alphabet: Alphabet
+) -> Tuple[Callable, Callable]:
+    """TODO"""
+
+    def target_transform(target):
+        return torch.tensor(
+            alphabet.get_indices(target),
+            dtype=torch.int32,
+            requires_grad=False,
+        )
+
+    vocab_size = len(alphabet)
+    transform = target_transform
+    if train_config.HasField("label_smoothing"):
+        type_idx = train_config.label_smoothing.type
+        smoothing_idx_to_name = (
+            train_config_pb2.TrainConfig.LabelSmoothing.SmoothingType.Name
+        )
+        type_str = smoothing_idx_to_name(type_idx).lower()
+        probability = train_config.label_smoothing.probability.value
+        assert 0.0 < probability < 1
+        if type_str == "uniform":
+
+            def uniform(target):
+                target = target_transform(target)
+                uniform = torch.rand(target.shape)
+                mask = probability > uniform
+                if mask.sum() > 0:
+                    new_values = (
+                        torch.LongTensor(mask.sum().item())
+                        .random_(0, vocab_size - 1)
+                        .to(target.dtype)
+                    )
+                    target.masked_scatter_(mask, new_values)
+                return target
+
+            transform = uniform
+
+        elif type_str == "unigram":
+            raise NotImplementedError
+        else:
+            raise ValueError(
+                f"label_smoothing_type={type_str} is not recognized."
+            )
+
+    return transform, target_transform
