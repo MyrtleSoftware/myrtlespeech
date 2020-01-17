@@ -1,13 +1,16 @@
 import multiprocessing
+from typing import Callable
 from typing import Tuple
 
 import torch
 from myrtlespeech.builders.dataset import build as build_dataset
 from myrtlespeech.builders.speech_to_text import build as build_stt
+from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.data.batch import seq_to_seq_collate_fn
 from myrtlespeech.data.sampler import RandomBatchSampler
 from myrtlespeech.model.seq_to_seq import SeqToSeq
 from myrtlespeech.protos import task_config_pb2
+from myrtlespeech.protos import train_config_pb2
 
 
 def build(
@@ -96,13 +99,10 @@ def build(
         task_config, seq_to_seq.optim
     )
 
-    # create dataloader
-    def target_transform(target):
-        return torch.tensor(
-            seq_to_seq.alphabet.get_indices(target),
-            dtype=torch.int32,
-            requires_grad=False,
-        )
+    # get target transforms
+    train_target_trans, eval_target_trans = _get_target_transform(
+        task_config.train_config, seq_to_seq.alphabet
+    )
 
     num_workers = multiprocessing.cpu_count() // 4
 
@@ -110,7 +110,7 @@ def build(
     train_dataset = build_dataset(
         task_config.train_config.dataset,
         transform=seq_to_seq.pre_process,
-        target_transform=target_transform,
+        target_transform=train_target_trans,
         add_seq_len_to_transforms=True,
     )
 
@@ -132,7 +132,7 @@ def build(
     eval_dataset = build_dataset(
         task_config.eval_config.dataset,
         transform=seq_to_seq.pre_process,
-        target_transform=target_transform,
+        target_transform=eval_target_trans,
         add_seq_len_to_transforms=True,
     )
     eval_loader = torch.utils.data.DataLoader(
@@ -208,3 +208,52 @@ def _create_lr_scheduler(
         )
 
     return lr_scheduler
+
+
+def _get_target_transform(
+    train_config: train_config_pb2.TrainConfig, alphabet: Alphabet
+) -> Tuple[Callable, Callable]:
+    """TODO"""
+
+    def target_transform(target):
+        return torch.tensor(
+            alphabet.get_indices(target),
+            dtype=torch.int32,
+            requires_grad=False,
+        )
+
+    vocab_size = len(alphabet)
+    transform = target_transform
+    if train_config.HasField("label_smoothing"):
+        type_idx = train_config.label_smoothing.type
+        smoothing_idx_to_value = (
+            train_config_pb2.LabelSmoothing.SmoothingType.values_by_number
+        )
+        type_str = smoothing_idx_to_value[type_idx].name.lower()
+        probability = train_config.label_smoothing.probability.value
+        assert 0.0 < probability < 1
+        if type_str == "uniform":
+
+            def uniform(target):
+                target = target_transform(target)
+                uniform = torch.rand(target.shape)
+                mask = probability > uniform
+                if mask.sum() > 0:
+                    new_values = (
+                        torch.LongTensor(mask.sum().item())
+                        .random_(0, vocab_size - 1)
+                        .to(target.dtype)
+                    )
+                    target.masked_scatter_(mask, new_values)
+                return target
+
+            transform = uniform
+
+        elif type_str == "unigram":
+            raise NotImplementedError
+        else:
+            raise ValueError(
+                f"label_smoothing_type={type_str} is not recognized."
+            )
+
+    return transform, target_transform
