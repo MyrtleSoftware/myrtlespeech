@@ -429,7 +429,9 @@ def run() -> None:
         callbacks.append(MixedPrecision(seq_to_seq, opt_level="O1"))
 
     if args.stop_epoch_after is not None:
-        callbacks.append(StopEpochAfter(epoch_batches=args.stop_epoch_after))
+        callbacks.append(
+            StopEpochAfter(epoch_minibatches=args.stop_epoch_after)
+        )
 
     callbacks.extend(
         [CSVLogger(log_dir.joinpath("log.csv")), Saver(log_dir, seq_to_seq)]
