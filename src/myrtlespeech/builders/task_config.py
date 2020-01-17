@@ -226,10 +226,10 @@ def _get_target_transform(
     transform = target_transform
     if train_config.HasField("label_smoothing"):
         type_idx = train_config.label_smoothing.type
-        smoothing_idx_to_value = (
-            train_config_pb2.LabelSmoothing.SmoothingType.values_by_number
+        smoothing_idx_to_name = (
+            train_config_pb2.TrainConfig.LabelSmoothing.SmoothingType.Name
         )
-        type_str = smoothing_idx_to_value[type_idx].name.lower()
+        type_str = smoothing_idx_to_name(type_idx).lower()
         probability = train_config.label_smoothing.probability.value
         assert 0.0 < probability < 1
         if type_str == "uniform":
