@@ -34,6 +34,8 @@ class BaseDataset(Dataset):
 
         max_duration: All samples with duration (in seconds) greater than this
             will be dropped.
+
+        use_sox: TODO
     """
 
     def __init__(
@@ -47,12 +49,14 @@ class BaseDataset(Dataset):
         download: bool = False,
         skip_integrity_check: bool = False,
         max_duration: Optional[float] = None,
+        use_sox: bool = False,
     ):
         self.root = os.path.expanduser(root)
         self.subsets = self._validate_subsets(subsets)
         self._transform = audio_transform
         self._target_transform = label_transform
         self.max_duration = max_duration
+        self.use_sox = use_sox
 
         if download:
             self.download()
@@ -86,12 +90,20 @@ class BaseDataset(Dataset):
             target transcription.
         """
         path = self.paths[index]
-        audio, rate = torchaudio.load(path)
+        if self.use_sox:
+            chain = torchaudio.sox_effects.SoxEffectsChain()
+            speed = (torch.rand(1) * 0.3 + 0.85).item()
+            chain.append_effect_to_chain("speed", [speed])
+            chain.append_effect_to_chain("rate", 16000)
+            chain.set_input_file(path)
+            audio, rate = chain.sox_build_flow_effects()
+        else:
+            audio, rate = torchaudio.load(path)
+            assert (
+                audio.size(1) / rate == self.durations[index]
+            ), f"{path} sample duration != expected duration"
 
         assert rate == 16000, f"{path} sample rate == {rate} != 16000"
-        assert (
-            audio.size(1) / rate == self.durations[index]
-        ), f"{path} sample duration != expected duration"
 
         if self._transform is not None:
             audio = self._transform(audio)

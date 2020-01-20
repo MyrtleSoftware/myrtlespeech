@@ -16,6 +16,7 @@ def build(
     target_transform: Optional[Callable] = None,
     add_seq_len_to_transforms: bool = False,
     download: bool = False,
+    use_sox: bool = False,
 ) -> torch.utils.data.Dataset:
     """Returns a :py:class:`torch.utils.data.Dataset` based on the config.
 
@@ -37,6 +38,8 @@ def build(
 
         download: If :py:data:`True` and dataset does not exist, download it
             if possible.
+
+        use_sox: TODO
 
     Returns:
         A :py:class:`torch.utils.data.Dataset` based on the config.
@@ -106,6 +109,7 @@ def build(
                 label_transform=target_transform,
                 download=download,
                 max_duration=max_duration,
+                use_sox=use_sox,
             )
         elif supported_dataset == "commonvoice":
             cfg = dset.commonvoice
@@ -124,6 +128,7 @@ def build(
                 label_transform=target_transform,
                 download=download,
                 max_duration=max_duration,
+                use_sox=use_sox,
             )
         elif supported_dataset == "composite":
             cfg = dset.composite
