@@ -23,5 +23,5 @@ deps/warp-transducer:
 	cd ../pytorch_binding && \
 	python3 setup.py install --user && \
 	cd ../../../ && \
-  rm -rf deps && \
-  echo "export WARP_RNNT_PATH=$(CONDA_PREFIX)/lib" >> ~/.bashrc
+	rm -rf deps && \
+	echo "export WARP_RNNT_PATH=$(CONDA_PREFIX)/lib" >> ~/.bashrc
