@@ -11,7 +11,6 @@ def build(
 ) -> TransducerGreedyDecoder:
     r"""Returns a :py:class:`TransducerGreedyDecoder` based on the config.
 
-
     Args:
         decoder_cfg: A ``TransducerGreedyDecoder`` protobuf object containing
             the config for the desired :py:class:`TransducerGreedyDecoder`.

@@ -23,7 +23,7 @@ def build(
     input_channels: int,
     vocab_size: int,
 ) -> Transducer:
-    r"""Returns a :py:class:`.Transducer` based on the config.
+    r"""Returns a :py:class:`Transducer` based on the config.
 
     .. note::
 
