@@ -3,6 +3,7 @@ from typing import Callable
 from typing import Tuple
 
 import torch
+import torchaudio
 from myrtlespeech.builders.dataset import build as build_dataset
 from myrtlespeech.builders.lr_scheduler import build as build_lr_scheduler
 from myrtlespeech.builders.speech_to_text import build as build_stt
@@ -126,6 +127,7 @@ def build(
         transform=seq_to_seq.pre_process,
         target_transform=train_target_trans,
         add_seq_len_to_transforms=True,
+        use_sox=True,
     )
 
     shuffle = task_config.train_config.shuffle_batches_before_every_epoch
@@ -140,6 +142,7 @@ def build(
         num_workers=num_workers,
         collate_fn=seq_to_seq_collate_fn,
         pin_memory=torch.cuda.is_available(),
+        worker_init_fn=lambda x: torchaudio.initialize_sox(),
     )
 
     # Add accumulation callback

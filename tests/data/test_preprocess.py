@@ -4,8 +4,8 @@ import hypothesis.strategies as st
 import pytest
 import torch
 from hypothesis import given
+from myrtlespeech.data.augment import SpecAugment
 from myrtlespeech.data.preprocess import AddSequenceLength
-from myrtlespeech.data.preprocess import SpecAugment
 
 from tests.utils.utils import tensors
 

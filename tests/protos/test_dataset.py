@@ -57,6 +57,12 @@ def datasets(
     elif dataset_type_str == "librispeech":
         warnings.warn("librispeech dataset not supported")
         assume(False)
+    elif dataset_type_str == "commonvoice":
+        warnings.warn("commonvoice dataset not supported")
+        assume(False)
+    elif dataset_type_str == "composite":
+        warnings.warn("composite dataset not supported")
+        assume(False)
     else:
         raise ValueError(
             f"test does not support generation of {dataset_type_str}"

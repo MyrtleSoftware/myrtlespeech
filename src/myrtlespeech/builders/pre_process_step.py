@@ -1,10 +1,10 @@
 from typing import Tuple
 from typing import Union
 
+from myrtlespeech.data.augment import SpecAugment
 from myrtlespeech.data.preprocess import AddContextFrames
 from myrtlespeech.data.preprocess import Downsample
 from myrtlespeech.data.preprocess import LogMelFB
-from myrtlespeech.data.preprocess import SpecAugment
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.protos import pre_process_step_pb2
 from myrtlespeech.run.stage import Stage
