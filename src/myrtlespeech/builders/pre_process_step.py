@@ -10,15 +10,14 @@ from myrtlespeech.protos import pre_process_step_pb2
 from myrtlespeech.run.stage import Stage
 from torchaudio.transforms import MFCC
 
+PreProcessStep = Union[
+    AddContextFrames, Downsample, LogMelFB, MFCC, SpecAugment, Standardize,
+]
+
 
 def build(
     pre_process_step_cfg: pre_process_step_pb2.PreProcessStep,
-) -> Tuple[
-    Union[
-        MFCC, Standardize, AddContextFrames, LogMelFB, SpecAugment, Downsample
-    ],
-    Stage,
-]:
+) -> Tuple[PreProcessStep, Stage]:
     """Returns tuple of ``(preprocessing callable, stage)``.
 
     Args:
