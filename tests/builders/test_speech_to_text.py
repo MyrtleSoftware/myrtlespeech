@@ -1,5 +1,4 @@
 import warnings
-from typing import Union
 
 from hypothesis import given
 from myrtlespeech.builders.speech_to_text import build
@@ -18,15 +17,7 @@ def test_build_returns_speech_to_text(
     stt_cfg: speech_to_text_pb2.SpeechToText,
 ) -> None:
     """Test that build returns a SpeechToText instance."""
-    try:
-        stt: Union[SpeechToText, None] = None
-        stt = build(stt_cfg)
-    except AttributeError:
-        warnings.warn(
-            "This test has been (partially) disabled. "
-            "TODO: remove this exception catching."
-        )
-    if stt is not None:
-        assert isinstance(stt, SpeechToText)
-        assert isinstance(stt, SeqToSeq)
-        warnings.warn("SpeechToText only built and not checked if correct")
+    stt = build(stt_cfg)
+    assert isinstance(stt, SpeechToText)
+    assert isinstance(stt, SeqToSeq)
+    warnings.warn("SpeechToText only built and not checked if correct")
