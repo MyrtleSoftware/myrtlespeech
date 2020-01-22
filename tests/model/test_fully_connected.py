@@ -22,23 +22,22 @@ def fully_connecteds(
     st.SearchStrategy[Tuple[FullyConnected, Dict]],
 ]:
     """Returns a SearchStrategy for FullyConnected."""
-    eps = 1e-8
     kwargs = {}
     kwargs["in_features"] = draw(st.integers(1, 32))
     kwargs["out_features"] = draw(st.integers(1, 32))
     kwargs["num_hidden_layers"] = draw(st.integers(0, 8))
-    kwargs["dropout"] = None
-    use_dropout = draw(st.booleans())
     if kwargs["num_hidden_layers"] == 0:
         kwargs["hidden_size"] = None
         kwargs["hidden_activation_fn"] = None
+        kwargs["dropout"] = None
     else:
         kwargs["hidden_size"] = draw(st.integers(1, 32))
         kwargs["hidden_activation_fn"] = draw(
             st.sampled_from([torch.nn.ReLU(), torch.nn.Tanh()])
         )
-        if use_dropout:
-            kwargs["dropout"] = draw(st.floats(eps, 1 - eps, allow_nan=False))
+        kwargs["dropout"] = draw(
+            st.one_of(st.none(), st.floats(min_value=0.0, max_value=1.0))
+        )
     if not return_kwargs:
         return FullyConnected(**kwargs)
     return FullyConnected(**kwargs), kwargs
