@@ -6,6 +6,7 @@ import "google/protobuf/wrappers.proto";
 
 import "myrtlespeech/protos/activation.proto";
 
+
 // Configuration for a fully connected decoder.
 message FullyConnected {
   // The number of hidden layers (0 means a single affine transformation).
