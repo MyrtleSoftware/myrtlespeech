@@ -44,7 +44,7 @@ class FullyConnected(torch.nn.Module):
     Raises:
         :py:class:`ValueError`: If ``num_hidden_layers < 0``.
 
-        :py:class:`ValueError`: If ``dropout is < 0 or > 1``.
+        :py:class:`ValueError`: If ``dropout < 0 or dropout > 1``.
 
         :py:class:`ValueError`: If ``num_hidden_layers == 0 and hidden_size is
             not None``.
@@ -52,8 +52,8 @@ class FullyConnected(torch.nn.Module):
         :py:class:`ValueError`: If ``num_hidden_layers == 0 and
             hidden_activation_fn is not None``.
 
-        :py:class:`ValueError`: If ``num_hidden_layers == 0 and dropout
-            != 0.0``.
+        :py:class:`ValueError`: If ``num_hidden_layers == 0 and dropout is
+            not None``.
     """
 
     def __init__(
