@@ -36,7 +36,7 @@ def fully_connecteds(
             st.sampled_from([torch.nn.ReLU(), torch.nn.Tanh()])
         )
         kwargs["dropout"] = draw(
-            st.one_of(st.none(), st.floats(min_value=0.0, max_value=1.0))
+            st.one_of(st.none(), st.floats(min_value=0.00, max_value=1.0))
         )
     if not return_kwargs:
         return FullyConnected(**kwargs)
@@ -69,7 +69,7 @@ def test_fully_connected_module_structure_correct_for_valid_kwargs(
     # dropout is present (activation is always present)
     expected_len = 2 * kwargs["num_hidden_layers"] + 1
 
-    if dropout is not None:
+    if dropout:
         expected_len += kwargs["num_hidden_layers"]
 
     assert len(fully_connected) == expected_len
@@ -78,7 +78,7 @@ def test_fully_connected_module_structure_correct_for_valid_kwargs(
     # following condition:
     # if module_idx % total_types == <module_type>_idx:
     #     assert isinstance(module, <module_type>)
-    if dropout is None:
+    if not dropout:
         linear_idx = 0
         activation_idx = 1
         dropout_idx = -1  # infeasible value
@@ -153,7 +153,7 @@ def test_fully_connected_raises_value_error_negative_num_hidden_layers(
 
 @given(
     fully_connected_kwargs=fully_connecteds(return_kwargs=True),
-    dropout=st.floats(0.1, 1.0),
+    dropout=st.floats(0.0, 1.0),
 )
 def test_fully_connected_raises_value_error_zero_hidden_dropout_not_None(
     fully_connected_kwargs: Tuple[FullyConnected, Dict], dropout: float

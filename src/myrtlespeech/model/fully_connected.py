@@ -82,7 +82,7 @@ class FullyConnected(torch.nn.Module):
                 raise ValueError(
                     "num_hidden_layers==0 but hidden_activation_fn is not None"
                 )
-            if dropout:
+            if dropout is not None:
                 raise ValueError(
                     "num_hidden_layers==0 so dropout must be None."
                 )
