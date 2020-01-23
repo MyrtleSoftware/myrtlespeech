@@ -164,7 +164,7 @@ def test_fully_connected_raises_value_error_zero_hidden_dropout_not_None(
     kwargs: Dict, dropout: float
 ) -> None:
     """Ensures ValueError raised when hidden_size=0 and dropout is not None."""
-    assume(kwargs["num_hidden_layers"] == 0)
+    kwargs["num_hidden_layers"] = 0
     kwargs["dropout"] = dropout
     with pytest.raises(ValueError):
         FullyConnected(**kwargs)
@@ -194,7 +194,7 @@ def test_fully_connected_raises_value_error_hidden_size_not_none(
     kwargs: Dict, hidden_size: int
 ) -> None:
     """Ensures ValueError raised when no hidden layers and not hidden_size."""
-    assume(kwargs["num_hidden_layers"] == 0)
+    kwargs["num_hidden_layers"] = 0
     kwargs["hidden_size"] = hidden_size
     with pytest.raises(ValueError):
         FullyConnected(**kwargs)
@@ -208,7 +208,7 @@ def test_fully_connected_raises_value_error_hidden_activation_fn_not_none(
     kwargs: Dict, hidden_activation_fn: torch.nn.Module,
 ) -> None:
     """Ensures ValueError raised when no hidden layers and no act fn."""
-    assume(kwargs["num_hidden_layers"] == 0)
+    kwargs["num_hidden_layers"] = 0
     kwargs["hidden_activation_fn"] = hidden_activation_fn
     with pytest.raises(ValueError):
         FullyConnected(**kwargs)
