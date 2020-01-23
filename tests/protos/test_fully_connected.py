@@ -23,30 +23,25 @@ def fully_connecteds(
     st.SearchStrategy[Tuple[fully_connected_pb2.FullyConnected, Dict]],
 ]:
     """Returns a SearchStrategy for a FC layer plus maybe the kwargs."""
-    eps = 1e-8
 
     kwargs = {}
-    to_ignore = []
     kwargs["num_hidden_layers"] = draw(st.integers(0, 3))
     if valid_only and kwargs["num_hidden_layers"] == 0:
         kwargs["hidden_size"] = None
         kwargs["activation"] = activation_pb2.Activation(
             identity=empty_pb2.Empty()
         )
-        to_ignore.append("dropout")
+        kwargs["dropout"] = None
     else:
         kwargs["hidden_size"] = draw(st.integers(1, 32))
         kwargs["activation"] = draw(activations())
-        if draw(st.booleans()):
-            kwargs["dropout"] = FloatValue(
-                value=draw(st.floats(eps, 1 - eps, allow_nan=False))
+        kwargs["dropout"] = FloatValue(
+            value=draw(
+                st.one_of(st.none(), st.floats(min_value=0.0, max_value=1.0))
             )
-        else:
-            to_ignore.append("dropout")
+        )
 
-    all_fields_set(
-        fully_connected_pb2.FullyConnected, kwargs, to_ignore=to_ignore
-    )
+    all_fields_set(fully_connected_pb2.FullyConnected, kwargs)
     fc = fully_connected_pb2.FullyConnected(**kwargs)
     if not return_kwargs:
         return fc

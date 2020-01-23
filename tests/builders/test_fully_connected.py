@@ -39,6 +39,7 @@ def fully_connected_module_match_cfg(
     # both/either of {activation, dropout} are present.
     act_fn_is_none = fully_connected_cfg.activation.HasField("identity")
     dropout_is_none = not fully_connected_cfg.HasField("dropout")
+    dropout_is_none = dropout_is_none or fully_connected_cfg.dropout.value == 0
     if act_fn_is_none:
         expected_len = fully_connected_cfg.num_hidden_layers + 1
     else:
