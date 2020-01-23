@@ -5,6 +5,7 @@ from typing import Union
 import hypothesis.strategies as st
 import pytest
 import torch
+from hypothesis import assume
 from hypothesis import given
 from myrtlespeech.model.fully_connected import FullyConnected
 
@@ -15,17 +16,11 @@ from tests.utils.utils import tensors
 
 
 @st.composite
-def fully_connecteds(
-    draw, return_kwargs: bool = False
-) -> Union[
-    st.SearchStrategy[FullyConnected],
-    st.SearchStrategy[Tuple[FullyConnected, Dict]],
-]:
-    """Returns a SearchStrategy for FullyConnected."""
+def fully_connected_kwargs(draw) -> st.SearchStrategy[Dict]:
     kwargs = {}
     kwargs["in_features"] = draw(st.integers(1, 32))
     kwargs["out_features"] = draw(st.integers(1, 32))
-    kwargs["num_hidden_layers"] = draw(st.integers(0, 8))
+    kwargs["num_hidden_layers"] = draw(st.integers(0, 5))
     if kwargs["num_hidden_layers"] == 0:
         kwargs["hidden_size"] = None
         kwargs["hidden_activation_fn"] = None
@@ -38,6 +33,18 @@ def fully_connecteds(
         kwargs["dropout"] = draw(
             st.one_of(st.none(), st.floats(min_value=0.00, max_value=1.0))
         )
+    return kwargs
+
+
+@st.composite
+def fully_connecteds(
+    draw, return_kwargs: bool = False
+) -> Union[
+    st.SearchStrategy[FullyConnected],
+    st.SearchStrategy[Tuple[FullyConnected, Dict]],
+]:
+    """Returns a SearchStrategy for FullyConnected."""
+    kwargs = draw(fully_connected_kwargs())
     if not return_kwargs:
         return FullyConnected(**kwargs)
     return FullyConnected(**kwargs), kwargs
@@ -138,29 +145,25 @@ def test_fully_connected_module_returns_correct_seq_lens(
 
 
 @given(
-    fully_connected_kwargs=fully_connecteds(return_kwargs=True),
-    num_hidden_layers=st.integers(-1000, -1),
+    kwargs=fully_connected_kwargs(), num_hidden_layers=st.integers(-1000, -1),
 )
 def test_fully_connected_raises_value_error_negative_num_hidden_layers(
-    fully_connected_kwargs: Tuple[FullyConnected, Dict], num_hidden_layers: int
+    kwargs: Dict, num_hidden_layers: int
 ) -> None:
     """Ensures ValueError raised when num_hidden_layers < 0."""
-    _, kwargs = fully_connected_kwargs
     kwargs["num_hidden_layers"] = num_hidden_layers
     with pytest.raises(ValueError):
         FullyConnected(**kwargs)
 
 
 @given(
-    fully_connected_kwargs=fully_connecteds(return_kwargs=True),
-    dropout=st.floats(0.0, 1.0),
+    kwargs=fully_connected_kwargs(), dropout=st.floats(0.0, 1.0),
 )
 def test_fully_connected_raises_value_error_zero_hidden_dropout_not_None(
-    fully_connected_kwargs: Tuple[FullyConnected, Dict], dropout: float
+    kwargs: Dict, dropout: float
 ) -> None:
     """Ensures ValueError raised when hidden_size=0 and dropout is not None."""
-    _, kwargs = fully_connected_kwargs
-    kwargs["num_hidden_layers"] = 0
+    assume(kwargs["num_hidden_layers"] == 0)
     kwargs["dropout"] = dropout
     with pytest.raises(ValueError):
         FullyConnected(**kwargs)
