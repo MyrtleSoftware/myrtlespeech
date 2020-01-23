@@ -1,8 +1,8 @@
 from enum import IntEnum
+from typing import NewType
 from typing import Optional
 from typing import Tuple
 from typing import TypeVar
-from typing import Union
 
 import torch
 
@@ -14,11 +14,34 @@ class RNNType(IntEnum):
 
 
 RNNState = TypeVar("RNNState", torch.Tensor, Tuple[torch.Tensor, torch.Tensor])
+"""The type of an :py:class:`RNN` hidden state.
 
-RNNLengths = TypeVar("RNNLengths", bound=torch.Tensor)
+Depending on the :py:class:`RNN`'s :py:class:`RNNType`, the hidden state will
+either be a length 2 Tuple of :py:class:`torch.Tensor`s or a single
+:py:class:`torch.Tensor` (see :py:class:`torch.nn` documentation for more
+information).
+"""
 
-RNNInput = Union[torch.Tensor, Tuple[torch.Tensor, Optional[RNNState]]]
+RNNData = TypeVar(
+    "RNNData", torch.Tensor, Tuple[torch.Tensor, Optional[RNNState]]
+)
+"""The type of the sequence data input to a :py:class:`RNN`.
 
+The :py:class:`RNN` input ``x`` type is polymorphic: either it is a
+Tuple ``x = (inp, hid)`` or it is of the form: ``x = inp`` where ``inp``
+is the rnn input, a :py:class:`torch.Tensor`) with size
+``[seq_len, batch, in_features]`` or ``[batch, seq_len, in_features]``
+depending on whether ``batch_first=True`` and ``hid`` is the
+:py:class:`RNN` hidden state of type :py:class:`RNNType`.
+"""
+
+Lengths = NewType("Lengths", torch.Tensor)
+"""A :py:class:`torch.Tensor` representing sequence lengths.
+
+An object of type :py:obj:`Lengths` will always be accompanied by a sequence
+data object where each entry of the :py:obj:`Lengths` object represents the
+sequence length of the corresponding element in the data object batch.
+"""
 
 class RNN(torch.nn.Module):
     """A recurrent neural network.
@@ -62,8 +85,8 @@ class RNN(torch.nn.Module):
             provided as ``[batch, seq_len, in_features]``.
 
     Attributes:
-        rnn: A :py:class:`torch.LSTM`, :py:class:`torch.GRU`, or
-            :py:class:`torch.RNN` instance.
+        rnn: A :py:class:`torch.nn.LSTM`, :py:class:`torch.nn.GRU`, or
+            :py:class:`torch.nn.RNN` instance.
     """
 
     def __init__(
@@ -111,9 +134,7 @@ class RNN(torch.nn.Module):
         if self.use_cuda:
             self.rnn = self.rnn.cuda()
 
-    def forward(
-        self, x: Tuple[RNNInput, RNNLengths]
-    ) -> Tuple[RNNInput, RNNLengths]:
+    def forward(self, x: Tuple[RNNData, Lengths]) -> Tuple[RNNData, Lengths]:
         r"""Returns the result of applying the rnn to ``x[0]``.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda`
@@ -121,40 +142,21 @@ class RNN(torch.nn.Module):
         initialisation.
 
         Args:
-            x: A Tuple ``(RNNInput, RNNLengths)``. ``RNNLengths`` can take two
-                forms: either it is a tuple ``RNNInput = (inp, hid)`` or it is
-                a :py:class:`torch.Tensor`: ``RNNInput = inp`` where ``inp``
-                is the network input (a :py:class:`torch.Tensor`) with size
-                ``[seq_len, batch, in_features]`` and ``hid`` is the RNN
-                hidden state which is either a length 2 Tuple of
-                :py:class:`torch.Tensor`s or a single :py:class:`torch.Tensor`
-                depending on the ``RNNType`` (see :py:class:`torch.nn`
-                documentation for more information).
-
-                The return type ``res[0]`` will be the same as the ``RNNInput``
-                type so user should pass ``hid = None`` to obtain the hidden
-                state at the start-of-sequence. In this case, the
-                hidden state(s) will be initialised to zero in PyTorch.
-
-                ``RNNLengths`` is a :py:class:`torch.Tensor` where each entry
-                represents the sequence length of the corresponding network
-                *input* sequence.
+            x: A Tuple[RNNData, Lengths] where the first element is the rnn
+                sequence input and the second represents the length of these
+                *input* sequences.
 
         Returns:
-            A Tuple ``(res[0], res[1])``. ``res[0]`` will take the same form as
-            ``x[0]``: either a tuple ``res[0] = (out, hid)`` or a
-            :py:class:`torch.Tensor``. ``res[0] = out``. ``out`` is the
-            result after applying the RNN to ``inp``. It will have size
-            ``[seq_len, batch, out_features]``. ``hid`` is the
-            returned RNN hidden state which is either a length 2 Tuple of
-            :py:class:`torch.Tensor`s or a single :py:class:`torch.Tensor`
-            depending on the ``RNNType`` (see :py:class:`torch.nn`
-            documentation for more information).
+            A Tuple[RNNData, Lengths] where the first element is the rnn
+                sequence output and the second represents the length of these
+                *output* sequences. These lengths will be unchanged for the
+                input lengths.
 
-            ``res[1]`` is a :py:class:`torch.Tensor` where each entry
-            represents the sequence length of the corresponding network
-            *output* sequence. This will be equal to ``RNNLengths`` as this
-            layer does not change sequence length.
+                The sequence output of :py:obj:`RNNData` will have the same
+                subtype as ``x[0]`` so, if the user would like the hidden state
+                returned at the start-of-sequence, they should pass a hidden
+                state of :py:data:`None` and PyTorch will initialise the
+                hidden state(s) to zero.
         """
 
         if isinstance(x[0], torch.Tensor):
@@ -165,9 +167,7 @@ class RNN(torch.nn.Module):
             inp, hid = x[0]
             return_tuple = True
         else:
-            raise ValueError(
-                "`x[0]` must be of form (input, hidden) or (input)."
-            )
+            raise ValueError("`x[0]` must be of type RNNData.")
 
         if self.use_cuda:
             inp = inp.cuda()
@@ -178,7 +178,7 @@ class RNN(torch.nn.Module):
                     hid = hid.cuda()
                 else:
                     raise ValueError(
-                        "hid must be a length 2 tuple or a torch.Tensor."
+                        "hid must be a length 2 Tuple or a torch.Tensor."
                     )
 
         # Record sequence length to enable DataParallel
