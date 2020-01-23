@@ -1,5 +1,4 @@
 from enum import IntEnum
-from typing import NewType
 from typing import Optional
 from typing import Tuple
 from typing import TypeVar
@@ -23,25 +22,28 @@ information).
 """
 
 RNNData = TypeVar(
-    "RNNData", torch.Tensor, Tuple[torch.Tensor, Optional[RNNState]]
+    "RNNData",
+    torch.Tensor,
+    Tuple[torch.Tensor, Optional[RNNState]],  # type: ignore
 )
 """The type of the sequence data input to a :py:class:`RNN`.
 
 The :py:class:`RNN` input ``x`` type is polymorphic: either it is a
 Tuple ``x = (inp, hid)`` or it is of the form: ``x = inp`` where ``inp``
-is the rnn input, a :py:class:`torch.Tensor`) with size
+is the network input, a :py:class:`torch.Tensor`) with size
 ``[seq_len, batch, in_features]`` or ``[batch, seq_len, in_features]``
 depending on whether ``batch_first=True`` and ``hid`` is the
 :py:class:`RNN` hidden state of type :py:class:`RNNType`.
 """
 
-Lengths = NewType("Lengths", torch.Tensor)
+Lengths = TypeVar("Lengths", bound=torch.Tensor)
 """A :py:class:`torch.Tensor` representing sequence lengths.
 
 An object of type :py:obj:`Lengths` will always be accompanied by a sequence
 data object where each entry of the :py:obj:`Lengths` object represents the
 sequence length of the corresponding element in the data object batch.
 """
+
 
 class RNN(torch.nn.Module):
     """A recurrent neural network.
@@ -85,8 +87,8 @@ class RNN(torch.nn.Module):
             provided as ``[batch, seq_len, in_features]``.
 
     Attributes:
-        rnn: A :py:class:`torch.nn.LSTM`, :py:class:`torch.nn.GRU`, or
-            :py:class:`torch.nn.RNN` instance.
+        rnn: A :py:class:`torch.LSTM`, :py:class:`torch.GRU`, or
+            :py:class:`torch.RNN` instance.
     """
 
     def __init__(
