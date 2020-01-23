@@ -1,3 +1,4 @@
+import sys
 from typing import Dict
 from typing import Tuple
 from typing import Union
@@ -31,7 +32,7 @@ def fully_connected_kwargs(draw) -> st.SearchStrategy[Dict]:
             st.sampled_from([torch.nn.ReLU(), torch.nn.Tanh()])
         )
         kwargs["dropout"] = draw(
-            st.one_of(st.none(), st.floats(min_value=0.00, max_value=1.0))
+            st.one_of(st.none(), st.floats(min_value=0.0, max_value=1.0))
         )
     return kwargs
 
@@ -170,63 +171,57 @@ def test_fully_connected_raises_value_error_zero_hidden_dropout_not_None(
 
 
 @given(
-    fully_connected_kwargs=fully_connecteds(return_kwargs=True),
-    dropout=st.floats(allow_nan=False, allow_infinity=False,),
+    kwargs=fully_connected_kwargs(),
+    dropout=st.one_of(
+        st.floats(max_value=-sys.float_info.epsilon),
+        st.floats(min_value=1 + sys.float_info.epsilon),
+    ),
 )
 def test_fully_connected_raises_value_error_dropout_negative_or_greater_than_1(
-    fully_connected_kwargs: Tuple[FullyConnected, Dict], dropout: float
+    kwargs: Dict, dropout: float
 ) -> None:
     """Ensures ValueError raised when dropout is < 0 or > 1."""
-    _, kwargs = fully_connected_kwargs
-    if dropout >= 0.0 and dropout <= 1.0:
-        dropout += 1.1
     kwargs["dropout"] = dropout
-    if kwargs["num_hidden_layers"] == 0:
-        kwargs["num_hidden_layers"] = 1
+    assume(kwargs["num_hidden_layers"] != 0)
     with pytest.raises(ValueError):
         FullyConnected(**kwargs)
 
 
 @given(
-    fully_connected_kwargs=fully_connecteds(return_kwargs=True),
-    hidden_size=st.integers(1, 1000),
+    kwargs=fully_connected_kwargs(), hidden_size=st.integers(1, 1000),
 )
 def test_fully_connected_raises_value_error_hidden_size_not_none(
-    fully_connected_kwargs: Tuple[FullyConnected, Dict], hidden_size: int
+    kwargs: Dict, hidden_size: int
 ) -> None:
     """Ensures ValueError raised when no hidden layers and not hidden_size."""
-    _, kwargs = fully_connected_kwargs
-    kwargs["num_hidden_layers"] = 0
+    assume(kwargs["num_hidden_layers"] == 0)
     kwargs["hidden_size"] = hidden_size
     with pytest.raises(ValueError):
         FullyConnected(**kwargs)
 
 
 @given(
-    fully_connected_kwargs=fully_connecteds(return_kwargs=True),
+    kwargs=fully_connected_kwargs(),
     hidden_activation_fn=st.sampled_from([torch.nn.ReLU(), torch.nn.Tanh()]),
 )
 def test_fully_connected_raises_value_error_hidden_activation_fn_not_none(
-    fully_connected_kwargs: Tuple[FullyConnected, Dict],
-    hidden_activation_fn: torch.nn.Module,
+    kwargs: Dict, hidden_activation_fn: torch.nn.Module,
 ) -> None:
     """Ensures ValueError raised when no hidden layers and no act fn."""
-    _, kwargs = fully_connected_kwargs
-    kwargs["num_hidden_layers"] = 0
+    assume(kwargs["num_hidden_layers"] == 0)
     kwargs["hidden_activation_fn"] = hidden_activation_fn
     with pytest.raises(ValueError):
         FullyConnected(**kwargs)
 
 
 @given(
-    fully_connected_kwargs=fully_connecteds(return_kwargs=True),
+    kwargs=fully_connected_kwargs(),
     tensor=tensors(min_n_dims=3, max_n_dims=3),
 )
 def test_fully_connected_forward_returns_correct_size(
-    fully_connected_kwargs: Tuple[FullyConnected, Dict], tensor: torch.Tensor
+    kwargs: Dict, tensor: torch.Tensor
 ) -> None:
     # create new FullyConnected that accepts in_features sized input
-    _, kwargs = fully_connected_kwargs
     kwargs["in_features"] = tensor.size()[-1]
     fully_connected = FullyConnected(**kwargs)
 
