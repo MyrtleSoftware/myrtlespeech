@@ -5,7 +5,6 @@ import pytest
 import torch
 from hypothesis import assume
 from hypothesis import given
-from hypothesis import settings
 from myrtlespeech.model.rnn import RNN
 from myrtlespeech.model.rnn import RNNType
 
@@ -34,7 +33,6 @@ def rnn_types(draw) -> st.SearchStrategy[RNNType]:
     ),
     batch_first=st.booleans(),
 )
-@settings(deadline=4000)
 def test_correct_rnn_type_and_size_returned(
     rnn_type: RNNType,
     input_size: int,
@@ -108,7 +106,6 @@ def test_correct_rnn_type_and_size_returned(
     batch_size=st.integers(min_value=1, max_value=4),
     max_seq_len=st.integers(min_value=1, max_value=8),
 )
-@settings(deadline=4000)
 def test_rnn_forward_pass_no_hidden(
     rnn_type: RNNType,
     input_size: int,
@@ -179,7 +176,6 @@ def test_rnn_forward_pass_no_hidden(
     max_seq_len=st.integers(min_value=1, max_value=4),
     hidden_is_none=st.booleans(),
 )
-@settings(deadline=4000)
 def test_rnn_forward_pass_hidden_passed(
     rnn_type: RNNType,
     input_size: int,

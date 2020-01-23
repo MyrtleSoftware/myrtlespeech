@@ -5,7 +5,6 @@ import pytest
 import torch
 from hypothesis import assume
 from hypothesis import given
-from hypothesis import settings
 from myrtlespeech.builders.rnn import build
 from myrtlespeech.model.rnn import RNN
 from myrtlespeech.protos import rnn_pb2
@@ -63,7 +62,8 @@ def rnn_cfg_tensors(
 ) -> st.SearchStrategy[
     Tuple[torch.nn.Module, rnn_pb2.RNN, torch.Tensor, bool]
 ]:
-    """Returns a search strategy for RNNs built from a config + valid input."""
+    """Returns a search strategy of [RNNs, config, valid input, batch_first].
+    """
     batch_first = draw(st.booleans())
     rnn_cfg = draw(rnns())
     tensor = draw(tensors(min_n_dims=3, max_n_dims=3))
@@ -78,7 +78,6 @@ def rnn_cfg_tensors(
 # Tests -----------------------------------------------------------------------
 
 
-@settings(deadline=3000)
 @given(
     rnn_cfg=rnns(),
     input_features=st.integers(1, 32),
