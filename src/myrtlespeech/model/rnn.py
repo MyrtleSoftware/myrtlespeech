@@ -12,37 +12,35 @@ class RNNType(IntEnum):
     BASIC_RNN = 2
 
 
+#: The type of an :py:class:`RNN` hidden state.
+#:
+#: Depending on the :py:class:`RNN`'s :py:class:`RNNType`, the hidden state
+#: will either be a length 2 Tuple of :py:class:`torch.Tensor`s or a single
+#: :py:class:`torch.Tensor` (see :py:class:`torch.nn` documentation for more
+#: information).
 RNNState = TypeVar("RNNState", torch.Tensor, Tuple[torch.Tensor, torch.Tensor])
-"""The type of an :py:class:`RNN` hidden state.
 
-Depending on the :py:class:`RNN`'s :py:class:`RNNType`, the hidden state will
-either be a length 2 Tuple of :py:class:`torch.Tensor`s or a single
-:py:class:`torch.Tensor` (see :py:class:`torch.nn` documentation for more
-information).
-"""
 
+#: The type of the sequence data input to a :py:class:`RNN`.
+#:
+#: The :py:class:`RNN` input ``x`` type is polymorphic: either it is a
+#: Tuple ``x = (inp, hid)`` or it is of the form: ``x = inp`` where ``inp``
+#: is the network input, a :py:class:`torch.Tensor`) with size
+#: ``[seq_len, batch, in_features]`` or ``[batch, seq_len, in_features]``
+#: depending on whether ``batch_first=True`` and ``hid`` is the
+#: :py:class:`RNN` hidden state of type :py:class:`RNNType`.
 RNNData = TypeVar(
     "RNNData",
     torch.Tensor,
     Tuple[torch.Tensor, Optional[RNNState]],  # type: ignore
 )
-"""The type of the sequence data input to a :py:class:`RNN`.
 
-The :py:class:`RNN` input ``x`` type is polymorphic: either it is a
-Tuple ``x = (inp, hid)`` or it is of the form: ``x = inp`` where ``inp``
-is the network input, a :py:class:`torch.Tensor`) with size
-``[seq_len, batch, in_features]`` or ``[batch, seq_len, in_features]``
-depending on whether ``batch_first=True`` and ``hid`` is the
-:py:class:`RNN` hidden state of type :py:class:`RNNType`.
-"""
-
+#: A :py:class:`torch.Tensor` representing sequence lengths.
+#:
+#: An object of type :py:obj:`Lengths` will always be accompanied by a sequence
+#: data object where each entry of the :py:obj:`Lengths` object represents the
+#: sequence length of the corresponding element in the data object batch.
 Lengths = TypeVar("Lengths", bound=torch.Tensor)
-"""A :py:class:`torch.Tensor` representing sequence lengths.
-
-An object of type :py:obj:`Lengths` will always be accompanied by a sequence
-data object where each entry of the :py:obj:`Lengths` object represents the
-sequence length of the corresponding element in the data object batch.
-"""
 
 
 class RNN(torch.nn.Module):
