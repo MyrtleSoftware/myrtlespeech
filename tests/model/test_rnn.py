@@ -10,9 +10,7 @@ import pytest
 import torch
 from hypothesis import assume
 from hypothesis import given
-from myrtlespeech.model.rnn import Lengths
 from myrtlespeech.model.rnn import RNN
-from myrtlespeech.model.rnn import RNNData
 from myrtlespeech.model.rnn import RNNType
 
 from tests.utils.utils import tensors
@@ -67,9 +65,7 @@ def rnns(
 
 
 @st.composite
-def rnns_and_valid_inputs(
-    draw,
-) -> st.SearchStrategy[Tuple[RNN, RNNData, Lengths, Dict]]:
+def rnns_and_valid_inputs(draw,) -> st.SearchStrategy[Tuple]:
     """Returns a SearchStrategy +inputs + kwargs for an RNN."""
 
     inp = draw(tensors(min_n_dims=3, max_n_dims=3))
@@ -80,7 +76,6 @@ def rnns_and_valid_inputs(
     if kwargs["batch_first"]:
         inp = inp.transpose(1, 0)
 
-    data: RNNData
     hidden_state_setting = draw(rnn_hidden_settings())
     if hidden_state_setting == RNNHidStatus.NO_HID:
         data = inp
@@ -107,7 +102,6 @@ def rnns_and_valid_inputs(
             f"not recognized."
         )
 
-    seq_len: Lengths
     seq_lens = torch.randint(
         low=1,
         high=max_seq_len + 1,
@@ -167,17 +161,17 @@ def test_correct_rnn_type_and_size_returned(
 
 @given(rnns_and_valid_inputs())
 def test_rnn_forward_pass_correct_shapes_returned(
-    rnn_kwargs_and_valid_inputs: Tuple[RNN, RNNData, Lengths, Dict]
+    rnn_kwargs_and_valid_inputs: Tuple,
 ) -> None:
     """Tests forward rnn pass and checks outputs."""
     rnn, data, seq_lens, kwargs = rnn_kwargs_and_valid_inputs
 
-    # determine subtype of inp: RNNData
+    # determine subtype of inp
     if isinstance(data, torch.Tensor):
         inp = data
         hidden_present_in_input = False
     elif isinstance(data, tuple):
-        inp, hid = data
+        inp, hid_inp = data
         hidden_present_in_input = True
     else:
         raise ValueError
