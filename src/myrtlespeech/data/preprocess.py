@@ -50,7 +50,7 @@ class Standardize:
 
             per_feature: Normalize each sample on a per-feature basis over
                 all timesteps. In this case, input tensor must be of size
-                ``channels=1, features, seq_length.``.
+                ``[channels=1, features, seq_length]``.
 
     Example:
         >>> # Scale and shift standard normal distribution
