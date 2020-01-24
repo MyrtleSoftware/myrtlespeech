@@ -73,7 +73,7 @@ class RNN(torch.nn.Module):
         hidden_size: int,
         num_layers: int = 1,
         bias: int = True,
-        dropout: float = 0.0,
+        dropout: float = 0.32,
         bidirectional: bool = False,
         forget_gate_bias: Optional[float] = None,
         batch_first: bool = False,
