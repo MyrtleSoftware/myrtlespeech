@@ -95,12 +95,6 @@ class CallbackHandler:
 
         training: See Attributes.
 
-        epoch: training epoch at :py:class:`CallbackHandler` initialization.
-            Useful if resuming a training run.
-
-        total_train_batches: number of batches seen during training when a
-            training run is resumed.
-
     Attributes:
         state_dict: A dictionary containing the state of the
             :py:class:`CallbackHandler`.
@@ -113,14 +107,10 @@ class CallbackHandler:
         self,
         callbacks: Optional[Collection[Callback]] = None,
         training: bool = True,
-        epoch: Optional[int] = None,
-        total_train_batches: Optional[int] = None,
     ):
         self.callbacks = callbacks or []
         self.state_dict: Dict = {}
         self.training = training
-        self.initial_epoch = epoch or 0
-        self.initial_total_train_batches = total_train_batches or 0
 
     def __call__(self, stage_name: str) -> None:
         r"""Runs the ``stage_name`` method of all :py:class:`Callback`\s.
@@ -202,9 +192,9 @@ class CallbackHandler:
         """
         self.state_dict.update(
             dict(
-                epoch=self.initial_epoch,
+                epoch=0,
                 epochs=epochs,
-                total_train_batches=self.initial_total_train_batches,
+                total_train_batches=0,
                 epoch_batches=0,
                 reports={},
             )

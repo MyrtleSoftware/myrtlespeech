@@ -4,9 +4,14 @@ Under heavy development! Lots of code here should be moved elsewhere and
 tested.
 """
 import argparse
+import os
+import re
 import time
+import warnings
 from pathlib import Path
 from typing import List
+from typing import Optional
+from typing import Tuple
 from typing import Union
 
 import torch
@@ -172,21 +177,106 @@ class TensorBoardLogger(ModelCallback):
 class Saver(ModelCallback):
     """Saves ``model``'s ``state_dict`` each epoch.
 
-    Note that this callback will save both a :py:class:`SeqToSeq` instance or
-    ``seq_to_seq.model``. If, you would like to resume training after a crash,
-    the former should be passed as ``model``.
+    This callback will also attempt to load the ``state_dict`` from
+    ``log_dir`` if ``epoch`` is not :py:Data:`None`.
 
     Args:
         log_dir: A pathlike object giving the logging directory.
 
+        load_fp: An Optional pathlike object specifying the
+
         model: A :py:class:`torch.nn.Module` to be saved each epoch. To enable
-            resumption of training after a crash, the user should pass a
-            :py:class:`SeqToSeq` instance.
+            resumption of training after a crash, the user should initialise
+            this callback with a :py:class:`SeqToSeq` instance.
     """
 
-    def __init__(self, log_dir: Union[str, Path], *args, **kwargs):
+    def __init__(
+        self,
+        log_dir: Union[str, Path],
+        load_fp=Optional[Union[str, Path]],
+        *args,
+        **kwargs,
+    ):
         self.log_dir = Path(log_dir)
+        self.load_fp = load_fp
         super().__init__(*args, **kwargs)
+
+    def on_train_begin(self, **kwargs) -> None:
+        if self.load_fp is not None:
+            epoch, total_train_batches = self._load_seq_to_seq(
+                Path(self.load_fp)
+            )
+        else:
+            epoch, total_train_batches = self._load_most_recent_state_dict()
+
+        # Update CallbackHandler state_dict
+        if epoch is not None:
+            kwargs["epoch"] = epoch
+        if total_train_batches is not None:
+            kwargs["total_train_batches"] = total_train_batches
+
+        if kwargs["epoch"] > kwargs["epochs"]:
+            warnings.warn(
+                f'cb_handler.state_dict["epoch"] is > '
+                f'cb_handler.state_dict["epochs"] so no training can occur.'
+            )
+
+    def _load_most_recent_state_dict(
+        self,
+    ) -> Tuple[Optional[int], Optional[int]]:
+        """Loads most recent state_dict in ``self.log_dir``.
+
+        ''Most recent'' in this case is chosen according to state filenames
+        which must be in the form 'state_dict_<EPOCH>.pt'.
+
+        Returns:
+            A Tuple of Optional ints ``epoch, total_train_batches``.
+        """
+        fnames = []
+        dict_fname = None
+        for fname in os.listdir(self.log_dir):
+            if re.match(r"state_dict_\d*\.pt", fname):
+                epochs = [int(x) for x in re.findall(r"\d*", fname) if x != ""]
+                fnames.append((epochs[0], fname))
+
+        epoch: Optional[int] = None
+        total_train_batches: Optional[int] = None
+        if len(fnames) == 0:
+            return epoch, total_train_batches
+
+        fnames.sort()
+        fname_epoch, dict_fname = fnames[-1]
+        dict_fpath = self.log_dir / dict_fname
+        epoch, total_train_batches = self._load_seq_to_seq(dict_fpath)
+
+        if fname_epoch != epoch:
+            warnings.warn(
+                "Saved state_dict epoch did not match the epoch"
+                f"parsed from the filename. Loaded state from "
+                f"{str(dict_fpath)} but this might not be the most "
+                f"recent state_dict in ``log_dir``."
+            )
+        return epoch, total_train_batches
+
+    def _load_seq_to_seq(
+        self, state_dict_fp: Union[str, Path]
+    ) -> Tuple[Optional[int], Optional[int]]:
+        """Loads ``seq_to_seq`` state dict from path.
+
+        Args:
+            state_dict_fp: A path to a state dict.
+
+        Returns:
+            A Tuple of Optional ints where the first element is the number of
+            ``epoch``s completed and the second is the ``total_train_batches``
+            seen.
+        """
+        dict_ = torch.load(state_dict_fp)
+        epoch = dict_.pop("epoch", None)
+        total_train_batches = dict_.pop("total_train_batches", None)
+        self.model.load_state_dict(dict_)
+
+        return epoch, total_train_batches
 
     def on_epoch_end(self, **kwargs):
         if not self.training:
