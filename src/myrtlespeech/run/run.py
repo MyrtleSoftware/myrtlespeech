@@ -9,6 +9,7 @@ import re
 import time
 import warnings
 from pathlib import Path
+from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -183,7 +184,8 @@ class Saver(ModelCallback):
     Args:
         log_dir: A pathlike object giving the logging directory.
 
-        load_fp: An Optional pathlike object specifying the
+        load_fp: An Optional pathlike object specifying the filepath of the
+            state_dict.
 
         model: A :py:class:`torch.nn.Module` to be saved each epoch. To enable
             resumption of training after a crash, the user should initialise
@@ -193,7 +195,7 @@ class Saver(ModelCallback):
     def __init__(
         self,
         log_dir: Union[str, Path],
-        load_fp=Optional[Union[str, Path]],
+        load_fp: Optional[Union[str, Path]] = None,
         *args,
         **kwargs,
     ):
@@ -201,17 +203,15 @@ class Saver(ModelCallback):
         self.load_fp = load_fp
         super().__init__(*args, **kwargs)
 
-    def on_train_begin(self, **kwargs) -> None:
+    def on_train_begin(self, **kwargs) -> Optional[Dict]:
         if self.load_fp is not None:
-            epoch, total_train_batches = self._load_seq_to_seq(
-                Path(self.load_fp)
-            )
+            epoch, total_train_batches = self._load_seq_to_seq(self.load_fp)
         else:
             epoch, total_train_batches = self._load_most_recent_state_dict()
 
         # Update CallbackHandler state_dict
         if epoch is not None:
-            kwargs["epoch"] = epoch
+            kwargs["epoch"] = epoch + 1
         if total_train_batches is not None:
             kwargs["total_train_batches"] = total_train_batches
 
@@ -220,6 +220,7 @@ class Saver(ModelCallback):
                 f'cb_handler.state_dict["epoch"] is > '
                 f'cb_handler.state_dict["epochs"] so no training can occur.'
             )
+        return kwargs
 
     def _load_most_recent_state_dict(
         self,
@@ -238,7 +239,6 @@ class Saver(ModelCallback):
             if re.match(r"state_dict_\d*\.pt", fname):
                 epochs = [int(x) for x in re.findall(r"\d*", fname) if x != ""]
                 fnames.append((epochs[0], fname))
-
         epoch: Optional[int] = None
         total_train_batches: Optional[int] = None
         if len(fnames) == 0:
@@ -248,7 +248,7 @@ class Saver(ModelCallback):
         fname_epoch, dict_fname = fnames[-1]
         dict_fpath = self.log_dir / dict_fname
         epoch, total_train_batches = self._load_seq_to_seq(dict_fpath)
-
+        print("epoch, total_train_batches", epoch, total_train_batches)
         if fname_epoch != epoch:
             warnings.warn(
                 "Saved state_dict epoch did not match the epoch"
