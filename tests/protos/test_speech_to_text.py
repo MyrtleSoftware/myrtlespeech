@@ -16,7 +16,7 @@ from tests.protos.test_ctc_loss import ctc_losses
 from tests.protos.test_deep_speech_1 import deep_speech_1s
 from tests.protos.test_deep_speech_2 import deep_speech_2s
 from tests.protos.test_pre_process_step import pre_process_steps
-from tests.protos.test_transducer import transducer
+from tests.protos.test_transducer import transducers
 from tests.protos.test_transducer_decoders import transducer_beam_decoder
 from tests.protos.test_transducer_decoders import transducer_greedy_decoder
 from tests.protos.test_transducer_loss import transducer_losses
@@ -103,7 +103,7 @@ def speech_to_texts(
         )
         assume(input_features > 200)
     elif model_str == "transducer":
-        kwargs[model_str] = draw(transducer())
+        kwargs[model_str] = draw(transducers())
     else:
         raise ValueError(f"unknown model type {model_str}")
 

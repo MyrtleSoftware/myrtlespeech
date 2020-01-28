@@ -15,7 +15,7 @@ from tests.protos.utils import all_fields_set
 
 
 @st.composite
-def transducer(
+def transducers(
     draw, return_kwargs: bool = False
 ) -> Union[
     st.SearchStrategy[transducer_pb2.Transducer],

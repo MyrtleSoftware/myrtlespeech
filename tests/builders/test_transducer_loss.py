@@ -24,7 +24,6 @@ def transducer_loss_module_match_cfg(
     # verify torch module attributes
     transducer_loss = transducer_loss.transducer_loss
     assert transducer_loss.blank == transducer_loss_cfg.blank_index
-    print(transducer_loss_cfg)
     if (
         transducer_loss_cfg.reduction
         == transducer_loss_pb2.TransducerLoss.NONE
