@@ -23,7 +23,7 @@ def test_build_transducer(
     input_channels: int,
     vocab_size: int,
 ) -> None:
-    """Ensures builder does not throw exception."""
+    """Ensures builder creates :py:class:`Transducer` and submodules."""
     transducer = build_transducer(
         transducer_cfg, input_features, input_channels, vocab_size
     )
