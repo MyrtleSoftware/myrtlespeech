@@ -181,7 +181,7 @@ class Saver(ModelCallback):
     This callback will also attempt to load the ``state_dict``: from
     ``load_fp`` if present and otherwise will load the most recent
     ``state_dict`` in ``log_dir`` (if present) **according to filenames of
-    the form ``state_dict_<EPOCH>``**.
+    the form ``state_dict_<EPOCH>.pt``**.
 
     Args:
         log_dir: A pathlike object giving the logging directory.
@@ -220,7 +220,7 @@ class Saver(ModelCallback):
         if kwargs["epoch"] > kwargs["epochs"]:
             warnings.warn(
                 f'cb_handler.state_dict["epoch"] is > '
-                f'cb_handler.state_dict["epochs"] so no training can occur.'
+                f'cb_handler.state_dict["epochs"] so no training will occur.'
             )
         return kwargs
 
@@ -241,6 +241,7 @@ class Saver(ModelCallback):
             if re.match(r"state_dict_\d*\.pt", fname):
                 epochs = [int(x) for x in re.findall(r"\d*", fname) if x != ""]
                 fnames.append((epochs[0], fname))
+
         epoch: Optional[int] = None
         total_train_batches: Optional[int] = None
         if len(fnames) == 0:
@@ -250,7 +251,7 @@ class Saver(ModelCallback):
         fname_epoch, dict_fname = fnames[-1]
         dict_fpath = self.log_dir / dict_fname
         epoch, total_train_batches = self._load_seq_to_seq(dict_fpath)
-        print("epoch, total_train_batches", epoch, total_train_batches)
+
         if fname_epoch != epoch:
             warnings.warn(
                 "Saved state_dict epoch did not match the epoch"
