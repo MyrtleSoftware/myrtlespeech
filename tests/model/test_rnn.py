@@ -65,7 +65,7 @@ def rnns(
 
 
 @st.composite
-def rnns_and_valid_inputs(draw,) -> st.SearchStrategy[Tuple]:
+def rnns_and_valid_inputs(draw) -> st.SearchStrategy[Tuple]:
     """Returns a SearchStrategy +inputs + kwargs for an RNN."""
 
     inp = draw(tensors(min_n_dims=3, max_n_dims=3))
