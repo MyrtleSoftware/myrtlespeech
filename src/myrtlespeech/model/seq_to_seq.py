@@ -1,4 +1,6 @@
+from collections import OrderedDict
 from typing import Callable
+from typing import Mapping
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
@@ -60,23 +62,32 @@ class SeqToSeq(torch.nn.Module):
 
         return process
 
-    def state_dict(self):
+    def state_dict(self) -> OrderedDict:
         """Returns state dict."""
-        state = {
-            "model": self.model.state_dict(),
-            "optim": self.optim.state_dict(),
-        }
+        state: OrderedDict = OrderedDict()
+        state["model"] = self.model.state_dict()
+
+        if self.optim is not None:
+            state["optim"] = self.optim.state_dict()
         if self.lr_scheduler is not None:
             state["lr_scheduler"] = self.lr_scheduler.state_dict()
         return state
 
-    def load_state_dict(self, state_dict):
-        """Loads state_dict"""
-        self.model.load_state_dict(state_dict["model"])
-        self.optim.load_state_dict(state_dict["optim"])
+    def load_state_dict(
+        self,
+        state_dict: Mapping[str, Mapping[str, torch.Tensor]],
+        strict: bool = True,
+    ):
+        """See :py:meth:`~torch.nn.Module.load_state_dict`."""
+        self.model.load_state_dict(state_dict["model"], strict=strict)
+
+        if self.optim is not None:
+            self.optim.load_state_dict(state_dict["optim"], strict=strict)
 
         if self.lr_scheduler is not None:
-            self.lr_scheduler.load_state_dict(state_dict["lr_scheduler"])
+            self.lr_scheduler.load_state_dict(
+                state_dict["lr_scheduler"], strict=strict
+            )
             # Update the optimizer lrs to reflect correct lr_scheduler value
             for param_group, lr in zip(
                 self.lr_scheduler.optimizer.param_groups,
