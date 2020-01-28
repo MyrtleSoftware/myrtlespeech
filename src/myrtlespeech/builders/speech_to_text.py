@@ -169,34 +169,6 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
         input_channels,
     ) = _build_pre_process_steps(stt_cfg.pre_process_step)
 
-    # model
-    model_type = stt_cfg.WhichOneof("supported_models")
-    if model_type == "deep_speech_1":
-        model = DeepSpeech1(
-            in_features=input_channels * input_features,
-            n_hidden=stt_cfg.deep_speech_1.n_hidden,
-            out_features=len(alphabet),
-            drop_prob=stt_cfg.deep_speech_1.drop_prob,
-            relu_clip=stt_cfg.deep_speech_1.relu_clip,
-            forget_gate_bias=stt_cfg.deep_speech_1.forget_gate_bias,
-        )
-    elif model_type == "deep_speech_2":
-        model = build_deep_speech_2(
-            deep_speech_2_cfg=stt_cfg.deep_speech_2,
-            input_features=input_features,
-            input_channels=input_channels,
-            output_features=len(alphabet),
-        )
-    elif model_type == "transducer":
-        model = build_transducer(
-            transducer_cfg=stt_cfg.transducer,
-            input_features=input_features,
-            input_channels=input_channels,
-            vocab_size=len(alphabet) - 1,  # i.e. excluding the blank symbol
-        )
-    else:
-        raise ValueError(f"model={model_type} not supported")
-
     # capture "blank_index"s in all CTC/Transducer-based components to check
     # all match
     blank_indices: List[int] = []
@@ -226,8 +198,39 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
     else:
         raise ValueError(f"loss={loss_type} not supported")
 
+    # model
+    model_type = stt_cfg.WhichOneof("supported_models")
+    _check_model_type(loss_type, model_type)
+    if model_type == "deep_speech_1":
+        model = DeepSpeech1(
+            in_features=input_channels * input_features,
+            n_hidden=stt_cfg.deep_speech_1.n_hidden,
+            out_features=len(alphabet),
+            drop_prob=stt_cfg.deep_speech_1.drop_prob,
+            relu_clip=stt_cfg.deep_speech_1.relu_clip,
+            forget_gate_bias=stt_cfg.deep_speech_1.forget_gate_bias,
+        )
+    elif model_type == "deep_speech_2":
+        model = build_deep_speech_2(
+            deep_speech_2_cfg=stt_cfg.deep_speech_2,
+            input_features=input_features,
+            input_channels=input_channels,
+            output_features=len(alphabet),
+        )
+    elif model_type == "transducer":
+        model = build_transducer(
+            transducer_cfg=stt_cfg.transducer,
+            input_features=input_features,
+            input_channels=input_channels,
+            vocab_size=len(alphabet) - 1,  # i.e. excluding the blank symbol
+        )
+    else:
+        raise ValueError(f"model={model_type} not supported")
+
     # post processing
     post_process_type = stt_cfg.WhichOneof("supported_post_processes")
+    _check_post_process_type(loss_type, post_process_type)
+
     if post_process_type in ["ctc_greedy_decoder", "ctc_beam_decoder"]:
         if post_process_type == "ctc_greedy_decoder":
             blank_index_pp = stt_cfg.ctc_greedy_decoder.blank_index
@@ -339,3 +342,30 @@ def _build_pre_process_steps(
         input_features = 1
 
     return pre_process_steps, input_features, input_channels
+
+
+def _raise(loss_type: str, other_type: str, other_name: str):
+    """Raises ValueError with descriptive message."""
+    raise ValueError(
+        f"loss_type={loss_type} and {other_name}="
+        f"{other_name} are not compatible."
+    )
+
+
+def _check_model_type(loss_type: str, model_type: str):
+    """Ensures model type matches loss_type."""
+    if loss_type == "ctc_loss" and "transducer" in model_type:
+        _raise(loss_type, model_type, "model_type")
+    elif loss_type == "transducer_loss" and "transducer" not in model_type:
+        _raise(loss_type, model_type, "model_type")
+
+
+def _check_post_process_type(loss_type: str, post_process_type: str):
+    """Ensures post_process type matches loss_type."""
+    if loss_type == "ctc_loss" and "transducer" in post_process_type:
+        _raise(loss_type, post_process_type, "post_process_type")
+    elif (
+        loss_type == "transducer_loss"
+        and "transducer" not in post_process_type
+    ):
+        _raise(loss_type, post_process_type, "post_process_type")
