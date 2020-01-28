@@ -1,43 +1,41 @@
+from typing import Tuple
+
 import hypothesis.strategies as st
 import torch
+from hypothesis import assume
 from hypothesis import given
-from hypothesis import settings
 from myrtlespeech.builders.transducer import build as build_transducer
-from myrtlespeech.protos import transducer_pb2
+from myrtlespeech.model.transducer import Transducer
 
 from tests.protos.test_transducer import transducers
+from tests.utils.utils import tensors
 
+# Utilities -------------------------------------------------------------------
+@st.composite
+def transducers_and_valid_inputs(
+    draw,
+) -> Tuple[
+    st.SearchStrategy[Transducer],
+    st.SearchStrategy[
+        Tuple[
+            Tuple[torch.Tensor, torch.Tensor],
+            Tuple[torch.Tensor, torch.Tensor],
+        ],
+    ],
+    st.SearchStrategy[int],
+]:
+    """Returns a Transducer with valid inputs + vocab_size."""
+    x = draw(tensors(min_n_dims=4, max_n_dims=4))
+    (batch, input_channels, input_features, seq_len) = x.size()
+    assume(seq_len > 1)
+    vocab_size = draw(st.integers(min_value=2, max_value=32))
+    label_seq_len = draw(st.integers(2, 6))
+    transducer_cfg = draw(transducers())
 
-# Tests -----------------------------------------------------------------------
-
-
-@given(
-    data=st.data(),
-    transducer_cfg=transducers(),
-    input_features=st.integers(min_value=2, max_value=12),
-    input_channels=st.integers(min_value=1, max_value=5),
-    vocab_size=st.integers(min_value=2, max_value=32),
-)
-@settings(deadline=5000)
-def test_all_gradients_computed_for_all_parameters_and_size_as_expected(
-    data,
-    transducer_cfg: transducer_pb2.Transducer,
-    input_features: int,
-    input_channels: int,
-    vocab_size: int,
-) -> None:
-    """Tests that gradients are computed and output shape is as expected."""
-    # create network
     transducer = build_transducer(
         transducer_cfg, input_features, input_channels, vocab_size
     )
 
-    # generate random input
-    batch = data.draw(st.integers(1, 4))
-    seq_len = data.draw(st.integers(3, 8))
-    label_seq_len = data.draw(st.integers(2, 6))
-
-    x = torch.empty((batch, input_channels, input_features, seq_len)).normal_()
     seq_lens = torch.randint(
         low=1, high=seq_len, size=(batch,), dtype=torch.long
     )
@@ -61,6 +59,32 @@ def test_all_gradients_computed_for_all_parameters_and_size_as_expected(
         )
     else:
         input = ((x, seq_lens), (y, label_seq_lens))
+
+    return transducer, input, vocab_size
+
+
+# Tests -----------------------------------------------------------------------
+
+
+@given(transducers_and_valid_inputs())
+def test_all_gradients_computed_for_all_parameters_and_size_as_expected(
+    transducers_and_valid_inputs: Tuple[
+        Transducer,
+        Tuple[
+            Tuple[torch.Tensor, torch.Tensor],
+            Tuple[torch.Tensor, torch.Tensor],
+        ],
+        int,
+    ]
+) -> None:
+    """Tests that gradients are computed and output shape is as expected."""
+    # create network
+    transducer, input, vocab_size = transducers_and_valid_inputs
+    (batch, _, _, seq_len) = input[0][0].size()
+    _, label_seq_len = input[1][0].size()
+
+    # check generation
+    assert len(input[0][1]) == len(input[1][1]) == batch
 
     # forward pass
     out = transducer(input)
