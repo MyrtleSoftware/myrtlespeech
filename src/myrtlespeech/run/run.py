@@ -178,8 +178,10 @@ class TensorBoardLogger(ModelCallback):
 class Saver(ModelCallback):
     """Saves ``model``'s ``state_dict`` each epoch.
 
-    This callback will also attempt to load the ``state_dict`` from
-    ``log_dir`` if ``epoch`` is not :py:Data:`None`.
+    This callback will also attempt to load the ``state_dict``: from
+    ``load_fp`` if present and otherwise will load the most recent
+    ``state_dict`` in ``log_dir`` (if present) **according to filenames of
+    the form ``state_dict_<EPOCH>``**.
 
     Args:
         log_dir: A pathlike object giving the logging directory.
