@@ -6,7 +6,6 @@ import pytest
 import torch
 from hypothesis import assume
 from hypothesis import given
-from hypothesis import settings
 from myrtlespeech.model.cnn import MaskConv1d
 from myrtlespeech.model.cnn import MaskConv2d
 from myrtlespeech.model.cnn import out_lens
@@ -261,7 +260,6 @@ def test_mask_conv_1d_out_lens(data, conv1d: torch.nn.Conv1d) -> None:
 
 
 @given(mask_conv1d_input=mask_conv1d_valid_inputs())
-@settings(deadline=3000)
 def test_mask_conv_output_size_and_seq_lens(
     mask_conv1d_input: Tuple[MaskConv1d, Tuple[torch.Tensor, torch.Tensor]]
 ) -> None:
@@ -306,7 +304,7 @@ def test_mask_conv_output_size_and_seq_lens(
         stride=mask_conv1d.stride[0],
         dilation=mask_conv1d.dilation[0],
         padding=sum(padding),
-    ).to(out_seq_lens.device)
+    )
     assert torch.all(out_seq_lens == exp_out_seq_lens)
 
 
@@ -394,7 +392,7 @@ def test_mask2d_conv_output_size_and_seq_lens(
         stride=mask_conv2d.stride[1],
         dilation=mask_conv2d.dilation[1],
         padding=sum(padding),
-    ).to(out_seq_lens.device)
+    )
     assert torch.all(out_seq_lens == exp_out_seq_lens)
 
 
