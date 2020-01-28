@@ -347,8 +347,8 @@ def _build_pre_process_steps(
 def _raise(loss_type: str, other_type: str, other_name: str):
     """Raises ValueError with descriptive message."""
     raise ValueError(
-        f"loss_type={loss_type} and {other_name}="
-        f"{other_name} are not compatible."
+        f"Attempting to build SpeechToText with loss_type={loss_type} and "
+        f"{other_name}={other_name} but these are not compatible."
     )
 
 
