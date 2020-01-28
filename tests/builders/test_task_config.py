@@ -16,19 +16,9 @@ from tests.protos.test_task_config import task_configs
 @settings(deadline=3000)
 def test_build_returns(task_cfg: task_config_pb2.TaskConfig) -> None:
     """Test that build returns when called."""
-    try:
-        model, epochs, train_loader, eval_loader = build(task_cfg)
-        assert isinstance(model, torch.nn.Module)
-        assert isinstance(epochs, int)
-        assert isinstance(train_loader, torch.utils.data.DataLoader)
-        assert isinstance(eval_loader, torch.utils.data.DataLoader)
-        warnings.warn("TaskConfig only built and not checked if correct")
-    except ValueError as e:
-        if str(e) == "unsupported model None":
-            warnings.warn(
-                "model=None due to tests/protos/test_speech_to_text.py hack. "
-                "TOD0: Remove this exception handling once the hack in "
-                "tests/protos/test_speech_to_text.py has been removed."
-            )
-        else:
-            raise e
+    model, epochs, train_loader, eval_loader = build(task_cfg)
+    assert isinstance(model, torch.nn.Module)
+    assert isinstance(epochs, int)
+    assert isinstance(train_loader, torch.utils.data.DataLoader)
+    assert isinstance(eval_loader, torch.utils.data.DataLoader)
+    warnings.warn("TaskConfig only built and not checked if correct")

@@ -5,7 +5,7 @@ from hypothesis import settings
 from myrtlespeech.builders.transducer import build as build_transducer
 from myrtlespeech.protos import transducer_pb2
 
-from tests.protos.test_transducer import transducer
+from tests.protos.test_transducer import transducers
 
 
 # Tests -----------------------------------------------------------------------
@@ -13,7 +13,7 @@ from tests.protos.test_transducer import transducer
 
 @given(
     data=st.data(),
-    transducer_cfg=transducer(),
+    transducer_cfg=transducers(),
     input_features=st.integers(min_value=2, max_value=12),
     input_channels=st.integers(min_value=1, max_value=5),
     vocab_size=st.integers(min_value=2, max_value=32),
