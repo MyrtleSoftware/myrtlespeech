@@ -82,7 +82,6 @@ def speech_to_texts(
     supported_models = [
         f.name for f in descript.oneofs_by_name["supported_models"].fields
     ]
-    print("supported_models before", supported_models, loss_str)
     if valid_only:
         if loss_str == "transducer_loss":
             supported_models = [
@@ -92,7 +91,6 @@ def speech_to_texts(
             supported_models = [
                 n for n in supported_models if "transducer" not in n
             ]
-    print("supported_models after", supported_models)
     model_str = draw(st.sampled_from(supported_models))
     if model_str == "deep_speech_1":
         kwargs[model_str] = draw(deep_speech_1s())
