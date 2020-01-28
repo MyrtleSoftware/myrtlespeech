@@ -82,12 +82,10 @@ class SeqToSeq(torch.nn.Module):
         self.model.load_state_dict(state_dict["model"], strict=strict)
 
         if self.optim is not None:
-            self.optim.load_state_dict(state_dict["optim"], strict=strict)
+            self.optim.load_state_dict(state_dict["optim"])
 
         if self.lr_scheduler is not None:
-            self.lr_scheduler.load_state_dict(
-                state_dict["lr_scheduler"], strict=strict
-            )
+            self.lr_scheduler.load_state_dict(state_dict["lr_scheduler"])
             # Update the optimizer lrs to reflect correct lr_scheduler value
             for param_group, lr in zip(
                 self.lr_scheduler.optimizer.param_groups,
