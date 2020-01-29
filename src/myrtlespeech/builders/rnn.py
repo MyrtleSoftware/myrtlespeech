@@ -7,7 +7,7 @@ from myrtlespeech.protos import rnn_pb2
 
 
 def build(
-    rnn_cfg: rnn_pb2.RNN, input_features: int
+    rnn_cfg: rnn_pb2.RNN, input_features: int, batch_first: bool = False
 ) -> Tuple[torch.nn.Module, int]:
     """Returns a :py:class:`myrtlespeech.model.enocder.rnn.RNN` based on cfg.
 
@@ -16,6 +16,8 @@ def build(
             containing the config for the desired :py:class:`torch.nn.Module`.
 
         input_features: The number of features for the input.
+
+        batch_first: If :py:data:`True` this will return a batch_first RNN.
 
     Returns:
         A tuple containing an :py:class:`myrtlespeech.model.encoder.rnn.RNN`
@@ -72,6 +74,7 @@ def build(
         bias=rnn_cfg.bias,
         bidirectional=rnn_cfg.bidirectional,
         forget_gate_bias=forget_gate_bias,
+        batch_first=batch_first,
     )
 
     out_features = rnn_cfg.hidden_size

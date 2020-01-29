@@ -16,7 +16,9 @@ from tests.utils.utils import tensors
 # Utilities -------------------------------------------------------------------
 
 
-def rnn_match_cfg(rnn: RNN, rnn_cfg: rnn_pb2.RNN, input_features: int) -> None:
+def rnn_match_cfg(
+    rnn: RNN, rnn_cfg: rnn_pb2.RNN, input_features: int, batch_first: bool
+) -> None:
     """Ensures RNN matches protobuf configuration."""
     if rnn_cfg.rnn_type == rnn_pb2.RNN.LSTM:
         assert isinstance(rnn.rnn, torch.nn.LSTM)
@@ -31,7 +33,7 @@ def rnn_match_cfg(rnn: RNN, rnn_cfg: rnn_pb2.RNN, input_features: int) -> None:
     assert rnn_cfg.hidden_size == rnn.rnn.hidden_size
     assert rnn_cfg.num_layers == rnn.rnn.num_layers
     assert rnn_cfg.bias == rnn.rnn.bias
-    assert not rnn.rnn.batch_first
+    assert batch_first == rnn.rnn.batch_first
     assert rnn.rnn.dropout == 0.0
     assert rnn_cfg.bidirectional == rnn.rnn.bidirectional
 
@@ -49,44 +51,64 @@ def rnn_match_cfg(rnn: RNN, rnn_cfg: rnn_pb2.RNN, input_features: int) -> None:
         bias += getattr(rnn.rnn, f"bias_hh_l{l}")[
             hidden_size : 2 * hidden_size
         ]
-        assert torch.allclose(bias, torch.tensor(forget_gate_bias))
+        assert torch.allclose(
+            bias, torch.tensor(forget_gate_bias).to(bias.device)
+        )
 
 
 @st.composite
 def rnn_cfg_tensors(
     draw,
-) -> st.SearchStrategy[Tuple[torch.nn.Module, rnn_pb2.RNN, torch.Tensor]]:
-    """Returns a search strategy for RNNs built from a config + valid input."""
+) -> st.SearchStrategy[
+    Tuple[torch.nn.Module, rnn_pb2.RNN, torch.Tensor, bool]
+]:
+    """Returns search strategy of [RNNs, config, valid input, batch_first]."""
+    batch_first = draw(st.booleans())
     rnn_cfg = draw(rnns())
     tensor = draw(tensors(min_n_dims=3, max_n_dims=3))
-    rnn, _ = build(rnn_cfg, input_features=tensor.size(2))
-    return rnn, rnn_cfg, tensor
+    if batch_first:
+        tensor = tensor.transpose(1, 0)
+    rnn, _ = build(
+        rnn_cfg, input_features=tensor.size(2), batch_first=batch_first
+    )
+    return rnn, rnn_cfg, tensor, batch_first
 
 
 # Tests -----------------------------------------------------------------------
 
 
-@given(rnn_cfg=rnns(), input_features=st.integers(1, 128))
+@given(
+    rnn_cfg=rnns(),
+    input_features=st.integers(1, 32),
+    batch_first=st.booleans(),
+)
 def test_build_rnn_returns_correct_rnn_with_valid_params(
-    rnn_cfg: rnn_pb2.RNN, input_features: int
+    rnn_cfg: rnn_pb2.RNN, input_features: int, batch_first: bool
 ) -> None:
     """Test that build_rnn returns the correct RNN with valid params."""
-    rnn, rnn_output_size = build(rnn_cfg, input_features)
-    rnn_match_cfg(rnn, rnn_cfg, input_features)
+    rnn, rnn_output_size = build(rnn_cfg, input_features, batch_first)
+    rnn_match_cfg(rnn, rnn_cfg, input_features, batch_first)
 
 
 @given(rnn_cfg_tensor=rnn_cfg_tensors())
 def test_build_rnn_rnn_forward_output_correct_size(
-    rnn_cfg_tensor: Tuple[torch.nn.Module, rnn_pb2.RNN, torch.Tensor]
+    rnn_cfg_tensor: Tuple[torch.nn.Module, rnn_pb2.RNN, torch.Tensor, bool]
 ) -> None:
     """Ensures returned RNN forward produces output with correct size."""
-    rnn, rnn_cfg, tensor = rnn_cfg_tensor
-    seq_len, batch, input_features = tensor.size()
+    rnn, rnn_cfg, tensor, batch_first = rnn_cfg_tensor
+    if batch_first:
+        batch, seq_len, input_features = tensor.size()
+    else:
+        seq_len, batch, input_features = tensor.size()
 
     in_seq_lens = torch.randint(low=1, high=1 + seq_len, size=(batch,))
 
     out, out_seq_lens = rnn((tensor, in_seq_lens))
-    out_seq_len, out_batch, out_features = out.size()
+
+    if batch_first:
+        out_batch, out_seq_len, out_features = out.size()
+    else:
+        out_seq_len, out_batch, out_features = out.size()
 
     assert out_seq_len == seq_len
     assert out_batch == batch
@@ -95,7 +117,7 @@ def test_build_rnn_rnn_forward_output_correct_size(
         expected_out_features *= 2
     assert out_features == expected_out_features
 
-    assert torch.all(in_seq_lens == out_seq_lens)
+    assert torch.all(in_seq_lens == out_seq_lens.to(in_seq_lens.device))
 
 
 @given(

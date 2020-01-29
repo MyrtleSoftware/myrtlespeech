@@ -1,6 +1,7 @@
 from enum import IntEnum
 from typing import Optional
 from typing import Tuple
+from typing import TypeVar
 
 import torch
 
@@ -9,6 +10,37 @@ class RNNType(IntEnum):
     LSTM = 0
     GRU = 1
     BASIC_RNN = 2
+
+
+#: The type of an :py:class:`RNN` hidden state.
+#:
+#: Depending on the :py:class:`RNN`'s :py:class:`RNNType`, the hidden state
+#: will either be a length 2 Tuple of :py:class:`torch.Tensor`\s or a single
+#: :py:class:`torch.Tensor` (see :py:class:`torch.nn` documentation for more
+#: information).
+RNNState = TypeVar("RNNState", torch.Tensor, Tuple[torch.Tensor, torch.Tensor])
+
+
+#: The type of the sequence data input to a :py:class:`RNN`.
+#:
+#: The :py:class:`RNN` input type is polymorphic: either it is a Tuple
+#: ``(inp, hid)`` or it is of the form ``inp``, where ``inp`` is the network
+#: input, a :py:class:`torch.Tensor`, with size ``[seq_len, batch,
+#: in_features]`` or ``[batch, seq_len, in_features]`` depending on whether
+#: ``batch_first=True`` and ``hid`` is the :py:class:`RNN` hidden state of type
+#: :py:class:`RNNState`.
+RNNData = TypeVar(
+    "RNNData",
+    torch.Tensor,
+    Tuple[torch.Tensor, Optional[RNNState]],  # type: ignore
+)
+
+#: A :py:class:`torch.Tensor` representing sequence lengths.
+#:
+#: An object of type :py:obj:`Lengths` will always be accompanied by a sequence
+#: data object where each entry of the :py:obj:`Lengths` object represents the
+#: sequence length of the corresponding element in the data object batch.
+Lengths = TypeVar("Lengths", bound=torch.Tensor)
 
 
 class RNN(torch.nn.Module):
@@ -102,50 +134,71 @@ class RNN(torch.nn.Module):
         if self.use_cuda:
             self.rnn = self.rnn.cuda()
 
-    def forward(
-        self, x: Tuple[torch.Tensor, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: Tuple[RNNData, Lengths]) -> Tuple[RNNData, Lengths]:
         r"""Returns the result of applying the rnn to ``x[0]``.
 
-        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
-        :py:func:`torch.cuda.is_available` was :py:data:`True` on
+        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda`
+        if :py:func:`torch.cuda.is_available` was :py:data:`True` on
         initialisation.
 
-        Args
-            x: A tuple where the first element is the network input (a
-                :py:class:`torch.Tensor`) with size ``[seq_len, batch,
-                in_features]`` or ``[batch, seq_len, in_features]`` if
-                ``batch_first=True`` and the second element is
-                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-                represents the sequence length of the corresponding *input*
-                sequence.
+        Args:
+            x: A Tuple[RNNData, Lengths] where the first element is the rnn
+                sequence input and the second represents the length of these
+                *input* sequences.
 
         Returns:
-            The first element of the Tuple return value is the result after
-            applying the RNN to ``x[0]``. It must have size ``[seq_len,
-            batch, out_features]`` or ``[batch, seq_len, out_features]`` if
-            ``batch_first=True``.
+            A Tuple[RNNData, Lengths] where the first element is the rnn
+                sequence output and the second represents the length of these
+                *output* sequences. These lengths will be unchanged from the
+                input lengths.
 
-            The second element of the Tuple return value is a
-            :py:class:`torch.Tensor` with size ``[batch]`` where each entry
-            represents the sequence length of the corresponding *output*
-            sequence. This will be equal to ``x[1]`` as this layer does not
-            currently change sequence length.
+                The sequence output of :py:obj:`RNNData` will have the same
+                subtype as ``x[0]`` so, if the user would like the hidden state
+                returned at the start-of-sequence, they should pass a hidden
+                state of :py:data:`None` and PyTorch will initialise the
+                hidden state(s) to zero.
         """
+
+        if isinstance(x[0], torch.Tensor):
+            inp = x[0]
+            hid = None
+            return_tuple = False
+        elif isinstance(x[0], tuple) and len(x[0]) == 2:
+            inp, hid = x[0]
+            return_tuple = True
+        else:
+            raise ValueError("`x[0]` must be of type RNNData.")
+
         if self.use_cuda:
-            x = (x[0].cuda(), x[1].cuda())
+            inp = inp.cuda()
+            if hid is not None:
+                if isinstance(hid, tuple) and len(hid) == 2:  # LSTM
+                    hid = hid[0].cuda(), hid[1].cuda()
+                elif isinstance(hid, torch.Tensor):  # Vanilla RNN/GRU
+                    hid = hid.cuda()
+                else:
+                    raise ValueError(
+                        "hid must be a length 2 Tuple or a torch.Tensor."
+                    )
 
         # Record sequence length to enable DataParallel
         # https://pytorch.org/docs/stable/notes/faq.html#pack-rnn-unpack-with-data-parallelism
-        total_length = x[0].size(0 if not self.batch_first else 1)
-        input = torch.nn.utils.rnn.pack_padded_sequence(
-            input=x[0],
+        total_length = inp.size(0 if not self.batch_first else 1)
+        inp = torch.nn.utils.rnn.pack_padded_sequence(
+            input=inp,
             lengths=x[1],
             batch_first=self.batch_first,
             enforce_sorted=False,
         )
-        h, _ = self.rnn(input)
-        h, lengths = torch.nn.utils.rnn.pad_packed_sequence(
-            sequence=h, batch_first=self.batch_first, total_length=total_length
+
+        out, hid = self.rnn(inp, hx=hid)
+
+        out, lengths = torch.nn.utils.rnn.pad_packed_sequence(
+            sequence=out,
+            batch_first=self.batch_first,
+            total_length=total_length,
         )
-        return h, lengths
+
+        if return_tuple:
+            return (out, hid), lengths
+        return out, lengths
