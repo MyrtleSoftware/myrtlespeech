@@ -15,7 +15,7 @@ class RNNType(IntEnum):
 #: The type of an :py:class:`RNN` hidden state.
 #:
 #: Depending on the :py:class:`RNN`'s :py:class:`RNNType`, the hidden state
-#: will either be a length 2 Tuple of :py:class:`torch.Tensor`s or a single
+#: will either be a length 2 Tuple of :py:class:`torch.Tensor`\s or a single
 #: :py:class:`torch.Tensor` (see :py:class:`torch.nn` documentation for more
 #: information).
 RNNState = TypeVar("RNNState", torch.Tensor, Tuple[torch.Tensor, torch.Tensor])
