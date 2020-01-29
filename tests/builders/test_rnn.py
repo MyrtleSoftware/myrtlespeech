@@ -62,8 +62,7 @@ def rnn_cfg_tensors(
 ) -> st.SearchStrategy[
     Tuple[torch.nn.Module, rnn_pb2.RNN, torch.Tensor, bool]
 ]:
-    """Returns a search strategy of [RNNs, config, valid input, batch_first].
-    """
+    """Returns search strategy of [RNNs, config, valid input, batch_first]."""
     batch_first = draw(st.booleans())
     rnn_cfg = draw(rnns())
     tensor = draw(tensors(min_n_dims=3, max_n_dims=3))
