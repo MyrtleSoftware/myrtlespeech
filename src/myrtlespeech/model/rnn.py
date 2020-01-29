@@ -23,12 +23,12 @@ RNNState = TypeVar("RNNState", torch.Tensor, Tuple[torch.Tensor, torch.Tensor])
 
 #: The type of the sequence data input to a :py:class:`RNN`.
 #:
-#: The :py:class:`RNN` input ``x`` type is polymorphic: either it is a
-#: Tuple ``x = (inp, hid)`` or it is of the form: ``x = inp`` where ``inp``
-#: is the network input, a :py:class:`torch.Tensor`) with size
-#: ``[seq_len, batch, in_features]`` or ``[batch, seq_len, in_features]``
-#: depending on whether ``batch_first=True`` and ``hid`` is the
-#: :py:class:`RNN` hidden state of type :py:class:`RNNType`.
+#: The :py:class:`RNN` input type is polymorphic: either it is a Tuple
+#: ``(inp, hid)`` or it is of the form ``inp``, where ``inp`` is the network
+#: input, a :py:class:`torch.Tensor`, with size ``[seq_len, batch,
+#: in_features]`` or ``[batch, seq_len, in_features]`` depending on whether
+#: ``batch_first=True`` and ``hid`` is the :py:class:`RNN` hidden state of type
+#: :py:class:`RNNState`.
 RNNData = TypeVar(
     "RNNData",
     torch.Tensor,
@@ -149,7 +149,7 @@ class RNN(torch.nn.Module):
         Returns:
             A Tuple[RNNData, Lengths] where the first element is the rnn
                 sequence output and the second represents the length of these
-                *output* sequences. These lengths will be unchanged for the
+                *output* sequences. These lengths will be unchanged from the
                 input lengths.
 
                 The sequence output of :py:obj:`RNNData` will have the same
