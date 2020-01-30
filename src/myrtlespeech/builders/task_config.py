@@ -214,7 +214,22 @@ def _create_lr_scheduler(
 def _get_target_transform(
     train_config: train_config_pb2.TrainConfig, alphabet: Alphabet
 ) -> Tuple[Callable, Callable]:
-    """TODO"""
+    """Returns target_transform callables for training + eval.
+
+    If present in ``task_config``, this function adds label_smoothing to the
+    ``train_loader`` target_transform.
+
+    Args:
+        task_config: A :py:class:`task_config_pb2.TaskConfig` protobuf object
+            containing the config for the desired task.
+
+        alphabet: A :py:class:`Alphabet` object.
+
+    Returns:
+        A Tuple where the first element is the ``train_loader``
+        target_transform and the second element is the ``eval_loader``
+        target_transform.
+    """
 
     def target_transform(target):
         return torch.tensor(
@@ -223,7 +238,6 @@ def _get_target_transform(
             requires_grad=False,
         )
 
-    vocab_size = len(alphabet)
     transform = target_transform
     if train_config.HasField("label_smoothing"):
         type_idx = train_config.label_smoothing.type
@@ -242,14 +256,13 @@ def _get_target_transform(
                 if mask.sum() > 0:
                     new_values = (
                         torch.LongTensor(mask.sum().item())
-                        .random_(0, vocab_size - 1)
+                        .random_(0, len(alphabet) - 1)
                         .to(target.dtype)
                     )
                     target.masked_scatter_(mask, new_values)
                 return target
 
             transform = uniform
-
         elif type_str == "unigram":
             raise NotImplementedError
         else:
