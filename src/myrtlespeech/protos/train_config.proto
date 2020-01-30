@@ -40,7 +40,6 @@ message TrainConfig {
     // Type of smoothing
     enum SmoothingType {
       UNIFORM = 0;
-      UNIGRAM = 1;
     }
 
     SmoothingType type = 1;

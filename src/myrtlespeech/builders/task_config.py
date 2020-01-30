@@ -232,7 +232,7 @@ def _get_target_transform(
         )
         type_str = smoothing_idx_to_name(type_idx).lower()
         probability = train_config.label_smoothing.probability.value
-        assert 0.0 < probability < 1
+        assert 0.0 <= probability < 1
         if type_str == "uniform":
 
             def uniform(target):

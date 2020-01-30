@@ -126,10 +126,10 @@ def _label_smoothings(
 
     kwargs["type"] = draw(smoothing_types())
 
-    kwargs["probability"] = FloatValue(value=draw(st.floats(0, 0.3)))
+    kwargs["probability"] = FloatValue(value=draw(st.floats(0.0, 0.3)))
 
     all_fields_set(train_config_pb2.TrainConfig.LabelSmoothing, kwargs)
-    label_smoothing = train_config_pb2.TrainConfig.LabelSmoothin(**kwargs)
+    label_smoothing = train_config_pb2.TrainConfig.LabelSmoothing(**kwargs)
     if not return_kwargs:
         return label_smoothing
     return label_smoothing, kwargs
