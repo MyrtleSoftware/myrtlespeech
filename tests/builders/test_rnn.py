@@ -5,7 +5,6 @@ import pytest
 import torch
 from hypothesis import assume
 from hypothesis import given
-from hypothesis import settings
 from myrtlespeech.builders.rnn import build
 from myrtlespeech.model.rnn import RNN
 from myrtlespeech.protos import rnn_pb2
@@ -76,7 +75,6 @@ def rnn_cfg_tensors(
 
 
 # Tests -----------------------------------------------------------------------
-
 
 
 @given(

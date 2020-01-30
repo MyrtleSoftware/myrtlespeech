@@ -101,9 +101,5 @@ def fit(
             if cb_handler.on_epoch_end():
                 break
 
-            del x, y, out, loss, loss_out, loss_y
-
-    return cb_handler.on_epoch_end()
-
-
-# sphinx-doc-end-before-run-stage
+    cb_handler.on_epoch_end()
+    # sphinx-doc-end-before
