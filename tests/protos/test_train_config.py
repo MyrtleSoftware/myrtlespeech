@@ -1,8 +1,10 @@
 from typing import Dict
+from typing import List
 from typing import Tuple
 from typing import Union
 
 import hypothesis.strategies as st
+from google.protobuf.wrappers_pb2 import FloatValue
 from myrtlespeech.protos import train_config_pb2
 
 from tests.protos.test_dataset import datasets
@@ -86,9 +88,48 @@ def train_configs(
     else:
         raise ValueError(f"unknown shuffle type {shuffle_str}")
 
+    # label smoothing
+    to_ignore: List = []
+    if st.booleans():
+        kwargs["label_smoothing"] = draw(_label_smoothings())
+    else:
+        to_ignore.append("label_smoothing")
     # initialise and return
-    all_fields_set(train_config_pb2.TrainConfig, kwargs)
+    all_fields_set(train_config_pb2.TrainConfig, kwargs, to_ignore=to_ignore)
     train_config = train_config_pb2.TrainConfig(**kwargs)
     if not return_kwargs:
         return train_config
     return train_config, kwargs
+
+
+@st.composite
+def smoothing_types(draw) -> st.SearchStrategy:
+    """Returns a SearchStrategy for a stage."""
+    return draw(
+        st.sampled_from(
+            train_config_pb2.TrainConfig.LabelSmoothing.SmoothingType.values()
+        )
+    )
+
+
+@st.composite
+def _label_smoothings(
+    draw, return_kwargs: bool = False
+) -> Union[
+    st.SearchStrategy[train_config_pb2.TrainConfig.LabelSmoothing],
+    st.SearchStrategy[
+        Tuple[train_config_pb2.TrainConfig.LabelSmoothing, Dict]
+    ],
+]:
+    """Returns a SearchStrategy for label_smoothing + maybe the kwargs."""
+    kwargs: Dict = {}
+
+    kwargs["type"] = draw(smoothing_types())
+
+    kwargs["probability"] = FloatValue(value=draw(st.floats(0, 0.3)))
+
+    all_fields_set(train_config_pb2.TrainConfig.LabelSmoothing, kwargs)
+    label_smoothing = train_config_pb2.TrainConfig.LabelSmoothin(**kwargs)
+    if not return_kwargs:
+        return label_smoothing
+    return label_smoothing, kwargs
