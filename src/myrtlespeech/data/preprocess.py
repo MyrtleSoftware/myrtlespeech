@@ -145,7 +145,25 @@ class AddContextFrames:
 
 
 class SpeedPerturbation:
-    """TODO"""
+    """Applies SpeedPerturbation augmentation.
+
+    `SpeedPerturbation
+    <https://www.danielpovey.com/files/2015_interspeech_augmentation.pdf>`_. # noqa: E501
+    will be applied at a random speed chosen uniformly in
+    ``[min_speed, max_speed]``.
+
+    Args:
+        min_speed: The minimum ratio of original to final speed.
+
+        max_speed: The minimum ratio of original to final speed.
+
+        frequency: Desired frequency of output audio.
+
+    Raises:
+        :py:class:`ValueError`: ``if not (0.1 < min_speed <= 1.0)``.
+
+        :py:class:`ValueError`: ``if not (1.0 <= max_speed < 10.0)``.
+    """
 
     def __init__(
         self, min_speed: float, max_speed: float, frequency: int = 16000,
