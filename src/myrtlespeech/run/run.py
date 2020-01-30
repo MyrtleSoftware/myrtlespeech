@@ -236,11 +236,10 @@ class Saver(ModelCallback):
             A Tuple of Optional ints ``epoch, total_train_batches``.
         """
         fnames = []
-        dict_fname = None
         for fname in os.listdir(self.log_dir):
-            if re.match(r"state_dict_\d*\.pt", fname):
-                epochs = [int(x) for x in re.findall(r"\d*", fname) if x != ""]
-                fnames.append((epochs[0], fname))
+            match = re.findall(r"state_dict_(\d+)\.pt", fname)
+            if match:
+                fnames.append((int(match[0]), fname))
 
         epoch: Optional[int] = None
         total_train_batches: Optional[int] = None
