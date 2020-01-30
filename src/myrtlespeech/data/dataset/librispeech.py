@@ -3,11 +3,13 @@ import os
 import shutil
 import tarfile
 import warnings
+from pathlib import Path
 from typing import Callable
 from typing import List
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
+from typing import Union
 
 import requests
 import torch
@@ -35,6 +37,11 @@ class LibriSpeech(Dataset):
                 ``'dev-other'``
                 ``'test-clean``
                 ``'test-other'``
+
+        pre_load_audio_transforms: A function that, when given an audio
+            filepath, returns a Tuple where the first element is a
+            :py:class:`torch:Tensor` of loaded audio and the second element is
+            the audio sample rate.
 
         audio_transform: A function that returns a transformed piece of audio
             data.
@@ -92,6 +99,9 @@ class LibriSpeech(Dataset):
         self,
         root: str,
         subsets: Sequence[str],
+        pre_load_audio_transforms: Optional[
+            Callable[[Union[Path, str]], Tuple[torch.Tensor, int]]
+        ] = None,
         audio_transform: Optional[
             Callable[[torch.Tensor], torch.Tensor]
         ] = None,
@@ -102,6 +112,7 @@ class LibriSpeech(Dataset):
     ):
         self.root = os.path.expanduser(root)
         self.subsets = self._validate_subsets(subsets)
+        self._sox_transforms = pre_load_audio_transforms
         self._transform = audio_transform
         self._target_transform = label_transform
         self.max_duration = max_duration
@@ -134,21 +145,32 @@ class LibriSpeech(Dataset):
             target transcription.
         """
         path = self.paths[index]
-        audio, rate = torchaudio.load(path)
-
-        assert rate == 16000, f"{path} sample rate == {rate} != 16000"
-        assert (
-            audio.size(1) / rate == self.durations[index]
-        ), f"{path} sample duration != expected duration"
-
-        if self._transform is not None:
-            audio = self._transform(audio)
+        audio, rate = self._load_maybe_transform(path, index)
 
         target = self.transcriptions[index]
         if self._target_transform is not None:
             target = self._target_transform(target)
 
         return audio, target
+
+    def _load_maybe_transform(
+        self, path: Union[Path, str], index: int,
+    ) -> Tuple[torch.Tensor, int]:
+        """Loads audio data from ``path`` and applies any audio transforms."""
+        if self._sox_transforms is None:
+            audio, rate = torchaudio.load(path)
+            assert (
+                audio.size(1) / rate == self.durations[index]
+            ), f"{path} sample duration != expected duration"
+        else:
+            audio, rate = self._sox_transforms(path)
+
+        assert rate == 16000, f"{path} sample rate == {rate} != 16000"
+
+        if self._transform is not None:
+            audio = self._transform(audio)
+
+        return audio, rate
 
     def __len__(self) -> int:
         return len(self.paths)

@@ -3,6 +3,7 @@ from typing import Union
 
 from myrtlespeech.data.preprocess import AddContextFrames
 from myrtlespeech.data.preprocess import SpecAugment
+from myrtlespeech.data.preprocess import SpeedPerturbation
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.protos import pre_process_step_pb2
 from myrtlespeech.run.stage import Stage
@@ -11,7 +12,7 @@ from torchaudio.transforms import MFCC
 
 def build(
     pre_process_step_cfg: pre_process_step_pb2.PreProcessStep,
-) -> Tuple[Union[MFCC, Standardize], Stage]:
+) -> Tuple[Union[MFCC, SpeedPerturbation, Standardize], Stage]:
     """Returns tuple of ``(preprocessing callable, stage)``.
 
     Args:
@@ -32,6 +33,11 @@ def build(
                 "win_length": pre_process_step_cfg.mfcc.win_length,
                 "hop_length": pre_process_step_cfg.mfcc.hop_length,
             },
+        )
+    elif step_type == "speed_perturbation":
+        step = SpeedPerturbation(
+            min_speed=pre_process_step_cfg.speed_perturbation.min_speed,
+            max_speed=pre_process_step_cfg.speed_perturbation.max_speed,
         )
     elif step_type == "spec_augment":
         spec = pre_process_step_cfg.spec_augment

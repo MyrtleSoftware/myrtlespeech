@@ -74,7 +74,11 @@ def test_build_passes_transform_to_fake_speech_to_text(
     target_transform = lambda x: "target transform"  # noqa: E731
 
     dataset = build(
-        dataset_cfg, transform, target_transform, add_seq_len_to_transforms
+        dataset=dataset_cfg,
+        pre_load_transform=None,
+        post_load_transform=transform,
+        target_transform=target_transform,
+        add_seq_len_to_transforms=add_seq_len_to_transforms,
     )
 
     for audio, label in dataset:

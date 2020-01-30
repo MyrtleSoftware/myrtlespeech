@@ -20,6 +20,17 @@ def replace_dataset_w_fake_dataset(config):
     config.fake_speech_to_text.label_len.upper = 10
 
 
+def remove_speed_perturbation_if_present(stt_cfg):
+    """Removes speed_perturbation preprocessing if present."""
+    to_delete = []
+    for idx, step_cfg in enumerate(stt_cfg.pre_process_step):
+        if step_cfg.WhichOneof("pre_process_step") == "speed_perturbation":
+            to_delete.append(idx)
+
+    for idx in to_delete:
+        del stt_cfg.pre_process_step[idx]
+
+
 # Fixtures and Strategies -----------------------------------------------------
 
 
@@ -46,6 +57,10 @@ def test_model_in_configs_can_be_built(config_path):
 
     This attempts to build the task config **minus the dataset** which is
     replaced with fake_speech_to_text for speed.
+
+    It is then also necessary to remove any speed_perturbation
+    pre_processing_step if present as it is not compatible with
+    fake_speech_to_text.
     """
     with open(config_path, "r") as config_file:
         config = config_file.read()
@@ -53,4 +68,5 @@ def test_model_in_configs_can_be_built(config_path):
     compiled = text_format.Merge(config, task_config_pb2.TaskConfig())
     replace_dataset_w_fake_dataset(compiled.train_config.dataset)
     replace_dataset_w_fake_dataset(compiled.eval_config.dataset)
+    remove_speed_perturbation_if_present(compiled.speech_to_text)
     build(compiled)

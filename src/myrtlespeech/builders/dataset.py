@@ -10,7 +10,8 @@ from myrtlespeech.protos import dataset_pb2
 
 def build(
     dataset: dataset_pb2.Dataset,
-    transform: Optional[Callable] = None,
+    pre_load_transform: Optional[Callable] = None,
+    post_load_transform: Optional[Callable] = None,
     target_transform: Optional[Callable] = None,
     add_seq_len_to_transforms: bool = False,
     download: bool = False,
@@ -22,15 +23,18 @@ def build(
             object containing the config for the desired
             :py:class:`torch.utils.data.Dataset`.
 
-        transform: Transform to pass to the
+        pre_load_transform: Pre-loading transforms to pass to the
+            :py:class:`torch.utils.data.Dataset`.
+
+        post_load_transform: Transform to pass to the
             :py:class:`torch.utils.data.Dataset`.
 
         target_transform: Target transform to pass to the
             :py:class:`torch.utils.data.Dataset`.
 
         add_seq_len_to_transforms: If :py:data:`True`, an additional function
-            is applied after ``transform`` and ``target_transform`` that takes
-            a value and returns a tuple of ``(value,
+            is applied after ``post_load_transform`` and ``target_transform``
+            that takes a value and returns a tuple of ``(value,
             torch.tensor(len(value)))``.
 
         download: If :py:data:`True` and dataset does not exist, download it
@@ -71,17 +75,24 @@ def build(
     supported_dataset = dataset.WhichOneof("supported_datasets")
 
     if add_seq_len_to_transforms:
-        transform = _add_seq_len(transform, len_fn=lambda x: x.size(-1))
+        post_load_transform = _add_seq_len(
+            post_load_transform, len_fn=lambda x: x.size(-1)
+        )
         target_transform = _add_seq_len(target_transform, len_fn=len)
 
     if supported_dataset == "fake_speech_to_text":
+        if pre_load_transform is not None:
+            raise ValueError(
+                f"Cannot apply pre_load_transform(s) to "
+                f"fake_speech_to_text as it is a generator!"
+            )
         cfg = dataset.fake_speech_to_text
         dataset = FakeDataset(
             generator=speech_to_text(
                 audio_ms=(cfg.audio_ms.lower, cfg.audio_ms.upper),
                 label_symbols=cfg.label_symbols,
                 label_len=(cfg.label_len.lower, cfg.label_len.upper),
-                audio_transform=transform,
+                audio_transform=post_load_transform,
                 label_transform=target_transform,
             ),
             dataset_len=cfg.dataset_len,
@@ -97,7 +108,8 @@ def build(
                 .replace("_", "-")
                 for subset_idx in cfg.subset
             ],
-            audio_transform=transform,
+            pre_load_audio_transforms=pre_load_transform,
+            audio_transform=post_load_transform,
             label_transform=target_transform,
             download=download,
             max_duration=max_duration,

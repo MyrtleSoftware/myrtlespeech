@@ -2,6 +2,7 @@ import multiprocessing
 from typing import Tuple
 
 import torch
+import torchaudio
 from myrtlespeech.builders.dataset import build as build_dataset
 from myrtlespeech.builders.speech_to_text import build as build_stt
 from myrtlespeech.data.batch import seq_to_seq_collate_fn
@@ -104,12 +105,18 @@ def build(
             requires_grad=False,
         )
 
+    # Get worker init fn
+    def worker_init_fn(x):
+        if seq_to_seq.post_load_transforms:
+            torchaudio.initialize_sox()
+
     num_workers = multiprocessing.cpu_count() // 4
 
     # training
     train_dataset = build_dataset(
         task_config.train_config.dataset,
-        transform=seq_to_seq.pre_process,
+        pre_load_transform=seq_to_seq.pre_load_transforms,
+        post_load_transform=seq_to_seq.post_load_transforms,
         target_transform=target_transform,
         add_seq_len_to_transforms=True,
     )
@@ -126,12 +133,14 @@ def build(
         num_workers=num_workers,
         collate_fn=seq_to_seq_collate_fn,
         pin_memory=torch.cuda.is_available(),
+        worker_init_fn=worker_init_fn,
     )
 
     # eval
     eval_dataset = build_dataset(
         task_config.eval_config.dataset,
-        transform=seq_to_seq.pre_process,
+        pre_load_transform=seq_to_seq.pre_load_transforms,
+        post_load_transform=seq_to_seq.post_load_transforms,
         target_transform=target_transform,
         add_seq_len_to_transforms=True,
     )
@@ -141,6 +150,7 @@ def build(
         num_workers=num_workers,
         collate_fn=seq_to_seq_collate_fn,
         pin_memory=torch.cuda.is_available(),
+        worker_init_fn=worker_init_fn,
     )
 
     return (

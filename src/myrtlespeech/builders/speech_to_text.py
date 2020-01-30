@@ -14,6 +14,7 @@ from myrtlespeech.builders.pre_process_step import (
 from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.data.preprocess import AddContextFrames
 from myrtlespeech.data.preprocess import SpecAugment
+from myrtlespeech.data.preprocess import SpeedPerturbation
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.model.cnn import Conv1dTo2d
 from myrtlespeech.model.deep_speech_1 import DeepSpeech1
@@ -240,15 +241,24 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
 
 
 def _build_pre_process_steps(
-    pre_process_step_cfg: List[pre_process_step_pb2.PreProcessStep],
-) -> Tuple[List[Tuple[Callable, Stage]], int, int]:
+    pre_process_step_cfg: Tuple[
+        List[pre_process_step_pb2.PreProcessStep],
+        List[pre_process_step_pb2.PreProcessStep],
+    ]
+) -> Tuple[
+    Tuple[List[Tuple[Callable, Stage]], List[Tuple[Callable, Stage]]], int, int
+]:
     """Returns the preprocessing steps, features, and channels."""
     input_features = None
     input_channels = 1
-    pre_process_steps: List[Tuple[Callable, Stage]] = []
+    pre_load_transforms: List[Tuple[Callable, Stage]] = []
+    post_load_transforms: List[Tuple[Callable, Stage]] = []
     for step_cfg in pre_process_step_cfg:
         step = build_pre_process_step(step_cfg)
-        if isinstance(step[0], MFCC):
+        if isinstance(step[0], SpeedPerturbation):
+            pre_load_transforms.append(step)
+            continue
+        elif isinstance(step[0], MFCC):
             input_features = step[0].n_mfcc
         elif isinstance(step[0], SpecAugment):
             pass
@@ -258,12 +268,12 @@ def _build_pre_process_steps(
             input_channels = 2 * step[0].n_context + 1
         else:
             raise ValueError(f"unknown step={step[0]}")
-        pre_process_steps.append(step)
+        post_load_transforms.append(step)
 
     if input_features is None:
-        pre_process_steps.append(
+        post_load_transforms.append(
             (Conv1dTo2d(seq_len_support=False), Stage.TRAIN_AND_EVAL)
         )
         input_features = 1
-
+    pre_process_steps = (pre_load_transforms, post_load_transforms)
     return pre_process_steps, input_features, input_channels

@@ -2,9 +2,12 @@
 Utilities for preprocessing audio data.
 """
 import random
+from pathlib import Path
 from typing import Tuple
+from typing import Union
 
 import torch
+import torchaudio
 
 
 class AddSequenceLength:
@@ -139,6 +142,36 @@ class AddContextFrames:
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + f"(n_context={self.n_context})"
+
+
+class SpeedPerturbation:
+    """TODO"""
+
+    def __init__(
+        self, min_speed: float, max_speed: float, frequency: int = 16000,
+    ):
+        if not (0.1 < min_speed <= 1.0):
+            raise ValueError(
+                f"Must have 0.1 < min_speed <= 1. but min_speed = "
+                f"{min_speed}."
+            )
+        if not (1.0 <= max_speed < 10.0):
+            raise ValueError(
+                f"Must have 1. <= max_speed < 10. but max_speed = "
+                f"{max_speed}."
+            )
+        self.min_speed = min_speed
+        self.max_speed = max_speed
+        self.range = self.max_speed - self.min_speed
+        self.frequency = frequency
+
+    def __call__(self, path: Union[Path, str]) -> Tuple[torch.Tensor, int]:
+        chain = torchaudio.sox_effects.SoxEffectsChain()
+        speed = (torch.rand(1) * self.range + self.min_speed).item()
+        chain.append_effect_to_chain("speed", [speed])
+        chain.append_effect_to_chain("rate", self.frequency)
+        chain.set_input_file(path)
+        return chain.sox_build_flow_effects()
 
 
 class SpecAugment:

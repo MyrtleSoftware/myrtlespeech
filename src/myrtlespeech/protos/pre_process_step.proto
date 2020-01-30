@@ -14,6 +14,7 @@ message PreProcessStep {
     Standardize standardize = 3;
     ContextFrames context_frames = 4;
     SpecAugment spec_augment = 5;
+    SpeedPerturbation speed_perturbation = 6;
   }
 }
 
@@ -27,6 +28,19 @@ message MFCC {
 
   // Step between successive windows in number of frames.
   uint32 hop_length = 3;
+}
+
+
+// Applies SpeedPerturbation transformation (https://www.danielpovey.com/files/2015_interspeech_augmentation.pdf).
+// This augmentation is applied to the raw audio signal and therefore,
+// if present, SpeedPerturbation must be applied before any frequency-based
+// feature extraction technique (e.g. MFCC).
+message SpeedPerturbation {
+  // Minimum speed ratio vs. original signal.
+  float min_speed = 1;
+
+  // Maximum speed ratio vs. original signal.
+  float max_speed = 2;
 }
 
 

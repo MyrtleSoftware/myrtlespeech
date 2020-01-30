@@ -36,6 +36,8 @@ def pre_process_steps(
 
     if step_type_str == "mfcc":
         kwargs["mfcc"] = draw(_mfccs())
+    elif step_type_str == "speed_perturbation":
+        kwargs["speed_perturbation"] = draw(_speed_perturbation())
     elif step_type_str == "spec_augment":
         kwargs["spec_augment"] = draw(_spec_augments())
     elif step_type_str == "standardize":
@@ -73,6 +75,27 @@ def _mfccs(
     if not return_kwargs:
         return mfcc
     return mfcc, kwargs
+
+
+@st.composite
+def _speed_perturbation(
+    draw, return_kwargs: bool = False
+) -> Union[
+    st.SearchStrategy[pre_process_step_pb2.SpeedPerturbation],
+    st.SearchStrategy[Tuple[pre_process_step_pb2.SpeedPerturbation, Dict]],
+]:
+    """Returns a SearchStrategy for SpecAugments plus maybe the kwargs."""
+    kwargs: Dict = {}
+
+    kwargs["min_speed"] = draw(st.floats(0.7, 1.0))
+    kwargs["max_speed"] = draw(st.floats(1.0, 1.3))
+
+    # initialise and return
+    all_fields_set(pre_process_step_pb2.SpeedPerturbation, kwargs)
+    speed_p = pre_process_step_pb2.SpeedPerturbation(**kwargs)  # type: ignore
+    if not return_kwargs:
+        return speed_p
+    return speed_p, kwargs
 
 
 @st.composite

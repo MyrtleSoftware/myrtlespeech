@@ -37,8 +37,18 @@ def speech_to_texts(
     # preprocess step
     kwargs["pre_process_step"] = []
     if draw(st.booleans()):
-        kwargs["pre_process_step"].append(draw(pre_process_steps()))
-
+        pre_process = draw(pre_process_steps())
+        kwargs["pre_process_step"].append(pre_process)
+        if pre_process.WhichOneof("pre_process_step") == "speed_perturbation":
+            assume(
+                pre_process.WhichOneof("pre_process_step")
+                != "speed_perturbation"
+            )
+            warnings.warn(
+                "Unable to test speed_perturbation in full task config since "
+                "only fake_speech_to_text Dataset is supported and this is "
+                "incompatible with speed_perturbation."
+            )
     # record input_features and input_channels to ensure built model is valid
     _, input_features, input_channels = _build_pre_process_steps(
         kwargs["pre_process_step"]
