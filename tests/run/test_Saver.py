@@ -5,6 +5,7 @@ import pytest
 import torch
 from hypothesis import given
 from hypothesis import settings
+from hypothesis import strategies as st
 from myrtlespeech.model.seq_to_seq import SeqToSeq
 from myrtlespeech.protos import task_config_pb2
 from myrtlespeech.run.callbacks.callback import CallbackHandler
@@ -41,9 +42,9 @@ def change_seq_to_seq_state_dict(seq_to_seq: SeqToSeq):
 
 
 @settings(deadline=3000)
-@given(seq_to_seq_cfg=task_configs())
+@given(seq_to_seq_cfg=task_configs(), check_with_fit_api=st.booleans())
 def test_seq_to_seq_correctly_built_saved_and_loaded(
-    seq_to_seq_cfg: task_config_pb2.TaskConfig,
+    seq_to_seq_cfg: task_config_pb2.TaskConfig, check_with_fit_api: bool,
 ) -> None:
     """Test that SeqToSeq is correctly built + saved + loaded."""
     seq_to_seq, epochs, train_loader, _ = build_and_check_task_config(
@@ -84,31 +85,29 @@ def test_seq_to_seq_correctly_built_saved_and_loaded(
                     seq_to_seq.state_dict()["lr_scheduler"],
                 )
 
-        # Now use **newly initialised** Saver cb to reload the state_dict
-        cb_handler = CallbackHandler(
-            callbacks=[Saver(log_dir=tmpdir, model=seq_to_seq)]
-        )
+        if not check_with_fit_api:
+            # Use **newly initialised** Saver cb to reload the state_dict
+            cb_handler = CallbackHandler(
+                callbacks=[Saver(log_dir=tmpdir, model=seq_to_seq)]
+            )
 
-        cb_handler.on_train_begin(epochs)
+            cb_handler.on_train_begin(epochs)
 
-        check_state_dicts_match(expected_sd, seq_to_seq.state_dict())
-        assert cb_handler.state_dict["epoch"] == 2
-        assert cb_handler.state_dict["total_train_batches"] == 0
+            check_state_dicts_match(expected_sd, seq_to_seq.state_dict())
+            assert cb_handler.state_dict["epoch"] == 2
+            assert cb_handler.state_dict["total_train_batches"] == 0
+        else:
+            # It should also be possible to reload state_dict when fit
+            # orchestrates the CallbackHandler.
 
-        # It should also be possible to reload state_dict when fit orchestrates
-        # the callbacks. First change state_dict again:
-        change_seq_to_seq_state_dict(seq_to_seq)
+            # 'Run training' for no epochs - the Saver callback should re-load
+            # seq_to_seq state_dict == expected_sd
+            fit(
+                seq_to_seq,
+                epochs=0,
+                train_loader=train_loader,
+                eval_loader=None,
+                callbacks=[Saver(log_dir=tmpdir, model=seq_to_seq)],
+            )
 
-        # checking state_dict has changed is expensive so skip here.
-
-        # 'Run training' for no epochs - the saver callback should re-load
-        # seq_to_seq state_dict == expected_sd
-        fit(
-            seq_to_seq,
-            epochs=0,
-            train_loader=train_loader,
-            eval_loader=None,
-            callbacks=[Saver(log_dir=tmpdir, model=seq_to_seq)],
-        )
-
-        check_state_dicts_match(expected_sd, seq_to_seq.state_dict())
+            check_state_dicts_match(expected_sd, seq_to_seq.state_dict())
