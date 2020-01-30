@@ -2,7 +2,6 @@ import hypothesis.strategies as st
 import torch
 from hypothesis import assume
 from hypothesis import given
-from hypothesis import settings
 from myrtlespeech.builders.fully_connected import build
 from myrtlespeech.model.fully_connected import FullyConnected
 from myrtlespeech.protos import fully_connected_pb2
@@ -100,7 +99,6 @@ def fully_connected_module_match_cfg(
     input_features=st.integers(min_value=1, max_value=32),
     output_features=st.integers(min_value=1, max_value=32),
 )
-@settings(deadline=3000)
 def test_build_fully_connected_returns_correct_module_structure(
     fully_connected_cfg: fully_connected_pb2.FullyConnected,
     input_features: int,
