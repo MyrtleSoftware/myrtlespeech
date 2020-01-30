@@ -189,7 +189,8 @@ class SpeedPerturbation:
         chain.append_effect_to_chain("speed", [speed])
         chain.append_effect_to_chain("rate", self.frequency)
         chain.set_input_file(path)
-        return chain.sox_build_flow_effects()
+        audio, sr = chain.sox_build_flow_effects()
+        return audio, sr
 
 
 class SpecAugment:
