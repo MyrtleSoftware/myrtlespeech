@@ -40,8 +40,6 @@ class SeqToSeq(torch.nn.Module):
             :py:data:`.SeqToSeq.post_load_transforms` returns a ``Callable``
             that handles this automatically based on
             :py:class:`.SeqToSeq.training`.
-
-
     """
 
     def __init__(
