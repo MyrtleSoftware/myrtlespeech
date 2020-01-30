@@ -157,13 +157,17 @@ class LibriSpeech(Dataset):
         self, path: Union[Path, str], index: int,
     ) -> Tuple[torch.Tensor, int]:
         """Loads audio data from ``path`` and applies any audio transforms."""
-        if self._sox_transforms is None or self._sox_transforms(path) == path:
+        if self._sox_transforms is not None:
+            sox_res = self._sox_transforms(path)
+
+        if self._sox_transforms is None or sox_res == path:
             audio, rate = torchaudio.load(path)
             assert (
                 audio.size(1) / rate == self.durations[index]
             ), f"{path} sample duration != expected duration"
+            self._sox_transforms = None
         else:
-            audio, rate = self._sox_transforms(path)
+            audio, rate = sox_res
 
         assert rate == 16000, f"{path} sample rate == {rate} != 16000"
 
