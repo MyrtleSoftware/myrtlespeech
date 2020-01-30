@@ -93,3 +93,25 @@ def tensors(
     return shape.flatmap(
         lambda s: arrays(s, dtype, elements).map(lambda a: torch.tensor(a))
     )
+
+
+# Utilities -------------------------------------------------------------------
+
+TOL = 1e-8
+
+
+def check_state_dicts_match(dict1, dict2):
+    """Ensures state_dicts match recursively."""
+    assert dict1.keys() == dict2.keys()
+    for key in dict1.keys():
+        val1 = dict1[key]
+        val2 = dict2[key]
+        if isinstance(val1, dict):
+            assert isinstance(val2, dict)
+            check_state_dicts_match(val1, val2)
+        elif isinstance(val1, float) or isinstance(val2, float):
+            assert abs(val1 - val2) < TOL
+        elif isinstance(val1, torch.Tensor):
+            assert torch.allclose(val1, val2)
+        else:
+            assert val1 == val2
