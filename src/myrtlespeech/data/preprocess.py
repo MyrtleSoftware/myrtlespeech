@@ -148,7 +148,7 @@ class SpeedPerturbation:
     """Applies SpeedPerturbation augmentation.
 
     `SpeedPerturbation
-    <https://www.danielpovey.com/files/2015_interspeech_augmentation.pdf>`_. # noqa: E501
+    <https://www.danielpovey.com/files/2015_interspeech_augmentation.pdf>`_
     will be applied at a random speed chosen uniformly in
     ``[min_speed, max_speed]``.
 

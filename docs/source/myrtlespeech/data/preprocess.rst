@@ -27,6 +27,12 @@
 
     .. automethod:: __call__
 
+.. autoclass:: myrtlespeech.data.preprocess.SpeedPerturbation
+    :members:
+    :show-inheritance:
+
+    .. automethod:: __call__
+
 
 .. autoclass:: myrtlespeech.data.preprocess.SpecAugment
     :members:
