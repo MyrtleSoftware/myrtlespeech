@@ -229,9 +229,7 @@ def run() -> None:
     if args.stop_epoch_after is not None:
         callbacks.append(StopEpochAfter(epoch_batches=args.stop_epoch_after))
 
-    callbacks.extend(
-        [CSVLogger(log_dir.joinpath("log.csv")), Saver(log_dir, seq_to_seq)]
-    )
+    callbacks.extend([CSVLogger(log_dir), Saver(log_dir, seq_to_seq)])
 
     # train and evaluate
     fit(
