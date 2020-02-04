@@ -167,4 +167,4 @@ dependencies:
     - mypy-protobuf==1.10
     - python-speech-features==0.6
     - tensorboard==2.0.0
-    - torchaudio==0.3.0
+    - torchaudio==0.4.0
