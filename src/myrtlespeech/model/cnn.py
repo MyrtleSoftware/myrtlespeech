@@ -332,9 +332,6 @@ class MaskConv1d(torch.nn.Conv1d):
 
         return acts, seq_lens
 
-    def extra_repr(self) -> str:
-        return super().extra_repr() + f", padding_mode={self.padding_mode}"
-
 
 class MaskConv2d(torch.nn.Conv2d):
     """Applies a 2D convolution over an input signal with a given length.
@@ -481,9 +478,6 @@ class MaskConv2d(torch.nn.Conv2d):
         acts = super().forward(acts)
 
         return acts, seq_lens
-
-    def extra_repr(self) -> str:
-        return super().extra_repr() + f", padding_mode={self.padding_mode}"
 
 
 SeqLenT = TypeVar("SeqLenT", torch.Tensor, Tuple[torch.Tensor, torch.Tensor])
