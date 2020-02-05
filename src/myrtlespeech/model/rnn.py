@@ -2,6 +2,7 @@ from enum import IntEnum
 from typing import Optional
 from typing import Tuple
 from typing import TypeVar
+from typing import Union
 
 import torch
 
@@ -31,32 +32,6 @@ class RNNBase(torch.nn.Module):
     This wrapper ensures the sequence length information is correctly used by
     the RNN (i.e. using :py:func:`torch.nn.utils.rnn.pad_packed_sequence` and
     :py:func:`torch.nn.utils.rnn.pad_packed_sequence`).
-
-    ########
-    Returns result of applying the rnn to inputs.
-
-    All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda`
-    if :py:func:`torch.cuda.is_available` was :py:data:`True` on
-    initialisation.
-
-    Args:
-        x: A Tuple where the first element is the rnn sequence input
-            which is a :py:class:`torch.Tensor` with size
-            ``[seq_len, batch, in_features]`` or ``[batch, seq_len,
-            in_features]`` depending on whether ``batch_first=True`` and
-            the and the second element represents the length of these
-            *input* sequences.
-
-        hx: The hidden state of type RNNState.
-
-    Returns:
-        A Tuple[Tuple[outputs, lengths], RNNState]. ``outputs`` is
-        a :py:class:`torch.Tensor` with size ``[seq_len, batch,
-        out_features]`` or ``[batch, seq_len, out_features]`` depending on
-        whether ``batch_first=True``. ``lengths`` are the corresponding
-        sequence lengths which will be unchanged from the input lengths.
-        ``RNNState`` is the returned hidden state.
-    #########
 
     Args:
         rnn_type: The type of recurrent neural network cell to use. See
@@ -137,6 +112,42 @@ class RNNBase(torch.nn.Module):
         self.use_cuda = torch.cuda.is_available()
         if self.use_cuda:
             self.rnn = self.rnn.cuda()
+
+    def forward(
+        self,
+        x: Tuple[torch.Tensor, torch.Tensor],
+        hx: Optional[
+            Union[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]
+        ] = None,
+    ) -> Tuple[
+        Tuple[torch.Tensor, torch.Tensor],
+        Union[Tuple[torch.Tensor, torch.Tensor], torch.Tensor],
+    ]:
+        """Returns result of applying the rnn to inputs.
+
+        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda`
+        if :py:func:`torch.cuda.is_available` was :py:data:`True` on
+        initialisation.
+
+        Args:
+            x: A Tuple where the first element is the rnn sequence input
+                which is a :py:class:`torch.Tensor` with size
+                ``[seq_len, batch, in_features]`` or ``[batch, seq_len,
+                in_features]`` depending on whether ``batch_first=True`` and
+                the and the second element represents the length of these
+                *input* sequences.
+
+            hx: The hidden state of type RNNState.
+
+        Returns:
+            A Tuple[Tuple[outputs, lengths], RNNState]. ``outputs`` is
+            a :py:class:`torch.Tensor` with size ``[seq_len, batch,
+            out_features]`` or ``[batch, seq_len, out_features]`` depending on
+            whether ``batch_first=True``. ``lengths`` are the corresponding
+            sequence lengths which will be unchanged from the input lengths.
+            ``RNNState`` is the returned hidden state."""
+
+        raise NotImplementedError
 
 
 class LSTM(RNNBase):
