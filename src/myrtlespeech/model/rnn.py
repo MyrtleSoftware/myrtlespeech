@@ -4,7 +4,6 @@ from typing import Tuple
 from typing import TypeVar
 
 import torch
-from torch.nn.utils.rnn import PackedSequence
 
 
 class RNNType(IntEnum):
@@ -128,8 +127,6 @@ class RNNBase(torch.nn.Module):
             bidirectional=bidirectional,
         )
 
-        self.rnn = self._add_wrapper(self.rnn, rnn_type)
-
         if rnn_type == RNNType.LSTM and bias and forget_gate_bias is not None:
             for l in range(num_layers):
                 ih = getattr(self.rnn, f"bias_ih_l{l}")
@@ -140,46 +137,6 @@ class RNNBase(torch.nn.Module):
         self.use_cuda = torch.cuda.is_available()
         if self.use_cuda:
             self.rnn = self.rnn.cuda()
-
-    def _add_wrapper(
-        self, rnn: torch.nn.Module, rnn_type: RNNType
-    ) -> torch.nn.Module:
-        """Adds a wrapper as a workaround for pytorch 1.4.0 ONNX export bug.
-
-        See here: https://github.com/pytorch/pytorch/issues/32976.
-        """
-        if torch.__version__ == "1.4.0":
-            if rnn_type == RNNType.LSTM:
-                return WrapLSTM(rnn)
-            elif rnn_type in [RNNType.GRU, RNNType.BASIC_RNN]:
-                return WrapGRUorRNN(rnn)
-            else:
-                raise ValueError
-        return rnn
-
-
-class WrapLSTM(torch.nn.Module):
-    def __init__(self, module):
-        super(WrapLSTM, self).__init__()
-        self.module = module
-
-    def forward(
-        self, input, hx=None,
-    ):
-        # type: (PackedSequence, Optional[Tuple[torch.Tensor, torch.Tensor]]) -> Tuple[PackedSequence, Tuple[torch.Tensor, torch.Tensor]]  # noqa
-        return self.module(input, hx)
-
-
-class WrapGRUorRNN(torch.nn.Module):
-    def __init__(self, module):
-        super(WrapGRUorRNN, self).__init__()
-        self.module = module
-
-    def forward(
-        self, input, hx=None,
-    ):
-        # type: (PackedSequence, Optional[Tuple[torch.Tensor, torch.Tensor]]) -> Tuple[PackedSequence, Tuple[torch.Tensor, torch.Tensor]]  # noqa
-        return self.module(input, hx)
 
 
 class LSTM(RNNBase):
@@ -267,9 +224,10 @@ class GRU_RNN(RNNBase):
 def RNN(**kwargs) -> RNNBase:
     """Returns an initialized rnn as described in :py:class:`RNNBase`.
 
-    Note that this function follows the same API as RNN and is necessary as
-    :py:class:`torch.nn.LSTM` has a different hidden state type to
-    :py:class:`torch.nn.GRU` and :py:class:`torch.nn.RNN`.
+    Note that this function follows the same API as :py:class:`RNNBase` and
+    is necessary as :py:class:`torch.nn.LSTM` has a different hidden state
+    type to :py:class:`torch.nn.GRU` and :py:class:`torch.nn.RNN` which
+    is a problem for ONNX exporting.
 
     Args:
         See :py:class:`RNNBase`.
