@@ -104,7 +104,9 @@ class DeepSpeech1(torch.nn.Module):
     ) -> torch.nn.Module:
         layers = [torch.nn.Linear(in_f, out_f)]
         if relu:
-            layers.append(torch.nn.Hardtanh(0, self._relu_clip, inplace=True))
+            layers.append(
+                torch.nn.Hardtanh(0.0, self._relu_clip, inplace=True)
+            )
         if dropout:
             layers.append(torch.nn.Dropout(p=self._drop_prob))
         if len(layers) == 1:
