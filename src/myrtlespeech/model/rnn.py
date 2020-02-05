@@ -235,7 +235,7 @@ class GRU_RNN(RNNBase):
 def RNN(**kwargs) -> RNNBase:
     """Returns an initialized rnn as described in :py:class:`RNNBase`.
 
-    Note that this function follows the same API as :py:class:`RNNBase` and
+    Note that this function follows the same API as :py:class:`RNNBase`. It
     is necessary as :py:class:`torch.nn.LSTM` has a different hidden state
     type to :py:class:`torch.nn.GRU` and :py:class:`torch.nn.RNN` which
     is a problem for ONNX exporting.
