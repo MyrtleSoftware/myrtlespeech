@@ -21,28 +21,6 @@ class RNNType(IntEnum):
 RNNState = TypeVar("RNNState", torch.Tensor, Tuple[torch.Tensor, torch.Tensor])
 
 
-#: The type of the sequence data input to a :py:class:`RNN`.
-#:
-#: The :py:class:`RNN` input type is polymorphic: either it is a Tuple
-#: ``(inp, hid)`` or it is of the form ``inp``, where ``inp`` is the network
-#: input, a :py:class:`torch.Tensor`, with size ``[seq_len, batch,
-#: in_features]`` or ``[batch, seq_len, in_features]`` depending on whether
-#: ``batch_first=True`` and ``hid`` is the :py:class:`RNN` hidden state of type
-#: :py:class:`RNNState`.
-RNNData = TypeVar(
-    "RNNData",
-    torch.Tensor,
-    Tuple[torch.Tensor, Optional[RNNState]],  # type: ignore
-)
-
-#: A :py:class:`torch.Tensor` representing sequence lengths.
-#:
-#: An object of type :py:obj:`Lengths` will always be accompanied by a sequence
-#: data object where each entry of the :py:obj:`Lengths` object represents the
-#: sequence length of the corresponding element in the data object batch.
-Lengths = TypeVar("Lengths", bound=torch.Tensor)
-
-
 class RNN(torch.nn.Module):
     """A recurrent neural network.
 
@@ -134,51 +112,46 @@ class RNN(torch.nn.Module):
         if self.use_cuda:
             self.rnn = self.rnn.cuda()
 
-    def forward(self, x: Tuple[RNNData, Lengths]) -> Tuple[RNNData, Lengths]:
-        r"""Returns the result of applying the rnn to ``x[0]``.
+    def forward(
+        self,
+        x: Tuple[torch.Tensor, torch.Tensor],
+        hx: Optional[RNNState] = None,
+    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState]:
+        r"""Returns result of applying the rnn to inputs.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda`
         if :py:func:`torch.cuda.is_available` was :py:data:`True` on
         initialisation.
 
         Args:
-            x: A Tuple[RNNData, Lengths] where the first element is the rnn
-                sequence input and the second represents the length of these
+            x: A Tuple where the first element is the rnn sequence input
+                which is a :py:class:`torch.Tensor` with size
+                ``[seq_len, batch, in_features]`` or ``[batch, seq_len,
+                in_features]`` depending on whether ``batch_first=True`` and
+                the and the second element represents the length of these
                 *input* sequences.
 
+            hx: The hidden state of type RNNState.
+
         Returns:
-            A Tuple[RNNData, Lengths] where the first element is the rnn
-                sequence output and the second represents the length of these
-                *output* sequences. These lengths will be unchanged from the
-                input lengths.
-
-                The sequence output of :py:obj:`RNNData` will have the same
-                subtype as ``x[0]`` so, if the user would like the hidden state
-                returned at the start-of-sequence, they should pass a hidden
-                state of :py:data:`None` and PyTorch will initialise the
-                hidden state(s) to zero.
+            A Tuple[Tuple[outputs, lengths], RNNState]. ``outputs`` is
+            a :py:class:`torch.Tensor` with size ``[seq_len, batch,
+            out_features]`` or ``[batch, seq_len, out_features]`` depending on
+            whether ``batch_first=True``. ``lengths`` are the corresponding
+            sequence lengths which will be unchanged from the input lengths.
+            ``RNNState`` is the returned hidden state.
         """
-
-        if isinstance(x[0], torch.Tensor):
-            inp = x[0]
-            hid = None
-            return_tuple = False
-        elif isinstance(x[0], tuple) and len(x[0]) == 2:
-            inp, hid = x[0]
-            return_tuple = True
-        else:
-            raise ValueError("`x[0]` must be of type RNNData.")
-
+        inp, lengths = x
         if self.use_cuda:
             inp = inp.cuda()
-            if hid is not None:
-                if isinstance(hid, tuple) and len(hid) == 2:  # LSTM
-                    hid = hid[0].cuda(), hid[1].cuda()
-                elif isinstance(hid, torch.Tensor):  # Vanilla RNN/GRU
-                    hid = hid.cuda()
+            if hx is not None:
+                if isinstance(hx, tuple) and len(hx) == 2:  # LSTM
+                    hx = hx[0].cuda(), hx[1].cuda()
+                elif isinstance(hx, torch.Tensor):  # Vanilla RNN/GRU
+                    hx = hx.cuda()
                 else:
                     raise ValueError(
-                        "hid must be a length 2 Tuple or a torch.Tensor."
+                        "hx must be a length 2 Tuple or a torch.Tensor."
                     )
 
         # Record sequence length to enable DataParallel
@@ -186,12 +159,12 @@ class RNN(torch.nn.Module):
         total_length = inp.size(0 if not self.batch_first else 1)
         inp = torch.nn.utils.rnn.pack_padded_sequence(
             input=inp,
-            lengths=x[1],
+            lengths=lengths,
             batch_first=self.batch_first,
             enforce_sorted=True,
         )
 
-        out, hid = self.rnn(inp, hx=hid)
+        out, hid = self.rnn(inp, hx=hx)
 
         out, lengths = torch.nn.utils.rnn.pad_packed_sequence(
             sequence=out,
@@ -199,6 +172,4 @@ class RNN(torch.nn.Module):
             total_length=total_length,
         )
 
-        if return_tuple:
-            return (out, hid), lengths
-        return out, lengths
+        return (out, lengths), hid
