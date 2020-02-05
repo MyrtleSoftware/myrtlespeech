@@ -110,6 +110,9 @@ def rnns_and_valid_inputs(draw) -> st.SearchStrategy[Tuple]:
         requires_grad=False,
     )
 
+    # sort lengths since we require enforce_sorted=True
+    seq_lens = seq_lens.sort(descending=True)[0]
+
     # hidden state
     return rnn, data, seq_lens, kwargs
 

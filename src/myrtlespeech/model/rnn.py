@@ -188,7 +188,7 @@ class RNN(torch.nn.Module):
             input=inp,
             lengths=x[1],
             batch_first=self.batch_first,
-            enforce_sorted=False,
+            enforce_sorted=True,
         )
 
         out, hid = self.rnn(inp, hx=hid)

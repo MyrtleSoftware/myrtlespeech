@@ -103,6 +103,9 @@ def test_build_rnn_rnn_forward_output_correct_size(
 
     in_seq_lens = torch.randint(low=1, high=1 + seq_len, size=(batch,))
 
+    # sort lengths since we require enforce_sorted=True
+    in_seq_lens = in_seq_lens.sort(descending=True)[0]
+
     out, out_seq_lens = rnn((tensor, in_seq_lens))
 
     if batch_first:
