@@ -4,6 +4,7 @@ from typing import Tuple
 from typing import TypeVar
 
 import torch
+from torch.nn.utils.rnn import PackedSequence
 
 
 class RNNType(IntEnum):
@@ -21,7 +22,7 @@ class RNNType(IntEnum):
 RNNState = TypeVar("RNNState", torch.Tensor, Tuple[torch.Tensor, torch.Tensor])
 
 
-class RNN(torch.nn.Module):
+class RNNBase(torch.nn.Module):
     """A recurrent neural network.
 
     See :py:class:`torch.nn.LSTM`, :py:class:`torch.nn.GRU` and
@@ -31,6 +32,32 @@ class RNN(torch.nn.Module):
     This wrapper ensures the sequence length information is correctly used by
     the RNN (i.e. using :py:func:`torch.nn.utils.rnn.pad_packed_sequence` and
     :py:func:`torch.nn.utils.rnn.pad_packed_sequence`).
+
+    ########
+    Returns result of applying the rnn to inputs.
+
+    All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda`
+    if :py:func:`torch.cuda.is_available` was :py:data:`True` on
+    initialisation.
+
+    Args:
+        x: A Tuple where the first element is the rnn sequence input
+            which is a :py:class:`torch.Tensor` with size
+            ``[seq_len, batch, in_features]`` or ``[batch, seq_len,
+            in_features]`` depending on whether ``batch_first=True`` and
+            the and the second element represents the length of these
+            *input* sequences.
+
+        hx: The hidden state of type RNNState.
+
+    Returns:
+        A Tuple[Tuple[outputs, lengths], RNNState]. ``outputs`` is
+        a :py:class:`torch.Tensor` with size ``[seq_len, batch,
+        out_features]`` or ``[batch, seq_len, out_features]`` depending on
+        whether ``batch_first=True``. ``lengths`` are the corresponding
+        sequence lengths which will be unchanged from the input lengths.
+        ``RNNState`` is the returned hidden state.
+    #########
 
     Args:
         rnn_type: The type of recurrent neural network cell to use. See
@@ -79,7 +106,7 @@ class RNN(torch.nn.Module):
         forget_gate_bias: Optional[float] = None,
         batch_first: bool = False,
     ):
-        super().__init__()
+        super(RNNBase, self).__init__()
         if rnn_type == RNNType.LSTM:
             rnn_cls = torch.nn.LSTM
         elif rnn_type == RNNType.GRU:
@@ -101,6 +128,8 @@ class RNN(torch.nn.Module):
             bidirectional=bidirectional,
         )
 
+        self.rnn = self._add_wrapper(self.rnn, rnn_type)
+
         if rnn_type == RNNType.LSTM and bias and forget_gate_bias is not None:
             for l in range(num_layers):
                 ih = getattr(self.rnn, f"bias_ih_l{l}")
@@ -112,47 +141,67 @@ class RNN(torch.nn.Module):
         if self.use_cuda:
             self.rnn = self.rnn.cuda()
 
+    def _add_wrapper(
+        self, rnn: torch.nn.Module, rnn_type: RNNType
+    ) -> torch.nn.Module:
+        """Adds a wrapper as a workaround for pytorch 1.4.0 ONNX export bug.
+
+        See here: https://github.com/pytorch/pytorch/issues/32976.
+        """
+        if torch.__version__ == "1.4.0":
+            if rnn_type == RNNType.LSTM:
+                return WrapLSTM(rnn)
+            elif rnn_type in [RNNType.GRU, RNNType.BASIC_RNN]:
+                return WrapGRUorRNN(rnn)
+            else:
+                raise ValueError
+        return rnn
+
+
+class WrapLSTM(torch.nn.Module):
+    def __init__(self, module):
+        super(WrapLSTM, self).__init__()
+        self.module = module
+
+    def forward(
+        self, input, hx=None,
+    ):
+        # type: (PackedSequence, Optional[Tuple[torch.Tensor, torch.Tensor]]) -> Tuple[PackedSequence, Tuple[torch.Tensor, torch.Tensor]]  # noqa
+        return self.module(input, hx)
+
+
+class WrapGRUorRNN(torch.nn.Module):
+    def __init__(self, module):
+        super(WrapGRUorRNN, self).__init__()
+        self.module = module
+
+    def forward(
+        self, input, hx=None,
+    ):
+        # type: (PackedSequence, Optional[Tuple[torch.Tensor, torch.Tensor]]) -> Tuple[PackedSequence, Tuple[torch.Tensor, torch.Tensor]]  # noqa
+        return self.module(input, hx)
+
+
+class LSTM(RNNBase):
+    """See :py:class:`RNNBase` docstrings."""
+
+    def __init__(self, **kwargs):
+        assert kwargs["rnn_type"] == RNNType.LSTM
+        super(LSTM, self).__init__(**kwargs)
+
     def forward(
         self,
         x: Tuple[torch.Tensor, torch.Tensor],
-        hx: Optional[RNNState] = None,
-    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState]:
-        r"""Returns result of applying the rnn to inputs.
+        hx: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+    ) -> Tuple[
+        Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]
+    ]:
 
-        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda`
-        if :py:func:`torch.cuda.is_available` was :py:data:`True` on
-        initialisation.
-
-        Args:
-            x: A Tuple where the first element is the rnn sequence input
-                which is a :py:class:`torch.Tensor` with size
-                ``[seq_len, batch, in_features]`` or ``[batch, seq_len,
-                in_features]`` depending on whether ``batch_first=True`` and
-                the and the second element represents the length of these
-                *input* sequences.
-
-            hx: The hidden state of type RNNState.
-
-        Returns:
-            A Tuple[Tuple[outputs, lengths], RNNState]. ``outputs`` is
-            a :py:class:`torch.Tensor` with size ``[seq_len, batch,
-            out_features]`` or ``[batch, seq_len, out_features]`` depending on
-            whether ``batch_first=True``. ``lengths`` are the corresponding
-            sequence lengths which will be unchanged from the input lengths.
-            ``RNNState`` is the returned hidden state.
-        """
         inp, lengths = x
         if self.use_cuda:
             inp = inp.cuda()
             if hx is not None:
-                if isinstance(hx, tuple) and len(hx) == 2:  # LSTM
-                    hx = hx[0].cuda(), hx[1].cuda()
-                elif isinstance(hx, torch.Tensor):  # Vanilla RNN/GRU
-                    hx = hx.cuda()
-                else:
-                    raise ValueError(
-                        "hx must be a length 2 Tuple or a torch.Tensor."
-                    )
+                hx = hx[0].cuda(), hx[1].cuda()
 
         # Record sequence length to enable DataParallel
         # https://pytorch.org/docs/stable/notes/faq.html#pack-rnn-unpack-with-data-parallelism
@@ -173,3 +222,63 @@ class RNN(torch.nn.Module):
         )
 
         return (out, lengths), hid
+
+
+class GRU_RNN(RNNBase):
+    """See :py:class:`RNNBase` docstrings."""
+
+    def __init__(self, **kwargs):
+        assert kwargs["rnn_type"] in [RNNType.GRU, RNNType.BASIC_RNN]
+        super(GRU_RNN, self).__init__(**kwargs)
+
+    def forward(
+        self,
+        x: Tuple[torch.Tensor, torch.Tensor],
+        hx: Optional[torch.Tensor] = None,
+    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
+
+        inp, lengths = x
+        if self.use_cuda:
+            inp = inp.cuda()
+            if hx is not None:
+                hx = hx.cuda()
+
+        # Record sequence length to enable DataParallel
+        # https://pytorch.org/docs/stable/notes/faq.html#pack-rnn-unpack-with-data-parallelism
+        total_length = inp.size(0 if not self.batch_first else 1)
+        inp = torch.nn.utils.rnn.pack_padded_sequence(
+            input=inp,
+            lengths=lengths,
+            batch_first=self.batch_first,
+            enforce_sorted=True,
+        )
+
+        out, hid = self.rnn(inp, hx=hx)
+
+        out, lengths = torch.nn.utils.rnn.pad_packed_sequence(
+            sequence=out,
+            batch_first=self.batch_first,
+            total_length=total_length,
+        )
+
+        return (out, lengths), hid
+
+
+def RNN(**kwargs) -> RNNBase:
+    """Returns an initialized rnn as described in :py:class:`RNNBase`.
+
+    Note that this function follows the same API as RNN and is necessary as
+    :py:class:`torch.nn.LSTM` has a different hidden state type to
+    :py:class:`torch.nn.GRU` and :py:class:`torch.nn.RNN`.
+
+    Args:
+        See :py:class:`RNNBase`.
+
+    Returns:
+        An initialized :py:class:`RNNBase`.
+    """
+    if kwargs["rnn_type"] == RNNType.LSTM:
+        rnn = LSTM(**kwargs)
+    elif kwargs["rnn_type"] in [RNNType.GRU, RNNType.BASIC_RNN]:
+        rnn = GRU_RNN(**kwargs)
+    return rnn
