@@ -166,10 +166,18 @@ class LSTM(RNNBase):
     ]:
 
         inp, lengths = x
+        if hx is None:
+            num_directions = 2 if self.bidirectional else 1
+            zeros = torch.zeros(
+                self.num_layers * num_directions,
+                lengths.shape[0],
+                self.hidden_size,
+                dtype=inp.dtype,
+            )
+            hx = (zeros, zeros)
         if self.use_cuda:
             inp = inp.cuda()
-            if hx is not None:
-                hx = hx[0].cuda(), hx[1].cuda()
+            hx = hx[0].cuda(), hx[1].cuda()
 
         # Record sequence length to enable DataParallel
         # https://pytorch.org/docs/stable/notes/faq.html#pack-rnn-unpack-with-data-parallelism
@@ -206,10 +214,17 @@ class GRU_RNN(RNNBase):
     ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
 
         inp, lengths = x
+        if hx is None:
+            num_directions = 2 if self.bidirectional else 1
+            hx = torch.zeros(
+                self.num_layers * num_directions,
+                lengths.shape[0],
+                self.hidden_size,
+                dtype=inp.dtype,
+            )
         if self.use_cuda:
             inp = inp.cuda()
-            if hx is not None:
-                hx = hx.cuda()
+            hx = hx.cuda()
 
         # Record sequence length to enable DataParallel
         # https://pytorch.org/docs/stable/notes/faq.html#pack-rnn-unpack-with-data-parallelism
