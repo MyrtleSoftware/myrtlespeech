@@ -175,7 +175,7 @@ class RNN(torch.nn.Module):
             num_directions = 2 if self.bidirectional else 1
             zeros = torch.zeros(
                 self.rnn.num_layers * num_directions,
-                x[0].shape[0],
+                x[1].shape[0],
                 self.rnn.hidden_size,
                 dtype=inp.dtype,
             )
@@ -183,6 +183,8 @@ class RNN(torch.nn.Module):
                 hx = (zeros, zeros)
             else:
                 hx = zeros
+        else:
+            hx = hid
 
         if self.use_cuda:
             inp = inp.cuda()

@@ -38,17 +38,17 @@ class DeepSpeech1(torch.nn.Module):
         DeepSpeech1(
           (fc1): Sequential(
             (0): Linear(in_features=5, out_features=10, bias=True)
-            (1): Hardtanh(min_val=0, max_val=10.0, inplace=True)
+            (1): Hardtanh(min_val=0.0, max_val=10.0, inplace=True)
             (2): Dropout(p=0.25, inplace=False)
           )
           (fc2): Sequential(
             (0): Linear(in_features=10, out_features=10, bias=True)
-            (1): Hardtanh(min_val=0, max_val=10.0, inplace=True)
+            (1): Hardtanh(min_val=0.0, max_val=10.0, inplace=True)
             (2): Dropout(p=0.25, inplace=False)
           )
           (fc3): Sequential(
             (0): Linear(in_features=10, out_features=20, bias=True)
-            (1): Hardtanh(min_val=0, max_val=10.0, inplace=True)
+            (1): Hardtanh(min_val=0.0, max_val=10.0, inplace=True)
             (2): Dropout(p=0.25, inplace=False)
           )
           (bi_lstm): RNN(
@@ -56,7 +56,7 @@ class DeepSpeech1(torch.nn.Module):
           )
           (fc4): Sequential(
             (0): Linear(in_features=20, out_features=10, bias=True)
-            (1): Hardtanh(min_val=0, max_val=10.0, inplace=True)
+            (1): Hardtanh(min_val=0.0, max_val=10.0, inplace=True)
             (2): Dropout(p=0.25, inplace=False)
           )
           (out): Linear(in_features=10, out_features=26, bias=True)
@@ -76,7 +76,7 @@ class DeepSpeech1(torch.nn.Module):
 
         self.use_cuda = torch.cuda.is_available()
 
-        self._relu_clip = relu_clip
+        self._relu_clip = float(relu_clip)
         self._drop_prob = drop_prob
 
         self.fc1 = self._fully_connected(in_features, n_hidden)
