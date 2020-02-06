@@ -91,6 +91,7 @@ class RNNBase(torch.nn.Module):
             raise ValueError(f"unknown rnn_type {rnn_type}")
 
         self.batch_first = batch_first
+        self.bidirectional = bidirectional
 
         self.rnn = rnn_cls(
             input_size=input_size,
