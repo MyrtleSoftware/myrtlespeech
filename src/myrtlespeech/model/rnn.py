@@ -167,11 +167,11 @@ class LSTM(RNNBase):
 
         inp, lengths = x
         if hx is None:
-            num_directions = 2 if self.bidirectional else 1
+            num_directions = 2 if self.rnn.bidirectional else 1
             zeros = torch.zeros(
-                self.num_layers * num_directions,
+                self.rnn.num_layers * num_directions,
                 lengths.shape[0],
-                self.hidden_size,
+                self.rnn.hidden_size,
                 dtype=inp.dtype,
             )
             hx = (zeros, zeros)
@@ -215,11 +215,11 @@ class GRU_RNN(RNNBase):
 
         inp, lengths = x
         if hx is None:
-            num_directions = 2 if self.bidirectional else 1
+            num_directions = 2 if self.rnn.bidirectional else 1
             hx = torch.zeros(
-                self.num_layers * num_directions,
+                self.rnn.num_layers * num_directions,
                 lengths.shape[0],
-                self.hidden_size,
+                self.rnn.hidden_size,
                 dtype=inp.dtype,
             )
         if self.use_cuda:
