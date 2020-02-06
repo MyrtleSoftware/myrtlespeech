@@ -153,7 +153,7 @@ class DeepSpeech1(torch.nn.Module):
         h = self.fc2(h)
         h = self.fc3(h)
 
-        (h, _) = self.bi_lstm(x=(h, seq_lens))
+        h, _ = self.bi_lstm((h, seq_lens))
 
         h = self.fc4(h)
         out = self.out(h)

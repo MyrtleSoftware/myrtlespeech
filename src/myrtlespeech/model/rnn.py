@@ -171,7 +171,7 @@ class RNN(torch.nn.Module):
         else:
             raise ValueError("`x[0]` must be of type RNNData.")
 
-        if hid == None:
+        if hid is None:
             num_directions = 2 if self.bidirectional else 1
             zeros = torch.zeros(
                 self.rnn.num_layers * num_directions,
@@ -180,20 +180,20 @@ class RNN(torch.nn.Module):
                 dtype=inp.dtype,
             )
             if self.rnn_type == RNNType.LSTM:
-                hid = (zeros, zeros)
+                hx = (zeros, zeros)
             else:
-                hid = zeros
+                hx = zeros
 
         if self.use_cuda:
             inp = inp.cuda()
-            if hid is not None:
-                if isinstance(hid, tuple) and len(hid) == 2:  # LSTM
-                    hid = hid[0].cuda(), hid[1].cuda()
-                elif isinstance(hid, torch.Tensor):  # Vanilla RNN/GRU
-                    hid = hid.cuda()
+            if hx is not None:
+                if isinstance(hx, tuple) and len(hx) == 2:  # LSTM
+                    hx = hx[0].cuda(), hx[1].cuda()
+                elif isinstance(hx, torch.Tensor):  # Vanilla RNN/GRU
+                    hx = hx.cuda()
                 else:
                     raise ValueError(
-                        "hid must be a length 2 Tuple or a torch.Tensor."
+                        "hx must be a length 2 Tuple or a torch.Tensor."
                     )
 
         # Record sequence length to enable DataParallel
@@ -206,7 +206,7 @@ class RNN(torch.nn.Module):
             enforce_sorted=True,
         )
 
-        out, hid = self.rnn(inp, hx=hid)
+        out, hx = self.rnn(inp, hx=hx)
 
         out, lengths = torch.nn.utils.rnn.pad_packed_sequence(
             sequence=out,
@@ -215,5 +215,5 @@ class RNN(torch.nn.Module):
         )
 
         if return_tuple:
-            return (out, hid), lengths
+            return (out, hx), lengths
         return out, lengths

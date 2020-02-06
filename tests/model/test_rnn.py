@@ -108,8 +108,8 @@ def rnns_and_valid_inputs(draw) -> st.SearchStrategy[Tuple]:
         size=[batch_size],
         dtype=torch.int32,
         requires_grad=False,
-    ) 
-    
+    )
+
     # sort lengths since we require enforce_sorted=True
     seq_lens = seq_lens.sort(descending=True)[0]
 
