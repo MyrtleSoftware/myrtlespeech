@@ -76,13 +76,12 @@ def rnns_and_valid_inputs(draw) -> st.SearchStrategy[Tuple]:
     if kwargs["batch_first"]:
         inp = inp.transpose(1, 0)
 
-    hx_setting = draw(rnn_hidden_settings())
-    if (
-        hx_setting == RNNHidStatus.NO_HID
-        or hx_setting == RNNHidStatus.HID_NONE
-    ):
-        hid = None
-    elif hx_setting == RNNHidStatus.HID_NOT_NONE:
+    hidden_state_setting = draw(rnn_hidden_settings())
+    if hidden_state_setting == RNNHidStatus.NO_HID:
+        data = inp
+    elif hidden_state_setting == RNNHidStatus.HID_NONE:
+        data = (inp, None)
+    elif hidden_state_setting == RNNHidStatus.HID_NOT_NONE:
         num_directions = 1 + int(kwargs["bidirectional"])
         hidden_size = kwargs["hidden_size"]
         num_layers = kwargs["num_layers"]
@@ -95,8 +94,13 @@ def rnns_and_valid_inputs(draw) -> st.SearchStrategy[Tuple]:
         elif kwargs["rnn_type"] == RNNType.LSTM:
             c_0 = h_0  # i.e. same dimensions
             hid = h_0, c_0
+
+        data = (inp, hid)
     else:
-        raise ValueError(f"hx_setting == {hx_setting} " f"not recognized.")
+        raise ValueError(
+            f"hidden_state_setting == {RNNHidStatus.HID_NOT_NONE} "
+            f"not recognized."
+        )
 
     seq_lens = torch.randint(
         low=1,
@@ -104,13 +108,13 @@ def rnns_and_valid_inputs(draw) -> st.SearchStrategy[Tuple]:
         size=[batch_size],
         dtype=torch.int32,
         requires_grad=False,
-    )
-
+    ) 
+    
     # sort lengths since we require enforce_sorted=True
     seq_lens = seq_lens.sort(descending=True)[0]
 
     # hidden state
-    return rnn, inp, seq_lens, hid, hx_setting, kwargs
+    return rnn, data, seq_lens, kwargs
 
 
 # Tests -----------------------------------------------------------------------
@@ -163,7 +167,17 @@ def test_rnn_forward_pass_correct_shapes_returned(
     rnn_kwargs_and_valid_inputs: Tuple,
 ) -> None:
     """Tests forward rnn pass and checks outputs."""
-    rnn, inp, seq_lens, hid, hx_setting, kwargs = rnn_kwargs_and_valid_inputs
+    rnn, data, seq_lens, kwargs = rnn_kwargs_and_valid_inputs
+
+    # determine subtype of inp
+    if isinstance(data, torch.Tensor):
+        inp = data
+        hidden_present_in_input = False
+    elif isinstance(data, tuple):
+        inp, hid_inp = data
+        hidden_present_in_input = True
+    else:
+        raise ValueError
 
     # Get expected out shapes
     hidden_size = kwargs["hidden_size"]
@@ -181,24 +195,25 @@ def test_rnn_forward_pass_correct_shapes_returned(
 
     # check data generation
     assert batch_size == len(seq_lens)
-
     # Run forward pass
-    if hx_setting == RNNHidStatus.NO_HID:
-        res = rnn(x=(inp, seq_lens))
-    elif hx_setting in [RNNHidStatus.HID_NONE, RNNHidStatus.HID_NOT_NONE]:
-        res = rnn(x=(inp, seq_lens), hx=hid)
+    res = rnn((data, seq_lens))
+
+    assert isinstance(res, tuple) and len(res) == 2
+    ret_data, out_lens = res
+
+    if hidden_present_in_input:  # hidden state must be present in output too
+        out, hid = ret_data
     else:
-        raise ValueError
-
-    assert isinstance(res, tuple) and len(res) == 2 and len(res[0]) == 2
-
-    (out, out_lens), hid = res
+        out = ret_data
 
     assert isinstance(out, torch.Tensor)
     assert out.shape == exp_out_shape
     assert torch.equal(
         out_lens.int(), seq_lens
     ), "Sequence length should be unchanged in this module"
+
+    if not hidden_present_in_input:
+        return
 
     if kwargs["rnn_type"] in [RNNType.BASIC_RNN, RNNType.GRU]:
         h_0 = hid

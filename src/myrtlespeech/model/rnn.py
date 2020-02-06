@@ -170,7 +170,7 @@ class RNN(torch.nn.Module):
             return_tuple = True
         else:
             raise ValueError("`x[0]` must be of type RNNData.")
-        
+
         if hid == None:
             num_directions = 2 if self.bidirectional else 1
             zeros = torch.zeros(
@@ -179,7 +179,7 @@ class RNN(torch.nn.Module):
                 self.rnn.hidden_size,
                 dtype=inp.dtype,
             )
-            if self.rnn_type ==  RNNType.LSTM:
+            if self.rnn_type == RNNType.LSTM:
                 hid = (zeros, zeros)
             else:
                 hid = zeros
