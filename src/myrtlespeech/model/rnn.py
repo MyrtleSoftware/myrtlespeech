@@ -112,6 +112,8 @@ class RNN(torch.nn.Module):
             raise ValueError(f"unknown rnn_type {rnn_type}")
 
         self.batch_first = batch_first
+        self.bidirectional = bidirectional
+        self.rnn_type = rnn_type
 
         self.rnn = rnn_cls(
             input_size=input_size,
@@ -168,6 +170,19 @@ class RNN(torch.nn.Module):
             return_tuple = True
         else:
             raise ValueError("`x[0]` must be of type RNNData.")
+        
+        if hid == None:
+            num_directions = 2 if self.bidirectional else 1
+            zeros = torch.zeros(
+                self.rnn.num_layers * num_directions,
+                x[0].shape[0],
+                self.rnn.hidden_size,
+                dtype=inp.dtype,
+            )
+            if self.rnn_type ==  RNNType.LSTM:
+                hid = (zeros, zeros)
+            else:
+                hid = zeros
 
         if self.use_cuda:
             inp = inp.cuda()

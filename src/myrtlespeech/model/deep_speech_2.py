@@ -148,7 +148,7 @@ class DeepSpeech2(torch.nn.Module):
             h = self.cnn(h)
         h = (self._conv_to_rnn_size(h[0]), h[1])
 
-        h, _ = self.rnn(x=h)
+        h = self.rnn(x=h)
 
         if self.lookahead is not None:
             h = (self._rnn_to_lookahead_size(h[0]), h[1])
