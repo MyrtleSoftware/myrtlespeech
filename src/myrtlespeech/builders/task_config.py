@@ -11,7 +11,7 @@ from myrtlespeech.protos import task_config_pb2
 
 
 def build(
-    task_config: task_config_pb2.TaskConfig,
+    task_config: task_config_pb2.TaskConfig, download_data: bool = False,
 ) -> Tuple[
     SeqToSeq, int, torch.utils.data.DataLoader, torch.utils.data.DataLoader
 ]:
@@ -20,6 +20,9 @@ def build(
     Args:
         task_config: A :py:class:`task_config_pb2.TaskConfig` protobuf object
             containing the config for the desired task.
+
+        download_data: A boolean. If :py:Data:`True`, the dataset will attempt
+            to download the data **if it is not already dowloaded**.
 
     Returns:
         A tuple of ``(seq_to_seq, epochs, optim, train_loader, eval_loader)``
