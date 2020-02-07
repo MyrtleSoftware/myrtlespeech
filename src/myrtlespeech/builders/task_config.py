@@ -115,6 +115,7 @@ def build(
         transform=seq_to_seq.pre_process,
         target_transform=target_transform,
         add_seq_len_to_transforms=True,
+        download=download_data,
     )
 
     shuffle = task_config.train_config.shuffle_batches_before_every_epoch
@@ -137,6 +138,7 @@ def build(
         transform=seq_to_seq.pre_process,
         target_transform=target_transform,
         add_seq_len_to_transforms=True,
+        download=download_data,
     )
     eval_loader = torch.utils.data.DataLoader(
         dataset=eval_dataset,
