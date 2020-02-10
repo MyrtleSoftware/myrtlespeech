@@ -101,7 +101,7 @@ def seq_to_seq_collate_fn(
             inputs, in_seq_lens, targets, target_seq_lens
         )
     ]
-    sorted_samples = sorted(samples, key=lambda s: s[0].size(-1))
+    sorted_samples = sorted(samples, key=lambda s: -s[0].size(-1))
     inputs, in_seq_lens, targets, target_seq_lens = zip(*sorted_samples)
 
     inputs = pad_sequence(inputs)
