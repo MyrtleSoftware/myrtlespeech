@@ -192,7 +192,7 @@ class RNN(torch.nn.Module):
 
         out, hid = self.rnn(inp, hx=hx)
 
-        out, lengths = torch.nn.utils.rnn.pad_packed_sequence(
+        out, _ = torch.nn.utils.rnn.pad_packed_sequence(
             sequence=out,
             batch_first=self.batch_first,
             total_length=total_length,
