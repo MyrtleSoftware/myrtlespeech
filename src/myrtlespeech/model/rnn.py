@@ -197,8 +197,5 @@ class RNN(torch.nn.Module):
             batch_first=self.batch_first,
             total_length=total_length,
         )
-        print("out", out)
-        print("lengths", lengths)
-        print("hid", hid)
-        print()
+
         return (out, lengths), hid
