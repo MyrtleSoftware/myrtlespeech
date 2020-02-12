@@ -142,10 +142,10 @@ class DeepSpeech2(torch.nn.Module):
 
         Returns:
             A ``Tuple[fc_output, state]``. ``fc_output`` is the result
-            after applying the fully connected layer but with the ``batch`` and
-            ``max_out_seq_len`` dimensions transposed. See initialisation
-            docstring. ``state`` is the hidden state of ``self.rnn`` (see
-            :py:class:`RNN` for details.).
+            after applying ``fully_connected`` (see initialisation
+            docstring) but with the ``batch`` and ``max_out_seq_len``
+            dimensions transposed. ``state`` is the hidden state of
+            ``self.rnn`` (see :py:class:`RNN` for details.).
         """
         h = x
 
