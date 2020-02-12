@@ -3,6 +3,7 @@ from typing import Tuple
 from typing import Union
 
 import torch
+from myrtlespeech.model.rnn import RNNState
 
 
 class RNNTEncoder(torch.nn.Module):
@@ -233,14 +234,14 @@ class RNNTPredictNet(torch.nn.Module):
         Returns:
             Output from ``pred_nn``. See initialisation docstring.
         """
-        return self.predict(y, hx=None, decoding=False)
+        return self.predict(y, hx=None, decoding=False)[0]
 
     def predict(
         self,
         y: Optional[Tuple[torch.Tensor, torch.Tensor]],
         hx: Optional[Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]],
         decoding: bool,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState]:
         r"""Excecutes :py:class:`RNNTPredictNet`.
 
         The behavior is different depending on whether system is training or
@@ -283,9 +284,9 @@ class RNNTPredictNet(torch.nn.Module):
         if not decoding:
             y = self._prepend_SOS(y)
 
-        out, _ = self.pred_nn(y, hx=hx)
+        out, hid = self.pred_nn(y, hx)
 
-        return out
+        return out, hid
 
     def embed(
         self, y: Tuple[torch.Tensor, torch.Tensor]
@@ -395,7 +396,7 @@ class RNNTJointNet(torch.nn.Module):
 
         concat_inp = torch.cat([f, g], dim=3)  # (B, T, U_, H1 + H2)
 
-        # reshape input to give 3 dimensions instead of 4 as required by fc API
+        # reshape input to give 3 dimensions instead of 4 as required by ``fc``
         concat_inp = concat_inp.view(B1, T * U_, -1)
 
         # drop g_lens (see :py:class:`Transducer` docstrings)

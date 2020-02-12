@@ -123,10 +123,7 @@ class TransducerDecoderBase(torch.nn.Module):
                 # when ``index > self._blank_index``.
             y = torch.IntTensor([[label]]), torch.IntTensor([1])
             y = y[0].to(self._device), y[1].to(self._device)
-        (out, hid), lengths = self._model.predict_net.predict(
-            y, hidden, decoding=True
-        )
-        return (out, lengths), hid
+        return self._model.predict_net.predict(y, hidden, decoding=True)
 
     def _joint_step(self, enc, pred):
         r"""Performs a step of the transducer joint network."""

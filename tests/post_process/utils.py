@@ -124,7 +124,7 @@ class PredNN:
     def __init__(self, hidden_size=3):
         self.hidden_size = hidden_size
 
-    def __call__(self, x):
+    def __call__(self, x, hx=None):
         """Replicates `pred_nn` :py:meth:`forward` method.
 
         This works by using the hidden state to decide which characters to
@@ -136,29 +136,19 @@ class PredNN:
         Returns:
             x: See :py:class:`RNN` with `batch_first=True`.
         """
-
-        if isinstance(x[0], torch.Tensor):
-            embedded = x[0]
-            state = None
-            return_tuple = False
-        elif isinstance(x[0], tuple) and len(x[0]) == 2:
-            embedded, state = x[0]
-            return_tuple = True
-        else:
-            raise ValueError(
-                "`x[0]` must be of form (input, hidden) or (input)."
-            )
+        # TODO: from here:
+        # if hx is None:
+        # see rnn.py checking and follow this.
+        embedded, lengths = x
 
         B, U_, H = embedded.shape
 
         assert B == U_ and B == 1, "Currently only supports batch=seq len== 1"
 
-        lengths = x[1]
-
-        if state is None:
-            # `state` is the index of char to upweight.
+        if hx is None:
+            # `hx` is the index of char to upweight.
             # In first instance upweight character at index 1
-            state = torch.IntTensor([1])
+            hx = torch.IntTensor([1])
         if embedded.squeeze().int()[0] == 0:
             # i.e. if this is the SOS,
             # assign probability of 0.2 to all three chars:
@@ -167,12 +157,9 @@ class PredNN:
             res = torch.ones(3, dtype=torch.float32) * 0.1
             state_to_upweight = embedded.squeeze().int()[1]  # 0 or 1
             res[state_to_upweight] += 0.3
-        res[state.item()] += 0.4
-        out, hid = torch.log(res), (state + 1) % 3
+        res[hx.item()] += 0.4
+        out, hid = torch.log(res), (hx + 1) % 3
         # blow up to full dimension
         out = out.unsqueeze(0).unsqueeze(0)
 
-        if return_tuple:
-            return (out, hid), lengths
-        else:
-            return out, lengths
+        return (out, lengths), hid
