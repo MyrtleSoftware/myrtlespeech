@@ -155,30 +155,18 @@ class RNN(torch.nn.Module):
         inp, lengths = x
 
         if hx is None:
-            # explicitly define hidden state for onnx export
-            num_directions = 2 if self.bidirectional else 1
-            zeros = torch.zeros(
-                self.rnn.num_layers * num_directions,
-                x[1].shape[0],
-                self.rnn.hidden_size,
-                dtype=inp.dtype,
-            )
-            if self.rnn_type == RNNType.LSTM:
-                hx = (zeros, zeros)
-            else:
-                hx = zeros
+            hx = self._init_hidden(batch=len(lengths), dtype=inp.dtype)
 
         if self.use_cuda:
             inp = inp.cuda()
-            if hx is not None:
-                if isinstance(hx, tuple) and len(hx) == 2:  # LSTM
-                    hx = hx[0].cuda(), hx[1].cuda()
-                elif isinstance(hx, torch.Tensor):  # Vanilla RNN/GRU
-                    hx = hx.cuda()
-                else:
-                    raise ValueError(
-                        "hx must be a length 2 Tuple or a torch.Tensor."
-                    )
+            if isinstance(hx, tuple) and len(hx) == 2:  # LSTM
+                hx = hx[0].cuda(), hx[1].cuda()
+            elif isinstance(hx, torch.Tensor):  # Vanilla RNN/GRU
+                hx = hx.cuda()
+            else:
+                raise ValueError(
+                    "hx must be a length 2 Tuple or a torch.Tensor."
+                )
 
         # Record sequence length to enable DataParallel
         # https://pytorch.org/docs/stable/notes/faq.html#pack-rnn-unpack-with-data-parallelism
@@ -199,3 +187,23 @@ class RNN(torch.nn.Module):
         )
 
         return (out, lengths), hid
+
+    def _init_hidden(self, batch: int, dtype: torch.dtype) -> RNNState:
+        """Returns an initial hidden state.
+
+        This is not deferred to the :py:class:`torch.nn.RNN` class since it is
+        necessary to pass the hidden state to correctly export an onnx graph.
+        """
+        num_directions = 2 if self.bidirectional else 1
+        zeros = torch.zeros(
+            self.rnn.num_layers * num_directions,
+            batch,
+            self.rnn.hidden_size,
+            dtype=dtype,
+        )
+        if self.rnn_type == RNNType.LSTM:
+            hx = (zeros, zeros)
+        else:
+            hx = zeros
+
+        return hx

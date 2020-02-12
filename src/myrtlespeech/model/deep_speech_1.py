@@ -78,7 +78,7 @@ class DeepSpeech1(torch.nn.Module):
 
         self.use_cuda = torch.cuda.is_available()
 
-        self._relu_clip = relu_clip
+        self._relu_clip = float(relu_clip)
         self._drop_prob = drop_prob
 
         self.fc1 = self._fully_connected(in_features, n_hidden)
@@ -120,7 +120,7 @@ class DeepSpeech1(torch.nn.Module):
         x: Tuple[torch.Tensor, torch.Tensor],
         hx: Optional[RNNState] = None,
     ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState]:
-        r"""Returns result of applying the model to ``x[0]`` + lstm state.
+        r"""Returns result of applying the model to ``(x[0], hx)``.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
