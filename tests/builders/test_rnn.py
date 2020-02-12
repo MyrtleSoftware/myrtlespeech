@@ -53,24 +53,6 @@ def rnn_match_cfg(
         )
 
 
-@st.composite
-def rnn_cfg_tensors(
-    draw,
-) -> st.SearchStrategy[
-    Tuple[torch.nn.Module, rnn_pb2.RNN, torch.Tensor, bool]
-]:
-    """Returns search strategy of [RNNs, config, valid input, batch_first]."""
-    batch_first = draw(st.booleans())
-    rnn_cfg = draw(rnns())
-    tensor = draw(tensors(min_n_dims=3, max_n_dims=3))
-    if batch_first:
-        tensor = tensor.transpose(1, 0)
-    rnn, _ = build(
-        rnn_cfg, input_features=tensor.size(2), batch_first=batch_first
-    )
-    return rnn, rnn_cfg, tensor, batch_first
-
-
 # Tests -----------------------------------------------------------------------
 
 
@@ -85,61 +67,6 @@ def test_build_rnn_returns_correct_rnn_with_valid_params(
     """Test that build_rnn returns the correct RNN with valid params."""
     rnn, rnn_output_size = build(rnn_cfg, input_features, batch_first)
     rnn_match_cfg(rnn, rnn_cfg, input_features, batch_first)
-
-@given(rnn_cfg_tensor=rnn_cfg_tensors())
-def test_build_rnn_rnn_forward_output_correct_size(
-    rnn_cfg_tensor: Tuple[torch.nn.Module, rnn_pb2.RNN, torch.Tensor, bool]
-) -> None:
-    """Ensures returned RNN forward produces output with correct size."""
-    rnn, rnn_cfg, tensor, batch_first = rnn_cfg_tensor
-    if batch_first:
-        batch, seq_len, input_features = tensor.size()
-    else:
-        seq_len, batch, input_features = tensor.size()
-
-    in_seq_lens = torch.randint(low=1, high=1 + seq_len, size=(batch,))
-
-    out, out_seq_lens = rnn((tensor, in_seq_lens))
-
-    if batch_first:
-        out_batch, out_seq_len, out_features = out.size()
-    else:
-        out_seq_len, out_batch, out_features = out.size()
-
-    assert out_seq_len == seq_len
-    assert out_batch == batch
-    expected_out_features = rnn_cfg.hidden_size
-    if rnn_cfg.bidirectional:
-        expected_out_features *= 2
-    assert out_features == expected_out_features
-
-    assert torch.all(in_seq_lens == out_seq_lens.to(in_seq_lens.device))
-
-
-@given(rnn_cfg=rnns(), tensor=tensors(min_n_dims=3, max_n_dims=3))
-def test_build_rnn_rnn_forward_output_correct_size_with_hidden_state(
-    rnn_cfg: rnn_pb2.RNN, tensor: torch.Tensor
-) -> None:
-    """Ensures returned RNN forward produces output with correct size when
-    hidden state is passed."""
-    seq_len, batch, input_features = tensor.size()
-    rnn, out_feat = build(rnn_cfg, input_features)
-
-    in_seq_lens = torch.randint(low=1, high=1 + seq_len, size=(batch,))
-
-    hidden = None
-    (out, hid), out_seq_lens = rnn(((tensor, hidden), in_seq_lens))
-    out_seq_len, out_batch, out_features = out.size()
-    assert isinstance(hid, (torch.Tensor, tuple))
-    assert out_seq_len == seq_len
-    assert out_batch == batch
-    expected_out_features = rnn_cfg.hidden_size
-    if rnn_cfg.bidirectional:
-        expected_out_features *= 2
-    assert out_features == expected_out_features
-
-    assert torch.all(in_seq_lens == out_seq_lens.to(in_seq_lens.device))
-
 
 
 @given(
