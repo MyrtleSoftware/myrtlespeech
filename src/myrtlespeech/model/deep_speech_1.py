@@ -78,7 +78,7 @@ class DeepSpeech1(torch.nn.Module):
 
         self.use_cuda = torch.cuda.is_available()
 
-        self._relu_clip = float(relu_clip)
+        self._relu_clip = relu_clip
         self._drop_prob = drop_prob
 
         self.fc1 = self._fully_connected(in_features, n_hidden)
