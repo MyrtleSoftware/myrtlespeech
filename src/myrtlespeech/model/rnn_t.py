@@ -104,9 +104,8 @@ class RNNTEncoder(torch.nn.Module):
             if fc2 is not None:
                 self.fc2 = self.fc2.cuda()
 
-        # add extra hard tahn
-        tanh = torch.nn.Hardtanh(min_val=0.0, max_val=20.0)
-        self.hardtanh = lambda x: (tanh(x[0]), x[1])
+        hardtanh = torch.nn.Hardtanh(min_val=0.0, max_val=20.0)
+        self.hardtanh = lambda x: (hardtanh(x[0]), x[1])
 
     def forward(
         self, x: Tuple[torch.Tensor, torch.Tensor],
@@ -135,15 +134,16 @@ class RNNTEncoder(torch.nn.Module):
             Output from ``fc2`` if present else output from ``rnn1``. See
             initialisation docstring.
         """
-
-        self._certify_inputs_encode(x)
+        inp, x_lens = x
+        B1, C, I, T = inp.shape
+        (B2,) = x_lens.shape
+        assert B1 == B2, "Batch size must be the same for inputs and targets"
 
         if self.use_cuda:
-            h = (x[0].cuda(), x[1].cuda())
+            h = (inp.cuda(), x_lens.cuda())
         else:
             h = x
 
-        # Add Optional convolutions here in the future?
         h = self._prepare_inputs_fc1(h)
 
         if hasattr(self, "fc1"):
@@ -159,14 +159,6 @@ class RNNTEncoder(torch.nn.Module):
         return h
 
     @staticmethod
-    def _certify_inputs_encode(inp):
-
-        x, x_lens = inp
-        B1, C, I, T = x.shape
-        (B2,) = x_lens.shape
-        assert B1 == B2, "Batch size must be the same for inputs and targets"
-
-    @staticmethod
     def _prepare_inputs_fc1(inp):
         r"""Reshapes inputs to prepare them for ``fc1``.
 
@@ -177,7 +169,6 @@ class RNNTEncoder(torch.nn.Module):
         x, x_lens = inp
         B, C, I, T = x.shape
         x = x.view(B, C * I, T)
-        # All modules in this method assume time-dimension-first inputs:
         x = x.permute(2, 0, 1)  # (B, hid, T) -> (T, B, hid)
         return x.contiguous(), x_lens
 
@@ -187,18 +178,18 @@ class RNNTPredictNet(torch.nn.Module):
 
     Args:
         embedding: A :py:class:`torch.nn.Module` which is an embedding lookup
-            for targets (eg graphemes, wordpieces) that must accept a
-            :py:class:`torch.Tensor` of size ``[batch, max_label_len]`` as
-            input and return a :py:class:`torch.Tensor` of size ``[batch,
-            max_label_len, pred_nn_input_feature_size]`.
+            for targets that must accept a :py:class:`torch.Tensor` of size
+            ``[batch, max_label_len]`` as input and return a
+            :py:class:`torch.Tensor` of size ``[batch, max_label_len,
+            pred_nn_input_feature_size]``.
 
         pred_nn: A :py:class:`torch.nn.Module` containing the non-embedding
             module the Transducer prediction.
 
-            ``pred_nn`` can be *any* :py:class:`torch.nn.Module` that
-            has the same input and return arguments as a
-            :py:class:`myrtlespeech.model.rnn.RNN` with ``batch_first=True`` as
-            well as the integer attribute ``hidden_size``.
+            ``pred_nn`` is a :py:class:`torch.nn.Module` with the same
+            :py:meth:`forward` API as a ``batch_first``
+            :py:class:`myrtlespeech.model.rnn.RNN`
+            and the attribute ``hidden_size: int``.
     """
 
     def __init__(self, embedding: torch.nn.Module, pred_nn: torch.nn.Module):
@@ -219,7 +210,7 @@ class RNNTPredictNet(torch.nn.Module):
 
             This function is only appropriate when the
             ground-truth labels are available. The :py:meth:`predict`
-            should be used for inference with ``training=False``.
+            should be used for inference with ``decoding=False``.
 
         .. note::
 
@@ -290,18 +281,9 @@ class RNNTPredictNet(torch.nn.Module):
             y = self.embed(y)
 
         if not decoding:
-            pred_inp = self._prepend_SOS(y)
-            # Update the lengths by adding one before inputing to the pred_nn
-            pred_inp = (pred_inp[0], pred_inp[1] + 1)
-        else:
-            pred_inp = y
+            y = self._prepend_SOS(y)
 
-        out, _ = self.pred_nn(pred_inp, hx=hx)
-
-        if not decoding:
-            # Revert the lengths to 'true' values (i.e. not including SOS)
-            # by subtracting one
-            out = (out[0], out[1] - 1)
+        out, _ = self.pred_nn(y, hx=hx)
 
         return out
 
@@ -347,7 +329,8 @@ class RNNTPredictNet(torch.nn.Module):
         start = torch.zeros((B, 1, H), device=y_0.device, dtype=y_0.dtype)
         y_0 = torch.cat([start, y_0], dim=1).contiguous()  # (B, U + 1, H)
 
-        return (y_0, y_1)
+        # Update the lengths by adding one:
+        return y_0, y_1 + 1
 
 
 class RNNTJointNet(torch.nn.Module):
