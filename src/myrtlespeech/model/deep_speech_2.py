@@ -2,6 +2,7 @@ from typing import Optional
 from typing import Tuple
 
 import torch
+from myrtlespeech.model.rnn import RNNState
 
 
 class DeepSpeech2(torch.nn.Module):
@@ -120,8 +121,10 @@ class DeepSpeech2(torch.nn.Module):
         return x.permute(1, 2, 0)
 
     def forward(
-        self, x: Tuple[torch.Tensor, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self,
+        x: Tuple[torch.Tensor, torch.Tensor],
+        hx: Optional[RNNState] = None,
+    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState]:
         """Returns the result of applying the Deep Speech 2 model to the input.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
@@ -134,10 +137,15 @@ class DeepSpeech2(torch.nn.Module):
         Args:
             x: Input for the cnn module. See initialisation docstring.
 
+            hx: An Optional RNNState of ``self.rnn`` (see :py:class:`RNN` for
+                details.)
+
         Returns:
-            Output from the fully connected layer but with the ``batch`` and
-            ``max_out_seq_len`` dimensions transposed. See initialisation
-            docstring.
+            A ``Tuple[fc_output, state]``. ``fc_output`` is the result
+            after applying ``fully_connected`` (see initialisation
+            docstring) but with the ``batch`` and ``max_out_seq_len``
+            dimensions transposed. ``state`` is the hidden state of
+            ``self.rnn`` (see :py:class:`RNN` for details.).
         """
         h = x
 
@@ -148,7 +156,7 @@ class DeepSpeech2(torch.nn.Module):
             h = self.cnn(h)
         h = (self._conv_to_rnn_size(h[0]), h[1])
 
-        h = self.rnn(h)
+        h, hid = self.rnn(h, hx=hx)
 
         if self.lookahead is not None:
             h = (self._rnn_to_lookahead_size(h[0]), h[1])
@@ -161,4 +169,4 @@ class DeepSpeech2(torch.nn.Module):
 
         h = (h[0].transpose(0, 1), h[1])
 
-        return h
+        return h, hid

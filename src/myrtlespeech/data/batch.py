@@ -94,6 +94,11 @@ def seq_to_seq_collate_fn(
         targets.append(target)
         target_seq_lens.append(target_seq_len)
 
+    # Sort the samples within the batch
+    samples = zip(inputs, in_seq_lens, targets, target_seq_lens)
+    sorted_samples = sorted(samples, key=lambda s: s[0].size(-1), reverse=True)
+    inputs, in_seq_lens, targets, target_seq_lens = zip(*sorted_samples)
+
     inputs = pad_sequence(inputs)
     in_seq_lens = torch.tensor(in_seq_lens, requires_grad=False)
     targets = pad_sequence(targets)

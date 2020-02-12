@@ -244,7 +244,7 @@ class MaskConv1d(torch.nn.Conv1d):
             groups=groups,
             bias=bias,
         )
-        self.padding_mode = padding_mode
+        self._padding_mode = padding_mode
         self.use_cuda = torch.cuda.is_available()
         if self.use_cuda:
             super().cuda()
@@ -255,9 +255,9 @@ class MaskConv1d(torch.nn.Conv1d):
         """Pads the input activations."""
         batch, channels, max_seq_len = acts.size()
 
-        if self.padding_mode == PaddingMode.NONE:
+        if self._padding_mode == PaddingMode.NONE:
             pad = (0, 0)
-        elif self.padding_mode == PaddingMode.SAME:
+        elif self._padding_mode == PaddingMode.SAME:
             pad = pad_same(
                 length=max_seq_len,
                 kernel_size=self.kernel_size[0],
@@ -266,7 +266,7 @@ class MaskConv1d(torch.nn.Conv1d):
             )
             acts = torch.nn.functional.pad(acts, pad)
         else:
-            raise ValueError(f"unknown padding mode {self.padding_mode}")
+            raise ValueError(f"unknown padding mode {self._padding_mode}")
 
         seq_lens = out_lens(
             seq_lens,
@@ -333,7 +333,7 @@ class MaskConv1d(torch.nn.Conv1d):
         return acts, seq_lens
 
     def extra_repr(self) -> str:
-        return super().extra_repr() + f", padding_mode={self.padding_mode}"
+        return super().extra_repr() + f", padding_mode={self._padding_mode}"
 
 
 class MaskConv2d(torch.nn.Conv2d):
@@ -383,7 +383,7 @@ class MaskConv2d(torch.nn.Conv2d):
             groups=groups,
             bias=bias,
         )
-        self.padding_mode = padding_mode
+        self._padding_mode = padding_mode
         self.use_cuda = torch.cuda.is_available()
         if self.use_cuda:
             super().cuda()
@@ -394,9 +394,9 @@ class MaskConv2d(torch.nn.Conv2d):
         """Pads the input activations."""
         batch, channels, features, max_seq_len = acts.size()
 
-        if self.padding_mode == PaddingMode.NONE:
+        if self._padding_mode == PaddingMode.NONE:
             pad_len = (0, 0)
-        elif self.padding_mode == PaddingMode.SAME:
+        elif self._padding_mode == PaddingMode.SAME:
             pad_len = pad_same(
                 length=max_seq_len,
                 kernel_size=self.kernel_size[1],
@@ -411,7 +411,7 @@ class MaskConv2d(torch.nn.Conv2d):
             )
             acts = torch.nn.functional.pad(acts, pad_len + pad_features)
         else:
-            raise ValueError(f"unknown padding mode {self.padding_mode}")
+            raise ValueError(f"unknown padding mode {self._padding_mode}")
 
         seq_lens = out_lens(
             seq_lens,
@@ -483,7 +483,7 @@ class MaskConv2d(torch.nn.Conv2d):
         return acts, seq_lens
 
     def extra_repr(self) -> str:
-        return super().extra_repr() + f", padding_mode={self.padding_mode}"
+        return super().extra_repr() + f", padding_mode={self._padding_mode}"
 
 
 SeqLenT = TypeVar("SeqLenT", torch.Tensor, Tuple[torch.Tensor, torch.Tensor])

@@ -51,8 +51,11 @@ def test_all_gradients_computed_for_all_model_parameters(data) -> None:
         low=1, high=seq_len + 1, size=(batch,), dtype=torch.long
     )
 
+    # sort lengths since we require enforce_sorted=True
+    seq_lens = seq_lens.sort(descending=True)[0]
+
     # forward pass
-    out = ds1((x, seq_lens))
+    out, _ = ds1((x, seq_lens))
 
     # backward pass using mean as proxy for an actual loss function
     loss = out[0].mean()

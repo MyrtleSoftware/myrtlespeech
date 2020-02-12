@@ -1,7 +1,9 @@
+from typing import Optional
 from typing import Tuple
 
 import torch
 from myrtlespeech.model.rnn import RNN
+from myrtlespeech.model.rnn import RNNState
 from myrtlespeech.model.rnn import RNNType
 
 
@@ -38,17 +40,17 @@ class DeepSpeech1(torch.nn.Module):
         DeepSpeech1(
           (fc1): Sequential(
             (0): Linear(in_features=5, out_features=10, bias=True)
-            (1): Hardtanh(min_val=0, max_val=10.0, inplace=True)
+            (1): Hardtanh(min_val=0.0, max_val=10.0, inplace=True)
             (2): Dropout(p=0.25, inplace=False)
           )
           (fc2): Sequential(
             (0): Linear(in_features=10, out_features=10, bias=True)
-            (1): Hardtanh(min_val=0, max_val=10.0, inplace=True)
+            (1): Hardtanh(min_val=0.0, max_val=10.0, inplace=True)
             (2): Dropout(p=0.25, inplace=False)
           )
           (fc3): Sequential(
             (0): Linear(in_features=10, out_features=20, bias=True)
-            (1): Hardtanh(min_val=0, max_val=10.0, inplace=True)
+            (1): Hardtanh(min_val=0.0, max_val=10.0, inplace=True)
             (2): Dropout(p=0.25, inplace=False)
           )
           (bi_lstm): RNN(
@@ -56,7 +58,7 @@ class DeepSpeech1(torch.nn.Module):
           )
           (fc4): Sequential(
             (0): Linear(in_features=20, out_features=10, bias=True)
-            (1): Hardtanh(min_val=0, max_val=10.0, inplace=True)
+            (1): Hardtanh(min_val=0.0, max_val=10.0, inplace=True)
             (2): Dropout(p=0.25, inplace=False)
           )
           (out): Linear(in_features=10, out_features=26, bias=True)
@@ -76,7 +78,7 @@ class DeepSpeech1(torch.nn.Module):
 
         self.use_cuda = torch.cuda.is_available()
 
-        self._relu_clip = relu_clip
+        self._relu_clip = float(relu_clip)
         self._drop_prob = drop_prob
 
         self.fc1 = self._fully_connected(in_features, n_hidden)
@@ -104,7 +106,9 @@ class DeepSpeech1(torch.nn.Module):
     ) -> torch.nn.Module:
         layers = [torch.nn.Linear(in_f, out_f)]
         if relu:
-            layers.append(torch.nn.Hardtanh(0, self._relu_clip, inplace=True))
+            layers.append(
+                torch.nn.Hardtanh(0.0, self._relu_clip, inplace=True)
+            )
         if dropout:
             layers.append(torch.nn.Dropout(p=self._drop_prob))
         if len(layers) == 1:
@@ -112,9 +116,11 @@ class DeepSpeech1(torch.nn.Module):
         return torch.nn.Sequential(*layers)
 
     def forward(
-        self, x: Tuple[torch.Tensor, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        r"""Returns the result of applying the model to ``x[0]``.
+        self,
+        x: Tuple[torch.Tensor, torch.Tensor],
+        hx: Optional[RNNState] = None,
+    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState]:
+        r"""Returns result of applying the model to ``(x[0], hx)``.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
@@ -128,16 +134,18 @@ class DeepSpeech1(torch.nn.Module):
                 represents the sequence length of the corresponding *input*
                 sequence.
 
-        Returns:
-            The first element of the Tuple return value is the result after
-            applying the model to ``x[0]``. It must have size ``[seq_len,
-            batch, out_features]``.
+            hx: An Optional RNNState of ``self.bi_lstm`` (see
+                :py:class:`RNN` for details.)
 
-            The second element of the Tuple return value is a
+        Returns:
+            A ``Tuple[Tuple[output, lengths], state]``. ``output`` is the
+            result after applying the model to ``(x[0], hx)``. It will have
+            size ``[seq_len, batch, out_features]``. ``lengths`` is a
             :py:class:`torch.Tensor` with size ``[batch]`` where each entry
             represents the sequence length of the corresponding *output*
             sequence. This will be equal to ``x[1]`` as this layer does not
-            currently change sequence length.
+            currently change sequence length. ``state`` is the hidden state of
+            ``self.bi_lstm`` (see :py:class:`RNN` for details.).
         """
         h, seq_lens = x
         if self.use_cuda:
@@ -151,10 +159,10 @@ class DeepSpeech1(torch.nn.Module):
         h = self.fc2(h)
         h = self.fc3(h)
 
-        h, _ = self.bi_lstm((h, seq_lens))
+        (h, _), hid = self.bi_lstm(x=(h, seq_lens), hx=hx)
 
         h = self.fc4(h)
         out = self.out(h)
         out = out.transpose(0, 1)
 
-        return out, seq_lens
+        return (out, seq_lens), hid

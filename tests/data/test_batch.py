@@ -103,8 +103,8 @@ def test_pad_sequences_returns_tensor_with_correct_values(
 
 def test_seq_to_seq_collate_fn() -> None:
     """Unit test to ensure seq_to_seq_collate_fn returns correct values."""
-    inputs = [rand([1, 2, 3]), rand([1, 2, 5])]
-    seq_lens = tensor([3, 5])
+    inputs = [rand([1, 2, 5]), rand([1, 2, 3])]
+    seq_lens = tensor([5, 3])
 
     targets = [rand([10]), rand([7])]
     target_lengths = tensor([10, 7])

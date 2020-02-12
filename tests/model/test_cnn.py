@@ -55,17 +55,17 @@ def mask_conv1d_valid_inputs(
 
     # PyTorch conv1d requires input size to be greater than effective kernel
     # size. Force this to be True.
-    if mask_conv1d.padding_mode == PaddingMode.NONE:
+    if mask_conv1d._padding_mode == PaddingMode.NONE:
         # NONE requires setting the minimum to the effective kernel size.
         effective_ks = (
             mask_conv1d.dilation[0] * (mask_conv1d.kernel_size[0] - 1) + 1
         )
         seq_len = draw(st.integers(effective_ks, effective_ks + 256))
-    elif mask_conv1d.padding_mode == PaddingMode.SAME:
+    elif mask_conv1d._padding_mode == PaddingMode.SAME:
         # SAME padding should sort this for us.
         seq_len = draw(st.integers(1, 257))
     else:
-        raise ValueError(f"unknown PaddingMode {mask_conv1d.padding_mode}")
+        raise ValueError(f"unknown PaddingMode {mask_conv1d._padding_mode}")
 
     tensor = torch.empty(
         [batch_size, mask_conv1d.in_channels, seq_len]
@@ -113,7 +113,7 @@ def mask_conv2d_valid_inputs(
 
     # PyTorch conv1d requires input size to be greater than effective kernel
     # size. Force this to be True.
-    if mask_conv2d.padding_mode == PaddingMode.NONE:
+    if mask_conv2d._padding_mode == PaddingMode.NONE:
         effective_ks = (
             mask_conv2d.dilation[0] * (mask_conv2d.kernel_size[0] - 1) + 1
         )
@@ -123,12 +123,12 @@ def mask_conv2d_valid_inputs(
             mask_conv2d.dilation[1] * (mask_conv2d.kernel_size[1] - 1) + 1
         )
         seq_len = draw(st.integers(effective_ks, effective_ks + 32))
-    elif mask_conv2d.padding_mode == PaddingMode.SAME:
+    elif mask_conv2d._padding_mode == PaddingMode.SAME:
         # SAME padding should sort this for us.
         features = draw(st.integers(1, 257))
         seq_len = draw(st.integers(1, 257))
     else:
-        raise ValueError(f"unknown PaddingMode {mask_conv2d.padding_mode}")
+        raise ValueError(f"unknown PaddingMode {mask_conv2d._padding_mode}")
 
     tensor = torch.empty(
         [batch_size, mask_conv2d.in_channels, features, seq_len]
@@ -274,7 +274,7 @@ def test_mask_conv_output_size_and_seq_lens(
 
     # test out_seq_len dimension of tensor output and set padding value ready
     # for testing out_seq_lens
-    if mask_conv1d.padding_mode == PaddingMode.NONE:
+    if mask_conv1d._padding_mode == PaddingMode.NONE:
         padding = (0, 0)
         # out_lens function returns correct expected length if the tests pass
         exp_len = out_lens(
@@ -285,7 +285,7 @@ def test_mask_conv_output_size_and_seq_lens(
             padding=0,
         ).item()
         assert out_seq_len == exp_len
-    elif mask_conv1d.padding_mode == PaddingMode.SAME:
+    elif mask_conv1d._padding_mode == PaddingMode.SAME:
         padding = pad_same(
             length=seq_len,
             kernel_size=mask_conv1d.kernel_size[0],
@@ -295,7 +295,7 @@ def test_mask_conv_output_size_and_seq_lens(
         # by definition of SAME padding
         assert out_seq_len == math.ceil(float(seq_len) / mask_conv1d.stride[0])
     else:
-        raise ValueError(f"unknown PaddingMode {mask_conv1d.padding_mode}")
+        raise ValueError(f"unknown PaddingMode {mask_conv1d._padding_mode}")
 
     # test out_seq_lens
     exp_out_seq_lens = out_lens(
@@ -344,7 +344,7 @@ def test_mask2d_conv_output_size_and_seq_lens(
 
     # test out_seq_len dimension of tensor output and set padding value ready
     # for testing out_seq_lens
-    if mask_conv2d.padding_mode == PaddingMode.NONE:
+    if mask_conv2d._padding_mode == PaddingMode.NONE:
         padding = (0, 0)
         # out_lens function returns correct expected length if the tests pass
         exp_features = out_lens(
@@ -363,7 +363,7 @@ def test_mask2d_conv_output_size_and_seq_lens(
             padding=0,
         ).item()
         assert out_seq_len == exp_len
-    elif mask_conv2d.padding_mode == PaddingMode.SAME:
+    elif mask_conv2d._padding_mode == PaddingMode.SAME:
         padding = pad_same(
             length=features,
             kernel_size=mask_conv2d.kernel_size[0],
@@ -383,7 +383,7 @@ def test_mask2d_conv_output_size_and_seq_lens(
         # by definition of SAME padding
         assert out_seq_len == math.ceil(float(seq_len) / mask_conv2d.stride[1])
     else:
-        raise ValueError(f"unknown PaddingMode {mask_conv2d.padding_mode}")
+        raise ValueError(f"unknown PaddingMode {mask_conv2d._padding_mode}")
 
     # test out_seq_lens
     exp_out_seq_lens = out_lens(
