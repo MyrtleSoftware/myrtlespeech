@@ -3,7 +3,6 @@ from typing import Tuple
 from typing import Union
 
 import torch
-from myrtlespeech.model.rnn import RNNState
 
 
 class RNNTEncoder(torch.nn.Module):
@@ -111,7 +110,7 @@ class RNNTEncoder(torch.nn.Module):
 
     def forward(
         self, x: Tuple[torch.Tensor, torch.Tensor],
-    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Returns result of applying the encoder to the audio features.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
