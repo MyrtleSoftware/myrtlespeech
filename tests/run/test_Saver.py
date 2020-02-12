@@ -19,8 +19,8 @@ from tests.utils.utils import check_state_dicts_match
 # Utilities -------------------------------------------------------------------
 
 
-def change_seq_to_seq_state_dict(seq_to_seq: SeqToSeq):
-    """Alters SeqToSeq state_dict.
+def alter_seq2seq_attributes_(seq_to_seq: SeqToSeq):
+    """Alters SeqToSeq attributes (and hence state_dict).
 
     This should ensure that calling this function multiple times should result
     in a unique state_dict for **every** successive call.
@@ -65,7 +65,7 @@ def test_seq_to_seq_correctly_built_saved_and_loaded(
         expected_sd = copy.deepcopy(seq_to_seq.state_dict())
 
         # Alter state_dict so that it != expected_sd
-        change_seq_to_seq_state_dict(seq_to_seq)
+        alter_seq2seq_attributes_(seq_to_seq)
 
         # check that state_dict **has** changed by checking that all subdicts
         # are altered
