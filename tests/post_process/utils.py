@@ -28,8 +28,8 @@ class DummyTransducerEncoder(RNNTEncoder):
     """
 
     def __init__(self):
-        rnn1_not_used_except_in_init = torch.nn.RNN(2, 2)
-        super().__init__(rnn1=rnn1_not_used_except_in_init)
+        rnn1 = torch.nn.RNN(2, 2)
+        super().__init__(rnn1=rnn1)
 
     def forward(
         self, x: Tuple[torch.Tensor, torch.Tensor]
@@ -127,7 +127,7 @@ class PredNN:
     def __call__(self, x, hx=None):
         """Replicates `pred_nn` :py:meth:`forward` method.
 
-        This works by using the hidden state to decide which characters to
+        This uses the hidden state to decide which characters to
         upweight at a given timestep.
 
         Args:
@@ -136,9 +136,6 @@ class PredNN:
         Returns:
             x: See :py:class:`RNN` with `batch_first=True`.
         """
-        # TODO: from here:
-        # if hx is None:
-        # see rnn.py checking and follow this.
         embedded, lengths = x
 
         B, U_, H = embedded.shape
@@ -157,9 +154,12 @@ class PredNN:
             res = torch.ones(3, dtype=torch.float32) * 0.1
             state_to_upweight = embedded.squeeze().int()[1]  # 0 or 1
             res[state_to_upweight] += 0.3
+
         res[hx.item()] += 0.4
-        out, hid = torch.log(res), (hx + 1) % 3
+        out = torch.log(res)
         # blow up to full dimension
         out = out.unsqueeze(0).unsqueeze(0)
+
+        hid = (hx + 1) % 3
 
         return (out, lengths), hid
