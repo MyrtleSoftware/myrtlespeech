@@ -3,6 +3,7 @@ from typing import Tuple
 from typing import Union
 
 import torch
+from myrtlespeech.model.rnn import RNNState
 
 
 class RNNTEncoder(torch.nn.Module):
@@ -109,8 +110,8 @@ class RNNTEncoder(torch.nn.Module):
         self.hardtanh = lambda x: (tanh(x[0]), x[1])
 
     def forward(
-        self, x: Tuple[torch.Tensor, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self, x: Tuple[torch.Tensor, torch.Tensor],
+    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState]:
         r"""Returns result of applying the encoder to the audio features.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
@@ -150,11 +151,12 @@ class RNNTEncoder(torch.nn.Module):
             h = self.fc1(h)
             h = self.hardtanh(h)
 
-        h = self.rnn1(h)
+        h, _ = self.rnn1(h)
 
         if hasattr(self, "fc2"):
             h = self.fc2(h)
             h = self.hardtanh(h)
+
         return h
 
     @staticmethod
@@ -241,14 +243,12 @@ class RNNTPredictNet(torch.nn.Module):
         Returns:
             Output from ``pred_nn``. See initialisation docstring.
         """
-        return self.predict(y, hidden_state=None, decoding=False)
+        return self.predict(y, hx=None, decoding=False)
 
     def predict(
         self,
         y: Optional[Tuple[torch.Tensor, torch.Tensor]],
-        hidden_state: Optional[
-            Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]
-        ],
+        hx: Optional[Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]],
         decoding: bool,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Excecutes :py:class:`RNNTPredictNet`.
@@ -263,15 +263,10 @@ class RNNTPredictNet(torch.nn.Module):
                 the *input* lengths of these target label sequences. ``y`` can
                 be None iff ``decoding=True``.
 
-            hidden_state: The Optional hidden state of ``pred_nn`` which is
-                either a length 2 Tuple of :py:class:`torch.Tensor`s or
-                a single :py:class:`torch.Tensor` depending on the ``RNNType``
-                (see :py:class:`torch.nn` documentation for more information).
-
-                ``hidden_state`` must be None when ``decoding=False``.
+            hx: The Optional ``RNNState`` of ``pred_nn``.
 
             decoding: A boolean. If :py:data:`True` then decoding is being
-                performed. When ``decoding=True``, the hidden_state is passed
+                performed. When ``decoding=True``, the hx is passed
                 to ``pred_nn`` and the output of this function will include
                 the returned :py:class:`RNN`, hidden state. This is the same
                 behaviour as :py:class:`RNN` - consult these docstrings for
@@ -283,13 +278,11 @@ class RNNTPredictNet(torch.nn.Module):
             ``batch_first=True`` for API.
         """
         if not decoding:
-            assert (
-                hidden_state is None
-            ), "Do not pass hidden_state during training"
+            assert hx is None, "Do not pass hx during training"
             assert y is not None, f"y must be None during training"
 
         if y is None:  # then performing decoding and at start-of-sequence
-            B = 1 if hidden_state is None else hidden_state[0].size(1)
+            B = 1 if hx is None else hx[0].size(1)
             y = torch.zeros((1, B, self.hidden_size)), torch.IntTensor([1])
         else:
             assert (
@@ -302,9 +295,9 @@ class RNNTPredictNet(torch.nn.Module):
             # Update the lengths by adding one before inputing to the pred_nn
             pred_inp = (pred_inp[0], pred_inp[1] + 1)
         else:
-            pred_inp = (y[0], hidden_state), y[1]
+            pred_inp = y
 
-        out = self.pred_nn(pred_inp)
+        out, _ = self.pred_nn(pred_inp, hx=hx)
 
         if not decoding:
             # Revert the lengths to 'true' values (i.e. not including SOS)

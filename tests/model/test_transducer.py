@@ -39,6 +39,9 @@ def transducers_and_valid_inputs(
     seq_lens = torch.randint(
         low=1, high=seq_len, size=(batch,), dtype=torch.long
     )
+    # sort lengths since we require enforce_sorted=True
+    seq_lens = seq_lens.sort(descending=True)[0]
+
     y = torch.randint(
         low=0,
         high=vocab_size - 1,
@@ -48,6 +51,10 @@ def transducers_and_valid_inputs(
     label_seq_lens = torch.randint(
         low=1, high=label_seq_len, size=(batch,), dtype=torch.long
     )
+
+    # sort lengths since we require enforce_sorted=True
+    label_seq_lens = label_seq_lens.sort(descending=True)[0]
+
     # ensure max values are present in lengths
     seq_lens[0] = seq_len
     label_seq_lens[0] = label_seq_len
