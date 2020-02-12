@@ -139,7 +139,7 @@ class DeepSpeech1(torch.nn.Module):
 
         Returns:
             A ``Tuple[Tuple[output, lengths], state]``. ``output`` is the
-            result after applying the model to ``x[0]``. It must have size
+            result after applying the model to ``(x[0], hx)``. It must have size
             ``[seq_len, batch, out_features]``. ``lengths`` is a
             :py:class:`torch.Tensor` with size ``[batch]`` where each entry
             represents the sequence length of the corresponding *output*
