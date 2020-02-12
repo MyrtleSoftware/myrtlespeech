@@ -1,7 +1,6 @@
 import copy
 from tempfile import TemporaryDirectory
 
-import pytest
 import torch
 from hypothesis import given
 from hypothesis import settings
@@ -14,7 +13,7 @@ from myrtlespeech.run.train import fit
 
 from tests.builders.test_task_config import build_and_check_task_config
 from tests.protos.test_task_config import task_configs
-from tests.utils.utils import check_state_dicts_match
+from tests.utils.utils import state_dicts_match
 
 # Utilities -------------------------------------------------------------------
 
@@ -69,21 +68,18 @@ def test_seq_to_seq_correctly_built_saved_and_loaded(
 
         # check that state_dict **has** changed by checking that all subdicts
         # are altered
-        with pytest.raises(AssertionError):
-            check_state_dicts_match(
-                expected_sd["model"], seq_to_seq.state_dict()["model"]
-            )
+        assert not state_dicts_match(
+            expected_sd["model"], seq_to_seq.state_dict()["model"]
+        )
         if seq_to_seq.optim:
-            with pytest.raises(AssertionError):
-                check_state_dicts_match(
-                    expected_sd["optim"], seq_to_seq.state_dict()["optim"]
-                )
+            assert not state_dicts_match(
+                expected_sd["optim"], seq_to_seq.state_dict()["optim"]
+            )
         if seq_to_seq.lr_scheduler:
-            with pytest.raises(AssertionError):
-                check_state_dicts_match(
-                    expected_sd["lr_scheduler"],
-                    seq_to_seq.state_dict()["lr_scheduler"],
-                )
+            assert not state_dicts_match(
+                expected_sd["lr_scheduler"],
+                seq_to_seq.state_dict()["lr_scheduler"],
+            )
 
         if not check_with_fit_api:
             # Use **newly initialised** Saver cb to reload the state_dict
@@ -93,7 +89,7 @@ def test_seq_to_seq_correctly_built_saved_and_loaded(
 
             cb_handler.on_train_begin(epochs)
 
-            check_state_dicts_match(expected_sd, seq_to_seq.state_dict())
+            state_dicts_match(expected_sd, seq_to_seq.state_dict())
             assert cb_handler.state_dict["epoch"] == 2
             assert cb_handler.state_dict["total_train_batches"] == 0
         else:
@@ -110,4 +106,4 @@ def test_seq_to_seq_correctly_built_saved_and_loaded(
                 callbacks=[Saver(log_dir=tmpdir, model=seq_to_seq)],
             )
 
-            check_state_dicts_match(expected_sd, seq_to_seq.state_dict())
+            state_dicts_match(expected_sd, seq_to_seq.state_dict())

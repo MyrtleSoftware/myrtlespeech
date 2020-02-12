@@ -1,4 +1,5 @@
 """Common utilities used in tests."""
+import math
 from typing import Callable
 from typing import Optional
 from typing import Union
@@ -115,3 +116,27 @@ def check_state_dicts_match(dict1, dict2):
             assert torch.allclose(val1, val2)
         else:
             assert val1 == val2
+
+
+def state_dicts_match(dict1, dict2) -> bool:
+    """Returns True if dicts have same keys and values."""
+    if not dict1.keys() == dict2.keys():
+        return False
+    for key in dict1.keys():
+        val1 = dict1[key]
+        val2 = dict2[key]
+        if isinstance(val1, dict):
+            if not (isinstance(val2, dict) and state_dicts_match(val1, val2)):
+                return False
+        elif isinstance(val1, float):
+            if not (isinstance(val2, float) and math.isclose(val1, val2)):
+                return False
+        elif isinstance(val1, torch.Tensor):
+            if not (
+                isinstance(val2, torch.Tensor) and torch.allclose(val1, val2)
+            ):
+                return False
+        else:
+            if val1 != val2:
+                return False
+    return True
