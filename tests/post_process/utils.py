@@ -1,6 +1,8 @@
+from typing import Optional
 from typing import Tuple
 
 import torch
+from myrtlespeech.model.rnn import RNNState
 from myrtlespeech.model.rnn_t import RNNTEncoder
 from myrtlespeech.model.rnn_t import RNNTJointNet
 from myrtlespeech.model.rnn_t import RNNTPredictNet
@@ -32,7 +34,9 @@ class DummyTransducerEncoder(RNNTEncoder):
         super().__init__(rnn1=rnn1)
 
     def forward(
-        self, x: Tuple[torch.Tensor, torch.Tensor]
+        self,
+        x: Tuple[torch.Tensor, torch.Tensor],
+        hx: Optional[RNNState] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Replicates :py:attr:`Transducer.encoder` API.
 
@@ -51,7 +55,7 @@ class DummyTransducerEncoder(RNNTEncoder):
         h = h.squeeze(1)  # B, H, T
         h = h.permute(2, 0, 1)
 
-        return h, x[1]
+        return (h, x[1]), hx
 
 
 class DummyJointNet(RNNTJointNet):
@@ -82,7 +86,6 @@ class DummyJointNet(RNNTJointNet):
 
         f = f.transpose(1, 0)  # (T, B, H1) -> (B, T, H1)
         f = f.unsqueeze(dim=2)  # (B, T, 1, H)
-
         g = g.unsqueeze(dim=1)  # (B, 1, U_, H)
 
         return (f + g), f_lens

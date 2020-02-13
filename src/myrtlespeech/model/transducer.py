@@ -57,10 +57,11 @@ class Transducer(torch.nn.Module):
 
         joint_net: A :py:class:`torch.nn.Module` to use as the the transducer
             joint network. It must accept as input a Tuple where the first
-            element is the ``encoder`` output and the second is the
-            ``predict_net`` output.
+            element is the first element of the ``encoder`` Tuple output and
+            the second is the first element of the ``predict_net`` Tuple
+            output.
 
-            It must return a nested Tuple of the form ``((a, b), (c, d))``
+            It must return a nested Tuple of the form ``(a, b)``
             where ``a`` is the result after applying the module to the inputs:
             a :py:class:`torch.Tensor` of size ``[batch, max_seq_len,
             max_label_length + 1, vocab_size + 1]``. ``max_seq_len`` is the
@@ -73,9 +74,7 @@ class Transducer(torch.nn.Module):
             blank symbol is a valid ``joint_net`` output. ``b`` is a
             :py:class:`torch.Tensor` of size ``[batch]`` where each entry
             represents the sequence length of the ``encoder`` features
-            after ``joint_net`` has acted on them. ``c`` and ``d`` are the
-            returned ``RNNState``s of the ``encoder`` and ``predict_net``
-            respectively.
+            after ``joint_net`` has acted on them.
 
             It is possible **but not necessary** to use an initialized
             :py:class:`TransducerJointNet` class as ``joint_net``.
@@ -122,12 +121,15 @@ class Transducer(torch.nn.Module):
                 and the second element is the input to ``predict_net`` (see
                 initialisation docstring).
 
-            hx_enc: The Optional ``RNNState`` for ``encoder``.
+            hx_enc: Optional ``RNNState`` of the encoder network.
 
-            hx_pred: The Optional ``RNNState`` for ``predict_net``.
+            hx_pred: Optional ``RNNState`` of the encoder network.
 
         Returns:
-            The output of ``joint_net``. See initialization docstring.
+            A Tuple of the form ``((a, b), (c, d))`` where ``(a, b)`` is
+            the ``joint_net`` output (see initialization docstring) and ``c``
+            and ``d`` are the returned ``RNNState``s of the ``encoder`` and
+            ``predict_net`` respectively.
         """
         self._certify_inputs_forward(x)
         (x_inp, x_lens), (y, y_lens) = x
@@ -138,10 +140,11 @@ class Transducer(torch.nn.Module):
             y = y.cuda()
             y_lens = y_lens.cuda()
 
-        f = self.encode((x_inp, x_lens), hx=hx_enc)
-        g = self.predict_net((y, y_lens), hx=hx_pred)
+        f, hx_f = self.encode((x_inp, x_lens), hx=hx_enc)
+        g, hx_g = self.predict_net((y, y_lens), hx=hx_pred)
+        h = self.joint_net((f, g))
 
-        return self.joint_net((f, g))
+        return h, (hx_f, hx_g)
 
     @staticmethod
     def _certify_inputs_forward(inp):

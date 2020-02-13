@@ -33,7 +33,7 @@ class TransducerGreedyDecoder(TransducerDecoderBase):
         See :py:class:`TransducerDecoderBase` for args.
         """
 
-        fs, fs_lens = self._model.encode(inp)
+        (fs, fs_lens), _ = self._model.encode(inp)
         fs = fs[
             : fs_lens.max(), :, :
         ]  # size: seq_len, batch = 1, rnn_features

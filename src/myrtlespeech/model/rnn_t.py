@@ -218,11 +218,9 @@ class RNNTPredictNet(torch.nn.Module):
 
         .. note::
 
-            The length of the sequence is increased by one as the
+            The length of the sequence is increased by ``+1`` as the
             start-of-sequence embedded state (all zeros) is prepended to the
-            start of the label sequence. Note that this change *is not*
-            reflected in the output lengths as the :py:class:`TransducerLoss`
-            requires the true label lengths.
+            start of the label sequence.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
@@ -362,10 +360,10 @@ class RNNTJointNet(torch.nn.Module):
     def forward(
         self,
         x: Tuple[
-            Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState],
-            Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState],
+            Tuple[torch.Tensor, torch.Tensor],
+            Tuple[torch.Tensor, torch.Tensor],
         ],
-    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], Tuple[RNNState, RNNState]]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Returns the result of applying the Transducer joint network.
 
         Args:
@@ -376,7 +374,7 @@ class RNNTJointNet(torch.nn.Module):
             The output of the :py:class:`.Transducer` network. See
             :py:class:`.Transducer`'s :py:meth:`forward` docstring.
         """
-        ((f, f_lens), hx_f), ((g, g_lens), hx_g) = x
+        (f, f_lens), (g, g_lens) = x
 
         T, B1, H1 = f.shape
         B2, U_, H2 = g.shape
@@ -403,4 +401,4 @@ class RNNTJointNet(torch.nn.Module):
         # return to 4D shape
         h = h[0].view(B1, T, U_, -1), h[1]
 
-        return h, (hx_f, hx_g)
+        return h
