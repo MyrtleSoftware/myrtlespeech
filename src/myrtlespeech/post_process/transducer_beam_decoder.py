@@ -80,7 +80,7 @@ class TransducerBeamDecoder(TransducerDecoderBase):
             : fs_lens.max(), :, :
         ]  # size: seq_len, batch = 1, rnn_features
 
-        B: List = [Sequence()]
+        B: List = [Sequence(pred_hidden=hx_pred)]
         for t in range(fs.shape[0]):
             f = fs[t, :, :].unsqueeze(0)
             # add length
