@@ -1,4 +1,5 @@
 from typing import List
+from typing import Optional
 from typing import Tuple
 
 import torch
@@ -57,7 +58,11 @@ class TransducerDecoderBase(torch.nn.Module):
         self._device = "cuda:0" if self._model.use_cuda else "cpu"
 
     @torch.no_grad()
-    def forward(self, x: Tuple[torch.Tensor, torch.Tensor]) -> List[List[int]]:
+    def forward(
+        self,
+        x: Tuple[torch.Tensor, torch.Tensor],
+        hxs: Optional[List[Tuple[RNNState, RNNState]]] = None,
+    ) -> Tuple[List[List[int]], List[Tuple[RNNState, RNNState]]]:
         r"""Decodes Transducer output.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
@@ -71,28 +76,43 @@ class TransducerDecoderBase(torch.nn.Module):
                 max_input_seq_len]`` while ``x[1]`` is the audio input lengths
                 of size ``[batch]``.
 
+            hxs: An Optional List of length ``batch`` where each element is a
+                Tuple of encoder and prediction network input ``RNNState``s.
+
         Returns:
-            A List of Lists where each sublist contains the index predictions
-            of the decoder.
+            A Tuple of the form ``(a, b)`` where ``a`` is a List of Lists
+            where each sublist contains the index predictions of the decoder
+            and ``b`` is a List of length ``batch`` where each element is a
+            Tuple of encoder and prediction network output ``RNNState``s.
         """
         training_state = self._model.training
         self._model.eval()
 
         preds = []
+        hids = []
+        hid_inp: Tuple[Optional[RNNState], Optional[RNNState]] = (None, None)
         for b in range(x[0].shape[0]):
             audio_len = x[1][b].unsqueeze(0)
             audio_features = x[0][b, :, :, :audio_len].unsqueeze(0)
             audio_inp = (audio_features, audio_len)
-            sentence = self.decode(audio_inp)
+            if hxs is not None:
+                hid_inp = hxs[b]
+            sentence, hid = self.decode(audio_inp, hid_inp[0], hid_inp[1])
             preds.append(sentence)
+            hids.append(hid)
 
         # restore training state
         self._model.train(training_state)
 
         del audio_inp, audio_features, audio_len
-        return preds
+        return preds, hids
 
-    def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
+    def decode(
+        self,
+        inp: Tuple[torch.Tensor, torch.Tensor],
+        hx_enc: Optional[RNNState] = None,
+        hx_pred: Optional[RNNState] = None,
+    ) -> Tuple[List[int], Tuple[RNNState, RNNState]]:
         r"""Decodes a single sample.
 
         Args:
@@ -103,10 +123,15 @@ class TransducerDecoderBase(torch.nn.Module):
                 entry represents the sequence length of the corresponding
                 *input* sequence to the transducer encoder.
 
-        Returns:
-            A List of length ``[batch]`` where each element is a List of
-            indexes.
+            hx_enc: Optional ``RNNState`` of the encoder.
 
+            hx_pred: Optional ``RNNState`` of the prediction network.
+
+        Returns:
+            A Tuple of the form ``(a, (b, c))`` where ``a`` is a List of
+            length ``[batch]`` where each element is a List of indexes. ``b``
+            and ``c`` are the ``RNNState`` of the encoder and prediction
+            networks respectively.
         """
         raise NotImplementedError(
             "decode method not implemented. Do not \

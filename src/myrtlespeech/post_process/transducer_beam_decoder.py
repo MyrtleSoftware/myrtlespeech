@@ -1,8 +1,10 @@
 import math
 from typing import List
+from typing import Optional
 from typing import Tuple
 
 import torch
+from myrtlespeech.model.rnn import RNNState
 from myrtlespeech.model.transducer import Transducer
 from myrtlespeech.post_process.transducer_decoder_base import (
     TransducerDecoderBase,
@@ -62,18 +64,23 @@ class TransducerBeamDecoder(TransducerDecoderBase):
         self._length_norm = length_norm
         self._log_prune_threshold = math.log(prune_threshold)
 
-    def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
+    def decode(
+        self,
+        inp: Tuple[torch.Tensor, torch.Tensor],
+        hx_enc: Optional[RNNState] = None,
+        hx_pred: Optional[RNNState] = None,
+    ) -> Tuple[List[int], Tuple[RNNState, RNNState]]:
         r"""Beam Transducer decode method.
 
         See :py:class:`TransducerDecoderBase` for args.
         """
 
-        (fs, fs_lens), _ = self._model.encode(inp)
+        (fs, fs_lens), hx_enc = self._model.encode(inp, hx_enc)
         fs = fs[
             : fs_lens.max(), :, :
         ]  # size: seq_len, batch = 1, rnn_features
 
-        B = [Sequence()]
+        B: List = [Sequence()]
         for t in range(fs.shape[0]):
             f = fs[t, :, :].unsqueeze(0)
             # add length
@@ -142,8 +149,9 @@ class TransducerBeamDecoder(TransducerDecoderBase):
             B.sort(key=lambda a: -a.logp / max(len(a.labels), 0.1))
 
         label = B[0].labels
+        hx_pred = B[0].pred_hidden
         del f, pred, hidden, logp, fs, B, A, y_star, yk
-        return label
+        return label, (hx_enc, hx_pred)  # type: ignore
 
     def __repr__(self):
         str = super().__repr__()[:-1]

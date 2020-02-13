@@ -43,7 +43,7 @@ def test_greedy_search_single_step(decoder=get_fixed_decoder()):
 
     expected = [0]
 
-    assert decoder.decode(inp) == expected
+    assert decoder.decode(inp)[0] == expected
 
 
 def test_greedy_search_multi_step(decoder=get_fixed_decoder()):
@@ -56,7 +56,7 @@ def test_greedy_search_multi_step(decoder=get_fixed_decoder()):
 
     expected = [0, 1, 0, 1]
 
-    assert decoder.decode((indata, lengths)) == expected
+    assert decoder.decode((indata, lengths))[0] == expected
 
 
 def test_greedy_search_limit_symbols_per_step(
@@ -71,7 +71,7 @@ def test_greedy_search_limit_symbols_per_step(
 
     expected = [0, 1]
 
-    assert decoder.decode((indata, lengths)) == expected
+    assert decoder.decode((indata, lengths))[0] == expected
 
 
 def test_multi_element_batch(decoder=get_fixed_decoder()):
@@ -87,7 +87,7 @@ def test_multi_element_batch(decoder=get_fixed_decoder()):
 
     expected = [[0, 1, 0, 1], [0]]
 
-    assert decoder((indata, lengths)) == expected
+    assert decoder((indata, lengths))[0] == expected
 
 
 def test_preserves_training_state(decoder=get_fixed_decoder()):

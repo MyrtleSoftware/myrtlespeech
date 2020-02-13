@@ -1,7 +1,9 @@
 from typing import List
+from typing import Optional
 from typing import Tuple
 
 import torch
+from myrtlespeech.model.rnn import RNNState
 from myrtlespeech.model.transducer import Transducer
 from myrtlespeech.post_process.transducer_decoder_base import (
     TransducerDecoderBase,
@@ -27,18 +29,23 @@ class TransducerGreedyDecoder(TransducerDecoderBase):
             max_symbols_per_step=max_symbols_per_step,
         )
 
-    def decode(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> List[int]:
+    def decode(
+        self,
+        inp: Tuple[torch.Tensor, torch.Tensor],
+        hx_enc: Optional[RNNState] = None,
+        hx_pred: Optional[RNNState] = None,
+    ) -> Tuple[List[int], Tuple[RNNState, RNNState]]:
         """Greedy Transducer decode method.
 
         See :py:class:`TransducerDecoderBase` for args.
         """
 
-        (fs, fs_lens), _ = self._model.encode(inp)
+        (fs, fs_lens), hx_enc = self._model.encode(inp, hx_enc)
         fs = fs[
             : fs_lens.max(), :, :
         ]  # size: seq_len, batch = 1, rnn_features
 
-        hidden = None
+        hx_pred = None
         label: List[int] = []
 
         for t in range(fs.shape[0]):
@@ -53,7 +60,7 @@ class TransducerGreedyDecoder(TransducerDecoderBase):
             while not_blank and symbols_added < self._max_symbols_per_step:
 
                 g, hidden_prime = self._pred_step(
-                    self._get_last_idx(label), hidden
+                    self._get_last_idx(label), hx_pred
                 )
                 logp = self._joint_step(f, g)
 
@@ -65,8 +72,8 @@ class TransducerGreedyDecoder(TransducerDecoderBase):
                     not_blank = False
                 else:
                     label.append(idx)
-                    hidden = hidden_prime
+                    hx_pred = hidden_prime
                 symbols_added += 1
 
-        del f, g, hidden, hidden_prime, logp, fs, fs_lens
-        return label
+        del f, g, hidden_prime, logp, fs, fs_lens
+        return label, (hx_enc, hx_pred)  # type: ignore
