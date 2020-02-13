@@ -94,7 +94,7 @@ def test_all_gradients_computed_for_all_parameters_and_size_as_expected(
     assert len(input[0][1]) == len(input[1][1]) == batch
 
     # forward pass
-    out = transducer(input)
+    out, _ = transducer(input)
 
     # backward pass using mean as proxy for an actual loss function
     loss = out[0].mean()

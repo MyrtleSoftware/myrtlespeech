@@ -1,6 +1,5 @@
 from typing import Optional
 from typing import Tuple
-from typing import Union
 
 import torch
 from myrtlespeech.model.rnn import RNNState
@@ -28,12 +27,13 @@ class RNNTEncoder(torch.nn.Module):
             represents the sequence length of the corresponding *input*
             sequence to the rnn.
 
-            It must return a tuple where the first element is the result after
-            applying the module to the input. It must have size
-            ``[max_rnn_seq_len, batch, rnn_features]``. The second element of
-            the tuple return value is a :py:class:`torch.Tensor` with size
+            It must return a nested Tuple of the form ``((a, b), c)``
+            where ``a`` is the result after applying the module to the input:
+            a :py:class:`torch.Tensor` of size ``[max_rnn_seq_len, batch,
+            rnn_features]``. ``b`` is a :py:class:`torch.Tensor` with size
             ``[batch]`` where each entry represents the sequence length of the
-            corresponding *output* sequence.
+            corresponding *output* sequence. ``c`` is the ``RNNState`` of the
+            module.
 
         fc1: An Optional :py:class:`torch.nn.Module` containing the first fully
             connected part of the Transducer encoder.
@@ -74,11 +74,9 @@ class RNNTEncoder(torch.nn.Module):
 
 
     Returns:
-        A Tuple where the first element is the  output of ``fc2`` if it is not
-        None, else the output of ``rnn1`` and the second element is a
-        :py:class:`torch.Tensor` of size ``[batch]`` where each entry
-        represents the sequence length of the corresponding *output*
-        sequence to the encoder.
+        A Tuple where the first element is the  output of ``fc2`` if present
+        None, else the output of ``rnn1`` and the second element is the
+        ``RNNState`` of ``rnn1``.
     """
 
     def __init__(
@@ -109,8 +107,10 @@ class RNNTEncoder(torch.nn.Module):
         self.hardtanh = lambda x: (hardtanh(x[0]), x[1])
 
     def forward(
-        self, x: Tuple[torch.Tensor, torch.Tensor],
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self,
+        x: Tuple[torch.Tensor, torch.Tensor],
+        hx: Optional[RNNState] = None,
+    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState]:
         r"""Returns result of applying the encoder to the audio features.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
@@ -118,12 +118,12 @@ class RNNTEncoder(torch.nn.Module):
         initialisation.
 
         Args:
-            x: Tuple where the first element is the encoder
-                input (a :py:class:`torch.Tensor`) with size ``[batch,
-                channels, features, max_input_seq_len]`` and the second element
-                is a :py:class:`torch.Tensor` of size ``[batch]`` where each
-                entry represents the sequence length of the corresponding
-                *input* sequence to the rnn. The channel dimension contains
+            x: A Tuple where the first element is the audio feature sequence:
+                a :py:class:`torch.Tensor` with size ``[batch, channels,
+                features, max_input_seq_len]`` and the second element is a
+                :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+                represents the sequence length of the corresponding audio
+                feature input. The channel dimension contains
                 context frames and is immediately flattened into the
                 ``features`` dimension. This reshaping operation is not dealt
                 with in preprocessing so that: a) this model conforms to the
@@ -131,9 +131,10 @@ class RNNTEncoder(torch.nn.Module):
                 to this class may add convolutions before input to the first
                 layer ``fc1``/``rnn1``.
 
+            hx: An Optional ``RNNState`` of ``rnn1``.
+
         Returns:
-            Output from ``fc2`` if present else output from ``rnn1``. See
-            initialisation docstring.
+            See initialisation docstring.
         """
         inp, x_lens = x
         B1, C, I, T = inp.shape
@@ -151,13 +152,13 @@ class RNNTEncoder(torch.nn.Module):
             h = self.fc1(h)
             h = self.hardtanh(h)
 
-        h, _ = self.rnn1(h)
+        h, hid = self.rnn1(h, hx=hx)
 
         if hasattr(self, "fc2"):
             h = self.fc2(h)
             h = self.hardtanh(h)
 
-        return h
+        return h, hid
 
     @staticmethod
     def _prepare_inputs_fc1(inp):
@@ -189,8 +190,8 @@ class RNNTPredictNet(torch.nn.Module):
 
             ``pred_nn`` is a :py:class:`torch.nn.Module` with the same
             :py:meth:`forward` API as a ``batch_first``
-            :py:class:`myrtlespeech.model.rnn.RNN`
-            and the attribute ``hidden_size: int``.
+            :py:class:`myrtlespeech.model.rnn.RNN` and the attribute
+            ``hidden_size: int``.
     """
 
     def __init__(self, embedding: torch.nn.Module, pred_nn: torch.nn.Module):
@@ -203,8 +204,10 @@ class RNNTPredictNet(torch.nn.Module):
         self.hidden_size = pred_nn.hidden_size
 
     def forward(
-        self, y: Tuple[torch.Tensor, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self,
+        y: Tuple[torch.Tensor, torch.Tensor],
+        hx: Optional[RNNState] = None,
+    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState]:
         r"""Returns the result of applying the Transducer prediction network.
 
         .. note::
@@ -231,21 +234,20 @@ class RNNTPredictNet(torch.nn.Module):
                 :py:class:`torch.Tensor` of size ``[batch]`` that contains the
                 *input* lengths of these target label sequences.
 
+            hx: Optional ``RNNState`` of ``pred_nn``.
+
         Returns:
             Output from ``pred_nn``. See initialisation docstring.
         """
-        return self.predict(y, hx=None, decoding=False)[0]
+        return self.predict(y, hx=hx, decoding=False)
 
     def predict(
         self,
         y: Optional[Tuple[torch.Tensor, torch.Tensor]],
-        hx: Optional[Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]],
+        hx: Optional[RNNState],
         decoding: bool,
     ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState]:
         r"""Excecutes :py:class:`RNNTPredictNet`.
-
-        The behavior is different depending on whether system is training or
-        performing inference.
 
         Args:
             y: A Optional Tuple where the first element is the target label
@@ -257,11 +259,7 @@ class RNNTPredictNet(torch.nn.Module):
             hx: The Optional ``RNNState`` of ``pred_nn``.
 
             decoding: A boolean. If :py:data:`True` then decoding is being
-                performed. When ``decoding=True``, the hx is passed
-                to ``pred_nn`` and the output of this function will include
-                the returned :py:class:`RNN`, hidden state. This is the same
-                behaviour as :py:class:`RNN` - consult these docstrings for
-                more details.
+                performed and start-of-sequence token is not prepended.
 
         Returns:
             This will return the output of ``pred_nn`` where a hidden state is
@@ -284,7 +282,7 @@ class RNNTPredictNet(torch.nn.Module):
         if not decoding:
             y = self._prepend_SOS(y)
 
-        out, hid = self.pred_nn(y, hx)
+        out, hid = self.pred_nn(y, hx=hx)
 
         return out, hid
 
@@ -364,10 +362,10 @@ class RNNTJointNet(torch.nn.Module):
     def forward(
         self,
         x: Tuple[
-            Tuple[torch.Tensor, torch.Tensor],
-            Tuple[torch.Tensor, torch.Tensor],
+            Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState],
+            Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState],
         ],
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], Tuple[RNNState, RNNState]]:
         r"""Returns the result of applying the Transducer joint network.
 
         Args:
@@ -378,7 +376,7 @@ class RNNTJointNet(torch.nn.Module):
             The output of the :py:class:`.Transducer` network. See
             :py:class:`.Transducer`'s :py:meth:`forward` docstring.
         """
-        (f, f_lens), (g, g_lens) = x
+        ((f, f_lens), hx_f), ((g, g_lens), hx_g) = x
 
         T, B1, H1 = f.shape
         B2, U_, H2 = g.shape
@@ -405,4 +403,4 @@ class RNNTJointNet(torch.nn.Module):
         # return to 4D shape
         h = h[0].view(B1, T, U_, -1), h[1]
 
-        return h
+        return h, (hx_f, hx_g)
