@@ -152,7 +152,7 @@ class TransducerBeamDecoder(TransducerDecoderBase):
         return str + ")"
 
 
-def log_aplusb(a, b):
+def log_aplusb(a: float, b: float) -> float:
     return max(a, b) + math.log1p(math.exp(-math.fabs(a - b)))
 
 

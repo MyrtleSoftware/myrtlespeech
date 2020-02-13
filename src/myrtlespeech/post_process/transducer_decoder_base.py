@@ -2,6 +2,7 @@ from typing import List
 from typing import Tuple
 
 import torch
+from myrtlespeech.model.rnn import RNNState
 from myrtlespeech.model.transducer import Transducer
 
 
@@ -67,7 +68,7 @@ class TransducerDecoderBase(torch.nn.Module):
             x: A Tuple of inputs to the network where both elements are
                 :py:class:`torch.Tensor`s. ``x[0]`` is the audio
                 feature input with size ``[batch, channels, features,
-                max_input_seq_len]`` while ``x[0]`` is the audio input lengths
+                max_input_seq_len]`` while ``x[1]`` is the audio input lengths
                 of size ``[batch]``.
 
         Returns:
@@ -113,7 +114,9 @@ class TransducerDecoderBase(torch.nn.Module):
             specific e.g. `TransducerGreedyDecoder`"
         )
 
-    def _pred_step(self, label, hidden):
+    def _pred_step(
+        self, label: int, hidden: RNNState
+    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState]:
         r"""Performs a step of the transducer prediction network."""
         if label == self._SOS:
             y = None
@@ -125,7 +128,11 @@ class TransducerDecoderBase(torch.nn.Module):
             y = y[0].to(self._device), y[1].to(self._device)
         return self._model.predict_net.predict(y, hidden, decoding=True)
 
-    def _joint_step(self, enc, pred):
+    def _joint_step(
+        self,
+        enc: Tuple[torch.Tensor, torch.Tensor],
+        pred: Tuple[torch.Tensor, torch.Tensor],
+    ):
         r"""Performs a step of the transducer joint network."""
 
         logits, _ = self._model.joint_net((enc, pred))
@@ -136,7 +143,7 @@ class TransducerDecoderBase(torch.nn.Module):
 
         return res
 
-    def _get_last_idx(self, labels):
+    def _get_last_idx(self, labels: List[int]) -> int:
         r"""Returns the final index in a list of indexes."""
         return self._SOS if labels == [] else labels[-1]
 
