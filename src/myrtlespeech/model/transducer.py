@@ -1,6 +1,8 @@
+from typing import Optional
 from typing import Tuple
 
 import torch
+from myrtlespeech.model.rnn import RNNState
 from myrtlespeech.run.callbacks.transducer_forward import TransducerForward
 
 
@@ -14,65 +16,69 @@ class Transducer(torch.nn.Module):
             size ``[batch, channels, features, max_input_seq_len]`` and the
             second element is a :py:class:`torch.Tensor` of size ``[batch]``
             where each entry represents the sequence length of the
-            corresponding audio feature input.
+            corresponding audio feature input. It should also accept an
+            Optional Arg ``hx`` representing the  ``RNNState`` of the encoder
+            network.
 
-            It must return a tuple where the first element is the result after
-            applying the module to the audio input. It must have size
-            ``[max_seq_len, batch, encoder_out_feat]``. The second element
-            of the tuple return value is a :py:class:`torch.Tensor` with size
+            It must return a nested Tuple of the form ``((a, b), c)``
+            where ``a`` is the result after applying the module to the audio
+            input: a :py:class:`torch.Tensor` of size ``[max_seq_len, batch,
+            encoder_out_feat]``. ``b`` is a :py:class:`torch.Tensor` with size
             ``[batch]`` where each entry represents the sequence length of the
-            corresponding *output* sequence. These may be different than the
-            input sequence lengths due to downsampling in `encoder`.
+            corresponding ``a`` sequence (these may be different to the
+            input sequence lengths due to downsampling in ``encoder``). ``c``
+            is the returned ``RNNState`` of ``encoder``.
 
             It is possible **but not necessary** to use an initialized
-            :py:class:`TransducerEncoder` class as `encoder`.
-
-            Note that the encoder network is sometimes referred to as the
-            'transcription network' in the literature.
+            :py:class:`TransducerEncoder` class as ``encoder``.
 
         predict_net: A :py:class:`torch.nn.Module` to use as the transducer
             prediction network. It must accept as input a Tuple where the
-            first element is the target label tensor with size ``[batch,
-            max_label_length]`` and the second is a :py:class:`torch.Tensor`
-            of size ``[batch]`` that contains the *input* lengths of these
-            target label sequences.
+            first element is the target label  :py:class:`torch.Tensor` with
+            size ``[batch, max_label_length]`` and the second is a
+            :py:class:`torch.Tensor` of size ``[batch]`` that contains the
+            *input* lengths of these target label sequences. It should also
+            accept an Optional Arg ``hx`` representing the
+            ``RNNState`` of the prediction network.
 
-            It must return a tuple where the first element is the result after
-            applying the module to the input and it must have size ``[batch,
-            max_label_length + 1, pred_net_out_feat]``. Note that the
-            dimension at index 1 is ``max_label_length + 1`` since the
-            start-of-sequence token is prepended to the label sequence.
-            The second element of the returned Tuple is a
-            :py:class:`torch.Tensor` of size ``[batch]`` with the containing
-            the lengths of the target label sequence. These should be ``+ 1``
-            greater than the input label sequence lengths.
+            It must return a nested Tuple of the form ``((a, b), c)``
+            where ``a`` is the result after applying the module to the target
+            inputs: a :py:class:`torch.Tensor` of size ``[batch,
+            max_label_length + 1, pred_net_out_feat]`` (where the ``+ 1`` is
+            results from the start-of-sequence token being prepended to the
+            target label sequence). ``b`` is a :py:class:`torch.Tensor` with
+            size ``[batch]`` where each entry represents the sequence length
+            of the corresponding ``a`` sequence (these should be ``+ 1``
+            greater than the input label sequence lengths.). ``c`` is the
+            returned ``RNNState`` of ``predict_net``.
 
             It is possible **but not necessary** to use an initialized
-            :py:class:`TransducerPredictNet` class as `predict_net`.
+            :py:class:`TransducerPredictNet` class as ``predict_net``.
 
         joint_net: A :py:class:`torch.nn.Module` to use as the the transducer
             joint network. It must accept as input a Tuple where the first
             element is the ``encoder`` output and the second is the
             ``predict_net`` output.
 
-            It must return a tuple where the first element is the result after
-            applying the module to the input and must have size ``[batch,
-            max_seq_len, max_label_length + 1, vocab_size + 1]``.
-            ``max_seq_len`` is the length of the longest sequence in
-            the batch that is output from ``encoder`` while
-            ``max_label_length`` is the length of the longest **label**
-            sequence in the batch that is output from ``predict_net``. Note
-            that the dimension at index 2 is ``max_label_length + 1`` since
-            the start-of-sequence label is prepended to the label sequence and
-            the dimension at index 3 is ``vocab_size + 1`` because the blank
-            symbol can be output.
-
-            The second element is a :py:class:`torch.Tensor` of
-            size ``[batch]`` where each entry represents the sequence length
-            of the ``encoder`` features after ``joint_net`` has acted on them.
+            It must return a nested Tuple of the form ``((a, b), (c, d))``
+            where ``a`` is the result after applying the module to the inputs:
+            a :py:class:`torch.Tensor` of size ``[batch, max_seq_len,
+            max_label_length + 1, vocab_size + 1]``. ``max_seq_len`` is the
+            length of the longest sequence in the batch that is output from
+            ``encoder`` while ``max_label_length`` is the length of the
+            longest **label** sequence in the batch that is output from
+            ``predict_net``. The ``+1`` in the ``max_label_length`` dimension
+            is the result of start-of-symbol preprending (see ``predict_net``)
+            and the ``+1`` in the ``vocab_size`` dimension indicates that the
+            blank symbol is a valid ``joint_net`` output. ``b`` is a
+            :py:class:`torch.Tensor` of size ``[batch]`` where each entry
+            represents the sequence length of the ``encoder`` features
+            after ``joint_net`` has acted on them. ``c`` and ``d`` are the
+            returned ``RNNState``s of the ``encoder`` and ``predict_net``
+            respectively.
 
             It is possible **but not necessary** to use an initialized
-            :py:class:`TransducerJointNet` class as `joint_net`.
+            :py:class:`TransducerJointNet` class as ``joint_net``.
 
     Attributes:
         callbacks: A collection of :py:class:`Callback`\s that will be
@@ -102,8 +108,10 @@ class Transducer(torch.nn.Module):
             Tuple[torch.Tensor, torch.Tensor],
             Tuple[torch.Tensor, torch.Tensor],
         ],
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        r"""Returns the result of applying the Transducer network to `x`.
+        hx_enc: Optional[RNNState] = None,
+        hx_pred: Optional[RNNState] = None,
+    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], Tuple[RNNState, RNNState]]:
+        r"""Returns the result of applying the Transducer network to ``x``.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
         :py:func:`torch.cuda.is_available` was :py:data:`True` on
@@ -114,10 +122,13 @@ class Transducer(torch.nn.Module):
                 and the second element is the input to ``predict_net`` (see
                 initialisation docstring).
 
+            hx_enc: The Optional ``RNNState`` for ``encoder``.
+
+            hx_pred: The Optional ``RNNState`` for ``predict_net``.
+
         Returns:
             The output of ``joint_net``. See initialization docstring.
         """
-
         self._certify_inputs_forward(x)
         (x_inp, x_lens), (y, y_lens) = x
 
@@ -127,12 +138,10 @@ class Transducer(torch.nn.Module):
             y = y.cuda()
             y_lens = y_lens.cuda()
 
-        f = self.encode((x_inp, x_lens))  # f[0] = (T, B, H1)
-        g = self.predict_net((y, y_lens))  # g[0] = (U, B, H2)
+        f = self.encode((x_inp, x_lens), hx=hx_enc)
+        g = self.predict_net((y, y_lens), hx=hx_pred)
 
-        out = self.joint_net((f, g))
-
-        return out
+        return self.joint_net((f, g))
 
     @staticmethod
     def _certify_inputs_forward(inp):
