@@ -61,8 +61,8 @@ class TransducerDecoderBase(torch.nn.Module):
     def forward(
         self,
         x: Tuple[torch.Tensor, torch.Tensor],
-        hxs: Optional[List[Tuple[RNNState, RNNState]]] = None,
-    ) -> Tuple[List[List[int]], List[Tuple[RNNState, RNNState]]]:
+        hxs: Optional[Tuple[RNNState, RNNState]] = None,
+    ) -> Tuple[List[List[int]], Tuple[RNNState, RNNState]]:
         r"""Decodes Transducer output.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
@@ -90,14 +90,16 @@ class TransducerDecoderBase(torch.nn.Module):
 
         preds = []
         hids = []
-        hid_inp: Tuple[Optional[RNNState], Optional[RNNState]] = (None, None)
+        hid_inp0: Optional[RNNState] = None
+        hid_inp1: Optional[RNNState] = None
         for b in range(x[0].shape[0]):
             audio_len = x[1][b].unsqueeze(0)
             audio_features = x[0][b, :, :, :audio_len].unsqueeze(0)
             audio_inp = (audio_features, audio_len)
             if hxs is not None:
-                hid_inp = hxs[b]
-            sentence, hid = self.decode(audio_inp, hid_inp[0], hid_inp[1])
+                hid_inp0 = self._get_hidden_state(hxs[0], batch=b)
+                hid_inp1 = self._get_hidden_state(hxs[1], batch=b)
+            sentence, hid = self.decode(audio_inp, hid_inp0, hid_inp1)
             preds.append(sentence)
             hids.append(hid)
 
@@ -105,7 +107,29 @@ class TransducerDecoderBase(torch.nn.Module):
         self._model.train(training_state)
 
         del audio_inp, audio_features, audio_len
-        return preds, hids
+        hid_tensors = self._collate_hid_states(hids)
+        return preds, hid_tensors
+
+    def _get_hidden_state(self, hx: RNNState, batch: int) -> RNNState:
+        """Returns ``RNNState`` of ``batch`` index."""
+        if isinstance(hx, tuple):
+            hx_inp0 = hx[0][:, batch, :].unsqueeze(1)
+            hx_inp1 = hx[1][:, batch, :].unsqueeze(1)
+            hx_inp = (hx_inp0, hx_inp1)
+        else:
+            hx_inp = hx[:, batch, :].unsqueeze(1)
+        return hx_inp
+
+    def _collate_hid_states(
+        self, states: List[Tuple[RNNState, RNNState]]
+    ) -> Tuple[RNNState, RNNState]:
+        """Collates List of ``RNNState``s into :py:class`torch.Tensor` form."""
+        h0s = []
+        h1s = []
+        for h0, h1 in states:
+            h0s.append(h0)
+            h1s.append(h1)
+        return torch.cat(h0s, dim=1), torch.cat(h1s, dim=1)
 
     def decode(
         self,
