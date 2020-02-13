@@ -30,7 +30,7 @@ class DummyTransducerEncoder(RNNTEncoder):
     """
 
     def __init__(self):
-        rnn1 = torch.nn.RNN(2, 2)
+        rnn1 = torch.nn.RNN(2, 2)  # just usef for initialize
         super().__init__(rnn1=rnn1)
 
     def forward(
@@ -54,6 +54,9 @@ class DummyTransducerEncoder(RNNTEncoder):
         ), f"In DummyTransducerModel(), input channels must == 1 but C == {C}"
         h = h.squeeze(1)  # B, H, T
         h = h.permute(2, 0, 1)
+
+        if hx is None:
+            hx = torch.zeros(1, 1, 1)
 
         return (h, x[1]), hx
 
@@ -149,6 +152,7 @@ class PredNN:
             # `hx` is the index of char to upweight.
             # In first instance upweight character at index 1
             hx = torch.IntTensor([1])
+            hx = hx.view((1, 1, 1))
         if embedded.squeeze().int()[0] == 0:
             # i.e. if this is the SOS,
             # assign probability of 0.2 to all three chars:
