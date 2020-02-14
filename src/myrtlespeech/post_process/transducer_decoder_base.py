@@ -124,12 +124,27 @@ class TransducerDecoderBase(torch.nn.Module):
         self, states: List[Tuple[RNNState, RNNState]]
     ) -> Tuple[RNNState, RNNState]:
         """Collates List of ``RNNState``s into :py:class`torch.Tensor` form."""
-        h0s = []
-        h1s = []
+        h0s: List = []
+        h1s: List = []
+        h00s, h01s, h10s, h11s = [], [], [], []
         for h0, h1 in states:
-            h0s.append(h0)
-            h1s.append(h1)
-        return torch.cat(h0s, dim=1), torch.cat(h1s, dim=1)
+            if isinstance(h0, tuple):
+                h00, h01 = h0
+                h10, h11 = h1
+                h00s.append(h00)
+                h01s.append(h01)
+                h10s.append(h10)
+                h11s.append(h11)
+            else:
+                h0s.append(h0)
+                h1s.append(h1)
+        if not h0s:
+            h0 = torch.cat(h00s, dim=1), torch.cat(h01s, dim=1)
+            h1 = torch.cat(h10s, dim=1), torch.cat(h11s, dim=1)
+        else:
+            h0 = torch.cat(h0s, dim=1)
+            h1 = torch.cat(h1s, dim=1)
+        return h0, h1
 
     def decode(
         self,
