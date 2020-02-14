@@ -58,7 +58,6 @@ class TransducerGreedyDecoder(TransducerDecoderBase):
             not_blank = True
             symbols_added = 0
             while not_blank and symbols_added < self._max_symbols_per_step:
-
                 g, hidden_prime = self._pred_step(
                     self._get_last_idx(label), hx_pred
                 )
@@ -74,6 +73,8 @@ class TransducerGreedyDecoder(TransducerDecoderBase):
                     label.append(idx)
                     hx_pred = hidden_prime
                 symbols_added += 1
+
+        hx_pred = self.set_hx_zeros_if_none(hx_pred, hidden_prime)
 
         del f, g, hidden_prime, logp, fs, fs_lens
         return label, (hx_enc, hx_pred)  # type: ignore

@@ -150,6 +150,8 @@ class TransducerBeamDecoder(TransducerDecoderBase):
 
         label = B[0].labels
         hx_pred = B[0].pred_hidden
+        hx_pred = self.set_hx_zeros_if_none(hx_pred, hidden)
+
         del f, pred, hidden, logp, fs, B, A, y_star, yk
         return label, (hx_enc, hx_pred)  # type: ignore
 

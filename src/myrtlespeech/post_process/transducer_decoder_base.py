@@ -62,6 +62,17 @@ class TransducerDecoderBase(torch.nn.Module):
         self,
         x: Tuple[torch.Tensor, torch.Tensor],
         hxs: Optional[Tuple[RNNState, RNNState]] = None,
+    ) -> Tuple[torch.Tensor, Tuple[RNNState, RNNState]]:
+        """Decodes transducer outputs returning :py:class:`torch.Tensors`."""
+        preds, hid_tensors = self.forward_list(x, hxs)
+        preds_tensor = self._collate_preds(preds)
+        return preds_tensor, hid_tensors
+
+    @torch.no_grad()
+    def forward_list(
+        self,
+        x: Tuple[torch.Tensor, torch.Tensor],
+        hxs: Optional[Tuple[RNNState, RNNState]] = None,
     ) -> Tuple[List[List[int]], Tuple[RNNState, RNNState]]:
         r"""Decodes Transducer output.
 
@@ -106,9 +117,32 @@ class TransducerDecoderBase(torch.nn.Module):
         # restore training state
         self._model.train(training_state)
 
-        del audio_inp, audio_features, audio_len
         hid_tensors = self._collate_hid_states(hids)
+
+        del audio_inp, audio_features, audio_len
         return preds, hid_tensors
+
+    def _collate_preds(self, preds: List[List[int]]) -> torch.Tensor:
+        """Collates list of predictions to batched form."""
+        sequences = []
+        # use negative (i.e. not valid index) padding_value
+        padding_value = -1
+
+        for pred in preds:
+            sequences.append(torch.IntTensor(pred))
+
+        max_size = sequences[0].size()
+        leading_dims = max_size[:-1]
+        max_len = max([s.size(-1) for s in sequences])
+
+        out_dims = (len(sequences),) + leading_dims + (max_len,)
+
+        out_tensor = (torch.ones(*out_dims) * padding_value).type(torch.int32)
+        for i, tensor in enumerate(sequences):
+            length = tensor.size(-1)
+            out_tensor[i, ..., :length] = tensor
+
+        return out_tensor
 
     def _get_hidden_state(self, hx: RNNState, batch: int) -> RNNState:
         """Returns ``RNNState`` of ``batch`` index."""
@@ -210,6 +244,23 @@ class TransducerDecoderBase(torch.nn.Module):
     def _get_last_idx(self, labels: List[int]) -> int:
         r"""Returns the final index in a list of indexes."""
         return self._SOS if labels == [] else labels[-1]
+
+    def set_hx_zeros_if_none(
+        self, hx_orig: Optional[RNNState], hx_like: RNNState
+    ) -> RNNState:
+        """Returns zero state like ``hx``.
+
+        This is used in case in which decoder outputs all blanks and hence
+        the hidden state is None."""
+        # Set hidden state to zero vector for case in which all
+        # blanks are output.
+        if hx_orig is None:
+            if isinstance(hx_like, tuple):
+                hn, cn = hx_like
+                hx_orig = torch.zeros_like(hn), torch.zeros_like(cn)
+            else:
+                hx_orig = torch.zeros_like(hx_like)
+        return hx_orig
 
     def __repr__(self):
         str = self._get_name() + "("
