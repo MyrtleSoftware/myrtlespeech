@@ -65,8 +65,7 @@ class TransducerDecoderBase(torch.nn.Module):
     ) -> Tuple[torch.Tensor, Tuple[RNNState, RNNState]]:
         """Decodes transducer outputs returning :py:class:`torch.Tensors`."""
         preds, hid_tensors = self.forward_list(x, hxs)
-        preds_tensor = self._collate_preds(preds)
-        return preds_tensor, hid_tensors
+        return self._collate_preds(preds), hid_tensors
 
     @torch.no_grad()
     def forward_list(
@@ -124,12 +123,13 @@ class TransducerDecoderBase(torch.nn.Module):
 
     def _collate_preds(self, preds: List[List[int]]) -> torch.Tensor:
         """Collates list of predictions to batched form."""
-        sequences = []
-        # use negative (i.e. not valid index) padding_value
+        sequences: List[torch.Tensor] = []
+        # use negative padding_value (i.e. an index that isn't valid)
         padding_value = -1
 
         for pred in preds:
-            sequences.append(torch.IntTensor(pred))
+            pred = torch.Tensor(pred).type(torch.int32)
+            sequences.append(pred)
 
         max_size = sequences[0].size()
         leading_dims = max_size[:-1]

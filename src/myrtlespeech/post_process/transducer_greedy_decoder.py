@@ -66,7 +66,6 @@ class TransducerGreedyDecoder(TransducerDecoderBase):
                 # get index k, of max prob
                 max_val, idx = logp.max(0)
                 idx = idx.item()
-
                 if idx == self._blank_index:
                     not_blank = False
                 else:

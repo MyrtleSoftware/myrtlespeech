@@ -100,11 +100,12 @@ class ReportDecoderBase(Callback):
         self.word_segmentor = word_segmentor
         self.eval_every = eval_every
         self.calc_quantities = list(set(calc_quantities))
+        self.decoder_name = self.decoder.__class__.__name__
 
     def _reset(self, **kwargs):
         decoder_report = {metric.name: -1 for metric in self.calc_quantities}
         decoder_report["transcripts"] = []
-        kwargs["reports"][self.decoder.__class__.__name__] = decoder_report
+        kwargs["reports"][self.decoder_name] = decoder_report
         self.distances = {metric.name: [] for metric in self.calc_quantities}
         self.lengths = {metric.name: [] for metric in self.calc_quantities}
 
@@ -122,9 +123,7 @@ class ReportDecoderBase(Callback):
     def on_batch_end(self, **kwargs):
         if self.training or kwargs["epoch"] % self.eval_every != 0:
             return
-        transcripts = kwargs["reports"][self.decoder.__class__.__name__][
-            "transcripts"
-        ]
+        transcripts = kwargs["reports"][self.decoder_name]["transcripts"]
 
         targets = kwargs["last_target"][0]
         target_lens = kwargs["last_target"][1]
@@ -171,9 +170,7 @@ class ReportDecoderBase(Callback):
                 )
                 err = -1  # return infeasible value
 
-            kwargs["reports"][self.decoder.__class__.__name__][
-                metric.name
-            ] = err
+            kwargs["reports"][self.decoder_name][metric.name] = err
 
 
 class ReportCTCDecoder(ReportDecoderBase):
@@ -224,6 +221,11 @@ class ReportTransducerDecoder(ReportDecoderBase):
             rnnt_decoder, alphabet, word_segmentor, eval_every, calc_quantities
         )
         self.skip_first_epoch = skip_first_epoch
+        # Call decoder forward method that returns List rather than Tensor
+        # (i.e ``forward_list()`` instead of ``forward()``) and also ignore
+        # the returned hidden states:
+        forward_list_fn_cached = self.decoder.forward_list
+        self.decoder = lambda x: forward_list_fn_cached(x)[0]
 
     def on_batch_end(self, **kwargs):
         r"""Performs error-rate calculation."""

@@ -87,7 +87,7 @@ def test_multi_element_batch(decoder=get_fixed_decoder()):
 
     expected = [[0, 1, 0, 1], [0]]
 
-    assert decoder((indata, lengths))[0] == expected
+    assert decoder.forward_list((indata, lengths))[0] == expected
 
 
 def test_preserves_training_state(decoder=get_fixed_decoder()):
