@@ -148,7 +148,10 @@ class TransducerBeamDecoder(TransducerDecoderBase):
         if self._length_norm:
             B.sort(key=lambda a: -a.logp / max(len(a.labels), 0.1))
 
-        label = B[0].labels
+        label_ints = B[0].labels
+        label: List[torch.Tensor] = []
+        for lab in label_ints:
+            label.append(torch.IntTensor([lab]))
         hx_pred = B[0].pred_hidden
         hx_pred = self.set_hx_zeros_if_none(hx_pred, hidden)
 

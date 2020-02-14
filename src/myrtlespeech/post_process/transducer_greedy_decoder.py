@@ -34,7 +34,7 @@ class TransducerGreedyDecoder(TransducerDecoderBase):
         inp: Tuple[torch.Tensor, torch.Tensor],
         hx_enc: Optional[RNNState] = None,
         hx_pred: Optional[RNNState] = None,
-    ) -> Tuple[List[int], Tuple[RNNState, RNNState]]:
+    ) -> Tuple[List[torch.tensor], Tuple[RNNState, RNNState]]:
         """Greedy Transducer decode method.
 
         See :py:class:`TransducerDecoderBase` for args.
@@ -46,7 +46,7 @@ class TransducerGreedyDecoder(TransducerDecoderBase):
         ]  # size: seq_len, batch = 1, rnn_features
 
         hx_pred = None
-        label: List[int] = []
+        label: List[torch.tensor] = []
 
         for t in range(fs.shape[0]):
 
@@ -64,8 +64,7 @@ class TransducerGreedyDecoder(TransducerDecoderBase):
                 logp = self._joint_step(f, g)
 
                 # get index k, of max prob
-                max_val, idx = logp.max(0)
-                idx = idx.item()
+                idx = logp.max(0).indices
                 if idx == self._blank_index:
                     not_blank = False
                 else:

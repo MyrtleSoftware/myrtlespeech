@@ -51,10 +51,10 @@ class TransducerDecoderBase(torch.nn.Module):
         ), "To perform Transducer decoding, model must be a Transducer"
 
         super().__init__()
-        self._blank_index = blank_index
+        self._blank_index = torch.tensor([blank_index])
         self._model = model
         self._max_symbols_per_step = max_symbols_per_step
-        self._SOS = -1  # Start of sequence
+        self._SOS = torch.tensor([-10])  # Start of sequence
         self._device = "cuda:0" if self._model.use_cuda else "cpu"
 
     @torch.no_grad()
@@ -72,7 +72,7 @@ class TransducerDecoderBase(torch.nn.Module):
         self,
         x: Tuple[torch.Tensor, torch.Tensor],
         hxs: Optional[Tuple[RNNState, RNNState]] = None,
-    ) -> Tuple[List[List[int]], Tuple[RNNState, RNNState]]:
+    ) -> Tuple[List[List[torch.Tensor]], Tuple[RNNState, RNNState]]:
         r"""Decodes Transducer output.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda` if
@@ -121,14 +121,15 @@ class TransducerDecoderBase(torch.nn.Module):
         del audio_inp, audio_features, audio_len
         return preds, hid_tensors
 
-    def _collate_preds(self, preds: List[List[int]]) -> torch.Tensor:
+    def _collate_preds(self, preds: List[torch.Tensor]) -> torch.Tensor:
         """Collates list of predictions to batched form."""
-        sequences: List[torch.Tensor] = []
         # use negative padding_value (i.e. an index that isn't valid)
         padding_value = -1
 
+        sequences: List[torch.Tensor] = []
         for pred in preds:
-            pred = torch.Tensor(pred).type(torch.int32)
+            pred = [p.unsqueeze(0) for p in pred]
+            pred = torch.cat(pred).type(torch.int32)
             sequences.append(pred)
 
         max_size = sequences[0].size()
@@ -213,7 +214,7 @@ class TransducerDecoderBase(torch.nn.Module):
         )
 
     def _pred_step(
-        self, label: int, hidden: RNNState
+        self, label: torch.Tensor, hidden: RNNState
     ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState]:
         r"""Performs a step of the transducer prediction network."""
         if label == self._SOS:
@@ -241,7 +242,7 @@ class TransducerDecoderBase(torch.nn.Module):
 
         return res
 
-    def _get_last_idx(self, labels: List[int]) -> int:
+    def _get_last_idx(self, labels: List[torch.tensor]) -> torch.tensor:
         r"""Returns the final index in a list of indexes."""
         return self._SOS if labels == [] else labels[-1]
 
