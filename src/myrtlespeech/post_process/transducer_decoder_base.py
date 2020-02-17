@@ -42,9 +42,7 @@ class TransducerDecoderBase(torch.nn.Module):
         if blank_index < 0:
             raise ValueError(f"blank_index={blank_index} must be >= 0")
 
-        assert (
-            max_symbols_per_step > 0
-        ), "max_symbols_per_step must be a positive integer"
+        assert max_symbols_per_step >= 0, "max_symbols_per_step must be >= 0"
 
         assert isinstance(
             model, Transducer
@@ -125,12 +123,14 @@ class TransducerDecoderBase(torch.nn.Module):
         """Collates list of predictions to batched form."""
         # use negative padding_value (i.e. an index that isn't valid)
         padding_value = -1
-
         sequences: List[torch.Tensor] = []
         for pred in preds:
-            pred = [p.unsqueeze(0) for p in pred]
-            pred = torch.cat(pred).type(torch.int32)
-            sequences.append(pred)
+            pred = [p.view((-1)) for p in pred]
+            if pred == []:
+                pred = torch.tensor([])
+            else:
+                pred = torch.cat(pred)
+            sequences.append(pred.type(torch.int32))
 
         max_size = sequences[0].size()
         leading_dims = max_size[:-1]
@@ -142,7 +142,6 @@ class TransducerDecoderBase(torch.nn.Module):
         for i, tensor in enumerate(sequences):
             length = tensor.size(-1)
             out_tensor[i, ..., :length] = tensor
-
         return out_tensor
 
     def _get_hidden_state(self, hx: RNNState, batch: int) -> RNNState:

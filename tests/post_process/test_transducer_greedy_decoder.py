@@ -90,11 +90,37 @@ def test_multi_element_batch(decoder=get_fixed_decoder()):
     assert decoder.forward_list((indata, lengths))[0] == expected
 
 
+def test_tensor_out_returned_correctly(decoder=get_fixed_decoder()):
+    """Checks training state is preserved."""
+    indata = torch.tensor(
+        [
+            [[[1.5, 0.0, 0.1], [0.3, 0.6, 0.1]]],
+            [[[1.5, 0.0, 0.1], [0.3, 0.6, 0.1]]],
+        ]
+    )  # (2, 1, 2, 3)
+    indata = indata.transpose(2, 3)
+    lengths = torch.IntTensor([2, 1])
+
+    # expected_lst = [[0, 1, 0, 1], [0]]
+    expected_tensor = torch.tensor(
+        [[0, 1, 0, 1], [0, -1, -1, -1]], dtype=torch.int32
+    )
+
+    out_tensor = decoder((indata, lengths))[0]
+    assert out_tensor.shape == (2, 4)
+    assert torch.allclose(out_tensor, expected_tensor)
+
+
 def test_preserves_training_state(decoder=get_fixed_decoder()):
     """Checks training state is preserved."""
-    indata = torch.tensor([[[1.5, 0.0, 0.1]]])  # (1, 1, 3)
-    indata = indata.unsqueeze(3)  # B, C, F, T = (1, 1, 3, 1)
-    lengths = torch.IntTensor([1])
+    indata = torch.tensor(
+        [
+            [[[1.5, 0.0, 0.1], [0.3, 0.6, 0.1]]],
+            [[[1.5, 0.0, 0.1], [0.3, 0.6, 0.1]]],
+        ]
+    )  # (2, 1, 2, 3)
+    indata = indata.transpose(2, 3)
+    lengths = torch.IntTensor([2, 1])
 
     decoder._model.train()
     decoder((indata, lengths))

@@ -265,7 +265,6 @@ class RNNTPredictNet(torch.nn.Module):
             ``batch_first=True`` for API.
         """
         if not decoding:
-            assert hx is None, "Do not pass hx during training"
             assert y is not None, f"y must be None during training"
 
         if y is None:  # then performing decoding and at start-of-sequence
