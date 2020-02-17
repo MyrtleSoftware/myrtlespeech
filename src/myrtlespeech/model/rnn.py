@@ -155,7 +155,7 @@ class RNN(torch.nn.Module):
         inp, lengths = x
 
         if hx is None:
-            hx = self._init_hidden(batch=len(lengths), dtype=inp.dtype)
+            hx = self._init_hidden(batch=lengths.shape[0], dtype=inp.dtype)
 
         if self.use_cuda:
             inp = inp.cuda()
@@ -164,23 +164,25 @@ class RNN(torch.nn.Module):
             else:
                 hx = hx.cuda()  # type: ignore
 
-        # Record sequence length to enable DataParallel
-        # https://pytorch.org/docs/stable/notes/faq.html#pack-rnn-unpack-with-data-parallelism
-        total_length = inp.size(0 if not self.batch_first else 1)
-        inp = torch.nn.utils.rnn.pack_padded_sequence(
-            input=inp,
-            lengths=lengths,
-            batch_first=self.batch_first,
-            enforce_sorted=True,
-        )
+        if lengths.shape[0] != 1:
+            # Record sequence length to enable DataParallel
+            # https://pytorch.org/docs/stable/notes/faq.html#pack-rnn-unpack-with-data-parallelism
+            total_length = inp.size(0 if not self.batch_first else 1)
+            inp = torch.nn.utils.rnn.pack_padded_sequence(
+                input=inp,
+                lengths=lengths,
+                batch_first=self.batch_first,
+                enforce_sorted=True,
+            )
 
         out, hid = self.rnn(inp, hx=hx)
 
-        out, _ = torch.nn.utils.rnn.pad_packed_sequence(
-            sequence=out,
-            batch_first=self.batch_first,
-            total_length=total_length,
-        )
+        if lengths.shape[0] != 1:
+            out, _ = torch.nn.utils.rnn.pad_packed_sequence(
+                sequence=out,
+                batch_first=self.batch_first,
+                total_length=total_length,
+            )
 
         return (out, lengths), hid
 
