@@ -244,8 +244,8 @@ class RNNTPredictNet(torch.nn.Module):
         self,
         y: Tuple[torch.Tensor, torch.Tensor],
         hx: Optional[RNNState],
-        decoding: bool,
         sos: torch.Tensor = torch.Tensor([False]),
+        decoding: bool = True,
     ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState]:
         r"""Excecutes :py:class:`RNNTPredictNet`.
 
@@ -327,6 +327,26 @@ class RNNTPredictNet(torch.nn.Module):
 
         # Update the lengths by adding one:
         return y_0, y_1 + 1
+
+
+class PredictNetInfer(torch.nn.Module):
+    def __init__(self, predict_net):
+        super().__init__()
+        self.embedding = predict_net.embedding
+        self.embed = predict_net.embed
+        self.pred_nn = predict_net.pred_nn
+        self.hidden_size = predict_net.hidden_size
+
+    def forward(
+        self,
+        y: Tuple[torch.Tensor, torch.Tensor],
+        hx: Optional[RNNState],
+        sos: torch.Tensor = torch.Tensor([False]),
+    ):
+        """TODO"""
+        if not sos:
+            y = self.embed(y)
+        return self.pred_nn(y, hx=hx)
 
 
 class RNNTJointNet(torch.nn.Module):

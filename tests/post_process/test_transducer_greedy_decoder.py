@@ -3,6 +3,7 @@ from myrtlespeech.post_process.transducer_greedy_decoder import (
     TransducerGreedyDecoder,
 )
 
+from tests.post_process.utils import dummy_embed
 from tests.post_process.utils import get_dummy_transducer
 
 
@@ -24,11 +25,13 @@ class TransducerGreedyDecoderDummy(TransducerGreedyDecoder):
 
 def get_fixed_decoder(max_symbols_per_step=100, blank_index=2):
     model = get_dummy_transducer(hidden_size=3)
-    return TransducerGreedyDecoderDummy(
+    decoder = TransducerGreedyDecoderDummy(
         blank_index=blank_index,
         model=model,
         max_symbols_per_step=max_symbols_per_step,
     )
+    decoder.predict_net_infer.embed = dummy_embed
+    return decoder
 
 
 # Tests -----------------------------------------------------------------------

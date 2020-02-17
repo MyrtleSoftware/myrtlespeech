@@ -3,6 +3,7 @@ from myrtlespeech.post_process.transducer_beam_decoder import (
     TransducerBeamDecoder,
 )
 
+from tests.post_process.utils import dummy_embed
 from tests.post_process.utils import get_dummy_transducer
 
 
@@ -27,13 +28,16 @@ def get_fixed_decoder(max_symbols_per_step=100):
     blank_index = 0
     model = get_dummy_transducer(hidden_size=3)
     length_norm = False
-    return TransducerBeamDecoderDummy(
+    decoder = TransducerBeamDecoderDummy(
         blank_index=blank_index,
         model=model,
         beam_width=2,
         length_norm=length_norm,
         max_symbols_per_step=max_symbols_per_step,
     )
+
+    decoder.predict_net_infer.embed = dummy_embed
+    return decoder
 
 
 # Tests -----------------------------------------------------------------------

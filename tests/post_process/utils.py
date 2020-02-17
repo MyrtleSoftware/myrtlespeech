@@ -99,7 +99,8 @@ class DummyPredictNet(RNNTPredictNet):
 
     Note that ``embedding=None`` will be passed to :py:meth:`super.__init__`
     as the :py:meth:`embed` method that calls forward on
-    :py:class:`embedding` in :py:class:`RNNTPredictNet` is overridden below.
+    :py:class:`embedding` in :py:class:`RNNTPredictNet` is overridden by
+    ``dummy_embed`` below.
 
     Args:
         pred_nn: module with same :py:meth:`__call__` API as `pred_nn` in
@@ -109,12 +110,13 @@ class DummyPredictNet(RNNTPredictNet):
     def __init__(self, pred_nn):
         super().__init__(embedding=None, pred_nn=pred_nn)
 
-    def embed(self, x):
-        """Overridden `:py:meth:`embed`."""
-        res = torch.tensor([1, x[0].item() + 1]).unsqueeze(0).unsqueeze(0)
-        x = res, x[1]
 
-        return x
+def dummy_embed(x):
+    """Overridden :py:meth:`embed`."""
+    res = torch.tensor([1, x[0].item() + 1]).unsqueeze(0).unsqueeze(0)
+    x = res, x[1]
+
+    return x
 
 
 class PredNN:

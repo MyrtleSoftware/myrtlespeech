@@ -4,6 +4,7 @@ from typing import Tuple
 
 import torch
 from myrtlespeech.model.rnn import RNNState
+from myrtlespeech.model.rnn_t import PredictNetInfer
 from myrtlespeech.model.transducer import Transducer
 
 
@@ -55,7 +56,7 @@ class TransducerDecoderBase(torch.nn.Module):
         self._SOS = torch.tensor([-10])  # Start of sequence
         self._device = "cuda:0" if self._model.use_cuda else "cpu"
         self.hidden_size = self._model.predict_net.hidden_size
-        # self.predict_net_infer = PredictNetInfer(self._model.predict_net)
+        self.predict_net_infer = PredictNetInfer(self._model.predict_net)
 
     @torch.no_grad()
     def forward(
@@ -229,9 +230,7 @@ class TransducerDecoderBase(torch.nn.Module):
             y = label.view((1, 1)), torch.IntTensor([1])
             y = y[0].to(self._device), y[1].to(self._device)
             sos = torch.tensor([False])
-        return self._model.predict_net.predict(
-            y, hidden, decoding=True, sos=sos
-        )
+        return self.predict_net_infer(y, hidden, sos=sos)
 
     def _joint_step(
         self,
