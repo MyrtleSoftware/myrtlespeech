@@ -68,7 +68,7 @@ class TransducerGreedyDecoder(TransducerDecoderBase):
                 if idx == self._blank_index:
                     not_blank = False
                 else:
-                    label.append(idx)
+                    label.append(idx.view(1))
                     hx_pred = hidden_prime
                 symbols_added += 1
 

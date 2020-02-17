@@ -222,7 +222,7 @@ class TransducerDecoderBase(torch.nn.Module):
             if label > self._blank_index:
                 label -= 1  # Since ``output indices = input indices + 1``
                 # when ``index > self._blank_index``.
-            y = torch.IntTensor([[label]]), torch.IntTensor([1])
+            y = label.view((1, 1)), torch.IntTensor([1])
             y = y[0].to(self._device), y[1].to(self._device)
         return self._model.predict_net.predict(y, hidden, decoding=True)
 
@@ -243,7 +243,10 @@ class TransducerDecoderBase(torch.nn.Module):
 
     def _get_last_idx(self, labels: List[torch.tensor]) -> torch.tensor:
         r"""Returns the final index in a list of indexes."""
-        return self._SOS if labels == [] else labels[-1]
+        idx = self._SOS if labels == [] else labels[-1]
+        if isinstance(idx, int):
+            idx = torch.IntTensor([idx]).view((1))
+        return idx
 
     def set_hx_zeros_if_none(
         self, hx_orig: Optional[RNNState], hx_like: RNNState
