@@ -41,16 +41,12 @@ class TransducerGreedyDecoder(TransducerDecoderBase):
         """
 
         (fs, fs_lens), hx_enc = self._model.encode(inp, hx_enc)
-        fs = fs[
-            : fs_lens.max(), :, :
-        ]  # size: seq_len, batch = 1, rnn_features
 
         hx_pred = None
         label: List[torch.tensor] = []
 
         for t in range(fs.shape[0]):
-
-            f = fs[t, :, :].unsqueeze(0)
+            f = fs[t].unsqueeze(0)
 
             # add length
             f = (f, torch.IntTensor([1]))

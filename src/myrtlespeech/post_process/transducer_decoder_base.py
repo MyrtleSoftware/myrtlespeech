@@ -54,6 +54,8 @@ class TransducerDecoderBase(torch.nn.Module):
         self._max_symbols_per_step = max_symbols_per_step
         self._SOS = torch.tensor([-10])  # Start of sequence
         self._device = "cuda:0" if self._model.use_cuda else "cpu"
+        self.hidden_size = self._model.predict_net.hidden_size
+        # self.predict_net_infer = PredictNetInfer(self._model.predict_net)
 
     @torch.no_grad()
     def forward(
@@ -101,7 +103,8 @@ class TransducerDecoderBase(torch.nn.Module):
         hid_inp0: Optional[RNNState] = None
         hid_inp1: Optional[RNNState] = None
         for b in range(x[0].shape[0]):
-            audio_len = x[1][b].unsqueeze(0)
+            audio_len = x[1][b].view((1,))
+            assert len(audio_len.size()) == 1
             audio_features = x[0][b, :, :, :audio_len].unsqueeze(0)
             audio_inp = (audio_features, audio_len)
             if hxs is not None:
@@ -140,18 +143,17 @@ class TransducerDecoderBase(torch.nn.Module):
 
         out_tensor = (torch.ones(*out_dims) * padding_value).type(torch.int32)
         for i, tensor in enumerate(sequences):
-            length = tensor.size(-1)
-            out_tensor[i, ..., :length] = tensor
+            out_tensor[i, : tensor.shape[-1]] = tensor
         return out_tensor
 
     def _get_hidden_state(self, hx: RNNState, batch: int) -> RNNState:
         """Returns ``RNNState`` of ``batch`` index."""
         if isinstance(hx, tuple):
-            hx_inp0 = hx[0][:, batch, :].unsqueeze(1)
-            hx_inp1 = hx[1][:, batch, :].unsqueeze(1)
+            hx_inp0 = hx[0][:, batch].unsqueeze(1)
+            hx_inp1 = hx[1][:, batch].unsqueeze(1)
             hx_inp = (hx_inp0, hx_inp1)
         else:
-            hx_inp = hx[:, batch, :].unsqueeze(1)
+            hx_inp = hx[:, batch].unsqueeze(1)
         return hx_inp
 
     def _collate_hid_states(
@@ -217,14 +219,19 @@ class TransducerDecoderBase(torch.nn.Module):
     ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState]:
         r"""Performs a step of the transducer prediction network."""
         if label == self._SOS:
-            y = None
+            B = 1 if hidden is None else hidden[0].size(1)
+            y = torch.zeros((1, B, self.hidden_size)), torch.IntTensor([1])
+            sos = torch.tensor([True])
         else:
             if label > self._blank_index:
                 label -= 1  # Since ``output indices = input indices + 1``
                 # when ``index > self._blank_index``.
             y = label.view((1, 1)), torch.IntTensor([1])
             y = y[0].to(self._device), y[1].to(self._device)
-        return self._model.predict_net.predict(y, hidden, decoding=True)
+            sos = torch.tensor([False])
+        return self._model.predict_net.predict(
+            y, hidden, decoding=True, sos=sos
+        )
 
     def _joint_step(
         self,

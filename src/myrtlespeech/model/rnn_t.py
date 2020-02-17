@@ -137,6 +137,7 @@ class RNNTEncoder(torch.nn.Module):
             See initialisation docstring.
         """
         inp, x_lens = x
+
         B1, C, I, T = inp.shape
         (B2,) = x_lens.shape
         assert B1 == B2, "Batch size must be the same for inputs and targets"
@@ -241,9 +242,10 @@ class RNNTPredictNet(torch.nn.Module):
 
     def predict(
         self,
-        y: Optional[Tuple[torch.Tensor, torch.Tensor]],
+        y: Tuple[torch.Tensor, torch.Tensor],
         hx: Optional[RNNState],
         decoding: bool,
+        sos: torch.Tensor = torch.Tensor([False]),
     ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], RNNState]:
         r"""Excecutes :py:class:`RNNTPredictNet`.
 
@@ -259,21 +261,19 @@ class RNNTPredictNet(torch.nn.Module):
             decoding: A boolean. If :py:data:`True` then decoding is being
                 performed and start-of-sequence token is not prepended.
 
+            sos: Boolean. If True, this is at SOS.
+
+
         Returns:
             This will return the output of ``pred_nn`` where a hidden state is
             present iff ``decoding=True``. See :py:class:`RNN` with
             ``batch_first=True`` for API.
         """
-        if not decoding:
-            assert y is not None, f"y must be None during training"
 
-        if y is None:  # then performing decoding and at start-of-sequence
-            B = 1 if hx is None else hx[0].size(1)
-            y = torch.zeros((1, B, self.hidden_size)), torch.IntTensor([1])
-        else:
-            assert (
-                isinstance(y, tuple) and len(y) == 2
-            ), f"y must be a tuple of length 2"
+        assert (
+            isinstance(y, tuple) and len(y) == 2
+        ), f"y must be a tuple of length 2"
+        if not sos:
             y = self.embed(y)
 
         if not decoding:
