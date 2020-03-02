@@ -228,6 +228,26 @@ class SpecAugment:
 
 
 class MFCCLegacy:
+    """Legacy MFCC implementation using ``python_speech_features``.
+
+    This is required for backwards compatibility: **new users should not use
+    this class.** This class has the same API as
+    :py:class`torchaudio.transforms.MFCC`.
+
+    Args:
+        n_mfcc: Number of MFCC coefficients.
+
+        melkwargs: Dict containing mel-spectogram kwargs:
+
+            win_length:
+                Window length (in samples not ms.)
+
+            hop_length:
+                Stride length (in samples not ms.)
+
+        sample_rate: audio sample rate.
+    """
+
     def __init__(self, n_mfcc, melkwargs, sample_rate=16000):
         win_length = melkwargs.get("win_length")
         hop_length = melkwargs.get("hop_length")
@@ -257,6 +277,7 @@ class MFCCLegacy:
         self.unsqueeze = Lambda(lambda_fn=lambda x: x.unsqueeze(0))
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        """See :py:class:`torchaudio.transforms.MFCC`."""
         x = self.normalise(x)
         x = python_speech_features.mfcc(
             x,
