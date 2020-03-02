@@ -257,7 +257,7 @@ class MFCCLegacy:
         self.unsqueeze = Lambda(lambda_fn=lambda x: x.unsqueeze(0))
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
-        x = x.normalise(x)
+        x = self.normalise(x)
         x = python_speech_features.mfcc(
             x,
             samplerate=self.samplerate,
