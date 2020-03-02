@@ -13,6 +13,7 @@ from myrtlespeech.builders.pre_process_step import (
 )
 from myrtlespeech.data.alphabet import Alphabet
 from myrtlespeech.data.preprocess import AddContextFrames
+from myrtlespeech.data.preprocess import MFCCLegacy
 from myrtlespeech.data.preprocess import SpecAugment
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.model.cnn import Conv1dTo2d
@@ -248,7 +249,7 @@ def _build_pre_process_steps(
     pre_process_steps: List[Tuple[Callable, Stage]] = []
     for step_cfg in pre_process_step_cfg:
         step = build_pre_process_step(step_cfg)
-        if isinstance(step[0], MFCC):
+        if isinstance(step[0], (MFCC, MFCCLegacy)):
             input_features = step[0].n_mfcc
         elif isinstance(step[0], SpecAugment):
             pass

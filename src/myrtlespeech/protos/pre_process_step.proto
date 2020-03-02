@@ -19,7 +19,7 @@ message PreProcessStep {
 
 // Computes Mel-frequency cepstral coefficients (MFCC).
 message MFCC {
-  // Number of mfc coefficients to retain.
+  // Number of mfcc coefficients to retain.
   uint32 n_mfcc = 1;
 
   // Window size in number of frames.
@@ -27,6 +27,10 @@ message MFCC {
 
   // Step between successive windows in number of frames.
   uint32 hop_length = 3;
+
+  // If True, use legacy MFCC implementation. Required for backwards
+  // compatibility. Defaults to False.
+  bool legacy = 4;
 }
 
 

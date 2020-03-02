@@ -4,7 +4,10 @@ Utilities for preprocessing audio data.
 import random
 from typing import Tuple
 
+import numpy as np
+import python_speech_features
 import torch
+from myrtlespeech.model.utils import Lambda
 
 
 class AddSequenceLength:
@@ -222,3 +225,54 @@ class SpecAugment:
             + f" n_feature_masks={self.n_feature_masks},"
             + f" n_time_masks={self.n_time_masks})"
         )
+
+
+class MFCCLegacy:
+    def __init__(self, n_mfcc, melkwargs, sample_rate=16000):
+        win_length = melkwargs.get("win_length")
+        hop_length = melkwargs.get("hop_length")
+        self.n_mfcc = n_mfcc
+
+        # convert from torchaudio -> python_speech_features equivalents
+        self.samplerate = sample_rate
+        self.numcep = self.n_mfcc
+        self.winlen = win_length / sample_rate
+        self.winstep = hop_length / sample_rate
+
+        # Add normalise/transpose and unsqueeze lambdas
+
+        # deepspeech_internal loader normalises data as it reads it in
+        # Modern PyTorch preserves type when tensors are converted to numpy
+        # but in PyTorch 0.4, the numpy type is always float64, leading
+        # to rounding errors with modern PyTorch where this behaviour is
+        # relied on
+        self.normalise = Lambda(
+            lambda_fn=lambda x: (x * (1 << 15))
+            .to(torch.int16)
+            .squeeze()
+            .numpy()
+            .astype(np.float64)
+        )
+        self.transpose = Lambda(lambda_fn=lambda x: x.transpose(0, 1))
+        self.unsqueeze = Lambda(lambda_fn=lambda x: x.unsqueeze(0))
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        x = x.normalise(x)
+        x = python_speech_features.mfcc(
+            x,
+            samplerate=self.samplerate,
+            winlen=self.winlen,
+            winstep=self.winstep,
+            numcep=self.numcep,
+        )
+        x = torch.FloatTensor(x)  # np -> torch
+        x = self.transpose(x)
+        x = self.unsqueeze(x)
+        return x
+
+    def __repr__(self):
+        params = "(numcep={0}, winlen={1}, winstep={2}, samplerate={3})"
+        params = params.format(  # fmt: off
+            self.numcep, self.winlen, self.winstep, self.samplerate
+        )
+        return self.__class__.__name__ + params

@@ -5,6 +5,7 @@ import pytest
 from hypothesis import given
 from myrtlespeech.builders.pre_process_step import build
 from myrtlespeech.data.preprocess import AddContextFrames
+from myrtlespeech.data.preprocess import MFCCLegacy
 from myrtlespeech.data.preprocess import SpecAugment
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.protos import pre_process_step_pb2
@@ -27,10 +28,23 @@ def pre_process_step_match_cfg(
     step_str = step_cfg.WhichOneof("pre_process_step")
 
     if step_str == "mfcc":
-        assert isinstance(step[0], MFCC)
+        assert isinstance(step[0], (MFCC, MFCCLegacy))
         assert step[0].n_mfcc == step_cfg.mfcc.n_mfcc
-        assert step[0].MelSpectrogram.win_length == step_cfg.mfcc.win_length
-        assert step[0].MelSpectrogram.hop_length == step_cfg.mfcc.hop_length
+        if isinstance(step[0], MFCC):
+            assert not step_cfg.mfcc.legacy
+            assert (
+                step[0].MelSpectrogram.win_length == step_cfg.mfcc.win_length
+            )
+            assert (
+                step[0].MelSpectrogram.hop_length == step_cfg.mfcc.hop_length
+            )
+        else:
+            sample_rate = 16000  # fixed
+            assert step_cfg.mfcc.legacy
+            assert step[0].numcep == step_cfg.mfcc.n_mfcc
+            assert step[0].samplerate == sample_rate
+            assert step[0].winlen == step_cfg.mfcc.win_length / sample_rate
+            assert step[0].winstep == step_cfg.mfcc.hop_length / sample_rate
     elif step_str == "spec_augment":
         assert isinstance(step[0], SpecAugment)
     elif step_str == "standardize":
