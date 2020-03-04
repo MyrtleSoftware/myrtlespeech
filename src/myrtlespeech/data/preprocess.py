@@ -282,7 +282,7 @@ class MFCCLegacy:
             x: Input :py:class:`torch.Tensor` size ``[1, time_samples]``.
 
         Returns:
-            A :py:class:`torch.Tensor` of size ``[1, self.m_fcc, timesteps]``.
+            A :py:class:`torch.Tensor` of size ``[1, self.n_mfcc, timesteps]``.
         """
         # 1)
         # In the previous implementation, on file read, the data was converted
