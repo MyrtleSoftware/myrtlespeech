@@ -230,9 +230,9 @@ class SpecAugment:
 class MFCCLegacy:
     """Legacy MFCC implementation using ``python_speech_features``.
 
-    This is required for backwards compatibility: **new users should not use
-    this class.** This class has the same API as
-    :py:class`torchaudio.transforms.MFCC`.
+    This is required for backwards compatibility with models trained on
+    features from ``python_speech_features.mfcc``. **New users should not use
+    this class.**
 
     Args:
         n_mfcc: Number of MFCC coefficients.
