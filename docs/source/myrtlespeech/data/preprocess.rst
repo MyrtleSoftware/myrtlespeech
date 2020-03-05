@@ -6,6 +6,11 @@
     :members:
     :show-inheritance:
 
+.. autoclass:: myrtlespeech.data.preprocess.MFCCLegacy
+    :members:
+    :show-inheritance:
+
+    .. automethod:: __call__
 
 .. autoclass:: myrtlespeech.data.preprocess.AddSequenceLength
     :members:

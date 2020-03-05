@@ -2,8 +2,11 @@
 Utilities for preprocessing audio data.
 """
 import random
+from typing import Dict
 from typing import Tuple
 
+import numpy as np
+import python_speech_features
 import torch
 
 
@@ -222,3 +225,104 @@ class SpecAugment:
             + f" n_feature_masks={self.n_feature_masks},"
             + f" n_time_masks={self.n_time_masks})"
         )
+
+
+class MFCCLegacy:
+    """Legacy MFCC implementation using ``python_speech_features``.
+
+    This is required for backwards compatibility with models trained on
+    features from ``python_speech_features.mfcc``. **New users should not use
+    this class.**
+
+    Args:
+        n_mfcc: Number of MFCC coefficients.
+
+        melkwargs: Dict containing mel-spectogram kwargs:
+
+            win_length:
+                Window length (in samples not ms).
+
+            hop_length:
+                Stride length (in samples not ms).
+
+        sample_rate: audio sample rate.
+    """
+
+    def __init__(self, n_mfcc: int, melkwargs: Dict, sample_rate: int = 16000):
+        self.n_mfcc = n_mfcc
+        win_length = melkwargs["win_length"]
+        hop_length = melkwargs["hop_length"]
+
+        # convert from torchaudio -> python_speech_features equivalents
+        self.samplerate = sample_rate
+        self.numcep = self.n_mfcc
+        self.winlen = win_length / sample_rate
+        self.winstep = hop_length / sample_rate
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        """Returns MFCC of ``x`` using legacy implementation.
+
+        The legacy implementation used PyTorch==0.4 and
+        ``python_speech_features`` instead of PyTorch>=1.4 and
+        ``torchaudio.transforms.MFCC``.
+
+        It is necessary to:
+        1) Re-scale to int16 range
+        2) Convert to numpy.
+        3) Cast to float64
+        4) Use python_speech_features.mfcc(...)
+        5) Convert back to torch.Tensor(dtype=torch.float32)
+        6) Reshape Tensor to match return shape of
+            `torchaudio.transforms.MFCC`.
+
+        Where required, the reasoning behind the above steps are given in
+        comments.
+
+        Args:
+            x: Input :py:class:`torch.Tensor` size ``[1, time_samples]``.
+
+        Returns:
+            A :py:class:`torch.Tensor` of size ``[1, self.n_mfcc, timesteps]``.
+        """
+        # 1)
+        # In the previous implementation, on file read, the data was converted
+        # to int16. With torchaudio.load the data is normalise to range
+        # [-1., 1.]. It is necessary to convert to int16 range (and type):
+        x = x * (1 << 15)  # rescale to int16 range
+        x = x.to(torch.int16)  # cast to int16
+
+        # 2)
+        x = (
+            x.squeeze()
+        )  # (since numpy deals with zero dim tensors differently)
+        x = x.numpy()
+
+        # 3)
+        # Previously we used a numpy operation on a torch.Tensor. In
+        # PyTorch >=1.0 the Tensor type is preserved but in version <=0.4,
+        # this was not the case and all tensors were treated as np.float64.
+        # Hence, to preserve the previous behaviour:
+        x = x.astype(np.float64)
+
+        # 4)
+        x = python_speech_features.mfcc(
+            x,
+            samplerate=self.samplerate,
+            winlen=self.winlen,
+            winstep=self.winstep,
+            numcep=self.numcep,
+        )
+        # 5)
+        x = torch.FloatTensor(x)
+
+        # 6)
+        x = x.transpose(0, 1)
+        x = x.unsqueeze(0)
+        return x
+
+    def __repr__(self):
+        params = "(numcep={0}, winlen={1}, winstep={2}, samplerate={3})"
+        params = params.format(  # fmt: off
+            self.numcep, self.winlen, self.winstep, self.samplerate
+        )
+        return self.__class__.__name__ + params

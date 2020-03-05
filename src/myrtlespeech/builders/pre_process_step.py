@@ -2,6 +2,7 @@ from typing import Tuple
 from typing import Union
 
 from myrtlespeech.data.preprocess import AddContextFrames
+from myrtlespeech.data.preprocess import MFCCLegacy
 from myrtlespeech.data.preprocess import SpecAugment
 from myrtlespeech.data.preprocess import Standardize
 from myrtlespeech.protos import pre_process_step_pb2
@@ -11,7 +12,9 @@ from torchaudio.transforms import MFCC
 
 def build(
     pre_process_step_cfg: pre_process_step_pb2.PreProcessStep,
-) -> Tuple[Union[MFCC, Standardize], Stage]:
+) -> Tuple[
+    Union[AddContextFrames, MFCC, MFCCLegacy, SpecAugment, Standardize], Stage
+]:
     """Returns tuple of ``(preprocessing callable, stage)``.
 
     Args:
@@ -26,7 +29,12 @@ def build(
     """
     step_type = pre_process_step_cfg.WhichOneof("pre_process_step")
     if step_type == "mfcc":
-        step = MFCC(
+        legacy = pre_process_step_cfg.mfcc.legacy
+        if legacy:
+            MFCC_cls = MFCCLegacy
+        else:
+            MFCC_cls = MFCC
+        step: Union[MFCC, MFCCLegacy] = MFCC_cls(
             n_mfcc=pre_process_step_cfg.mfcc.n_mfcc,
             melkwargs={
                 "win_length": pre_process_step_cfg.mfcc.win_length,

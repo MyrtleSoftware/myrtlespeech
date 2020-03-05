@@ -66,6 +66,7 @@ def _mfccs(
     kwargs["n_mfcc"] = draw(st.integers(1, 128))
     kwargs["win_length"] = draw(st.integers(100, 400))
     kwargs["hop_length"] = draw(st.integers(50, kwargs["win_length"]))
+    kwargs["legacy"] = draw(st.booleans())
 
     # initialise and return
     all_fields_set(pre_process_step_pb2.MFCC, kwargs)
