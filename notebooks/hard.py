@@ -31,10 +31,10 @@ def HardLSTMCell(x, hx, cx, w_ih, w_hh, b_ih, b_hh):
 
 class HardLSTM(nn.Module):
     def __init__(
-        self, in_size, hidden_size, batch_first=False, bidirectional=False
+        self, input_size, hidden_size, batch_first=False, bidirectional=False
     ):
         super(HardLSTM, self).__init__()
-        self.in_size = in_size
+        self.input_size = input_size
         self.hidden_size = hidden_size
         self.batch_first = batch_first
         self.bidirectional = bidirectional
@@ -45,7 +45,7 @@ class HardLSTM(nn.Module):
         self._all_weights = []
 
         for direction in range(self.num_directions):
-            w_ih = nn.Parameter(torch.Tensor(gate_size, in_size))
+            w_ih = nn.Parameter(torch.Tensor(gate_size, input_size))
             w_hh = nn.Parameter(torch.Tensor(gate_size, hidden_size))
             b_ih = nn.Parameter(torch.Tensor(gate_size))
             b_hh = nn.Parameter(torch.Tensor(gate_size))

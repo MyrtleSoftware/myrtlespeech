@@ -42,11 +42,11 @@ def HardLSTM(*args, **kwargs):
 
 class HardLSTM2(nn.Module):
     def __init__(
-        self, in_size, hidden_size, batch_first=False, bidirectional=False
+        self, input_size, hidden_size, batch_first=False, bidirectional=False
     ):
         assert bidirectional is True
         super(HardLSTM2, self).__init__()
-        self.in_size = in_size
+        self.input_size = input_size
         self.hidden_size = hidden_size
         self.batch_first = batch_first
         self.bidirectional = bidirectional
@@ -54,14 +54,14 @@ class HardLSTM2(nn.Module):
 
         gate_size = 4 * hidden_size
 
-        self.weight_ih_l0 = nn.Parameter(torch.Tensor(gate_size, in_size))
+        self.weight_ih_l0 = nn.Parameter(torch.Tensor(gate_size, input_size))
         self.weight_hh_l0 = nn.Parameter(torch.Tensor(gate_size, hidden_size))
         self.bias_ih_l0 = nn.Parameter(torch.Tensor(gate_size))
         self.bias_hh_l0 = nn.Parameter(torch.Tensor(gate_size))
 
         # reverse
         self.weight_ih_l0_reverse = nn.Parameter(
-            torch.Tensor(gate_size, in_size)
+            torch.Tensor(gate_size, input_size)
         )
         self.weight_hh_l0_reverse = nn.Parameter(
             torch.Tensor(gate_size, hidden_size)
@@ -88,32 +88,25 @@ class HardLSTM2(nn.Module):
             self.bias_ih_l0,
             self.bias_hh_l0,
         ]
-        if self.bidirectional:
-            weights_bwd = [
-                self.weight_ih_l0_reverse,
-                self.weight_hh_l0_reverse,
-                self.bias_ih_l0_reverse,
-                self.bias_hh_l0_reverse,
-            ]
-            weights = [weights_fwd, weights_bwd]
-        else:
-            weights = [weights_fwd, weights_fwd]
+
+        weights_bwd = [
+            self.weight_ih_l0_reverse,
+            self.weight_hh_l0_reverse,
+            self.bias_ih_l0_reverse,
+            self.bias_hh_l0_reverse,
+        ]
+        weights = [weights_fwd, weights_bwd]
 
         # hidden = list(zip(*hidden)) -> can't be scripted
         h0, c0 = hx
         hx_f = h0[0], c0[0]
-        if self.bidirectional:
-            hx_b = h0[1], c0[1]
-            hidden = [hx_f, hx_b]
-        else:
-            hidden = [
-                hx_f,
-                hx_f,
-            ]  # second element will be ignored. This preserves type
 
-        all_outputs = torch.empty(0)
-        hy = torch.empty(0)
-        cy = torch.empty(0)
+        hx_b = h0[1], c0[1]
+        hidden = [hx_f, hx_b]
+
+        all_outputs = torch.empty(0, device=h0.device)
+        hy = torch.empty(0, device=h0.device)
+        cy = torch.empty(0, device=h0.device)
         for direction in range(self.num_directions):
             output, (h, c) = recurrent(
                 x,
@@ -133,11 +126,11 @@ class HardLSTM2(nn.Module):
 
 class HardLSTM1(nn.Module):
     def __init__(
-        self, in_size, hidden_size, batch_first=False, bidirectional=False
+        self, input_size, hidden_size, batch_first=False, bidirectional=False
     ):
         assert bidirectional is False
         super(HardLSTM1, self).__init__()
-        self.in_size = in_size
+        self.input_size = input_size
         self.hidden_size = hidden_size
         self.batch_first = batch_first
         self.bidirectional = bidirectional
@@ -145,7 +138,7 @@ class HardLSTM1(nn.Module):
 
         gate_size = 4 * hidden_size
 
-        self.weight_ih_l0 = nn.Parameter(torch.Tensor(gate_size, in_size))
+        self.weight_ih_l0 = nn.Parameter(torch.Tensor(gate_size, input_size))
         self.weight_hh_l0 = nn.Parameter(torch.Tensor(gate_size, hidden_size))
         self.bias_ih_l0 = nn.Parameter(torch.Tensor(gate_size))
         self.bias_hh_l0 = nn.Parameter(torch.Tensor(gate_size))
@@ -182,43 +175,44 @@ class HardLSTM1(nn.Module):
         return output, (hy.unsqueeze(0), cy.unsqueeze(0))
 
 
+@torch.jit.script
 def recurrent(
     x: Tensor,
     hidden: Tuple[Tensor, Tensor],
     params: List[Tensor],
     reverse: bool = False,
 ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
-    output = torch.empty(0)
     hx, cx = hidden
     w_ih, w_hh, b_ih, b_hh = params
+    xs = x.unbind(0)
+    output = []  # type: ignore
     if reverse:
         for t in range(x.size(0) - 1, -1, -1):
-            hx, cx = HardLSTMCell(x[t], hx, cx, w_ih, w_hh, b_ih, b_hh)
-            output = torch.cat([output, hx.unsqueeze(0)], 0)
-        torch.flip(output, (0,))
+            hx, cx = HardLSTMCell(xs[t], hx, cx, w_ih, w_hh, b_ih, b_hh)
+            output += [hx]
+        output.reverse()
     else:
         for t in range(x.size(0)):
-            hx, cx = HardLSTMCell(x[t], hx, cx, w_ih, w_hh, b_ih, b_hh)
-            output = torch.cat([output, hx.unsqueeze(0)], 0)
-
-    return output, (hx, cx)
+            hx, cx = HardLSTMCell(xs[t], hx, cx, w_ih, w_hh, b_ih, b_hh)
+            output += [hx]
+    return torch.stack(output), (hx, cx)
 
 
 if __name__ == "__main__":
-    in_size = 2
+    input_size = 2
     hidden = 4
     seq_len = 3
     num_layers = 1
     bidirectional = True
     batch = 3
     lstm = HardLSTM(
-        in_size=in_size,
+        input_size=input_size,
         hidden_size=hidden,
         batch_first=False,
         bidirectional=bidirectional,
     )
 
-    x = torch.randn(seq_len, batch, in_size)
+    x = torch.randn(seq_len, batch, input_size)
     num_directions = 2 if bidirectional else 1
     zeros = torch.zeros(
         num_layers * num_directions, batch, hidden, dtype=x.dtype,
