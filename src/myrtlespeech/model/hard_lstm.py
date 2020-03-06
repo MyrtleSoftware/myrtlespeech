@@ -185,7 +185,7 @@ def recurrent(
     hx, cx = hidden
     w_ih, w_hh, b_ih, b_hh = params
     xs = x.unbind(0)
-    output = []  # type: ignore
+    output = torch.jit.annotate(List[Tensor], [])
     if reverse:
         for t in range(x.size(0) - 1, -1, -1):
             hx, cx = HardLSTMCell(xs[t], hx, cx, w_ih, w_hh, b_ih, b_hh)
