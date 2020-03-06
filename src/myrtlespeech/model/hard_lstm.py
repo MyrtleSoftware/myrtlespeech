@@ -1,74 +1,91 @@
 import math
 from typing import List
+from typing import Optional
 from typing import Tuple
 
 import torch
-import torch.nn as nn
 from torch import Tensor
-from torch.functional import F
 
 
-@torch.jit.script
-def hard_sigmoid(x):
-    x = 0.2 * x + 0.5
-    x = F.threshold(-x, -1.0, -1.0)
-    return F.threshold(-x, 0.0, 0.0)
-
-
-@torch.jit.script
-def HardLSTMCell(x, hx, cx, w_ih, w_hh, b_ih, b_hh):
-    gates = F.linear(x, w_ih, b_ih) + F.linear(hx, w_hh, b_hh)
-
-    ingate, forgetgate, cellgate, outgate = gates.chunk(4, 1)
-
-    ingate = hard_sigmoid(ingate)
-    forgetgate = hard_sigmoid(forgetgate)
-    cellgate = F.hardtanh(cellgate)
-    outgate = hard_sigmoid(outgate)
-
-    cy = (forgetgate * cx) + (ingate * cellgate)
-    hy = outgate * F.hardtanh(cy)
-
-    return hy, cy
-
-
-def HardLSTM(*args, **kwargs):
-    bidirectional = kwargs["bidirectional"]
+def HardLSTM(
+    input_size: int,
+    hidden_size: int,
+    num_layers: int = 1,
+    bias: int = True,
+    dropout: float = 0.0,
+    bidirectional: bool = False,
+    forget_gate_bias: Optional[float] = None,
+    batch_first: bool = False,
+):
+    assert not dropout
+    assert forget_gate_bias is None
     if bidirectional:
-        return HardLSTM2(*args, **kwargs)
+        layer_type = HardLSTMBidirLayer
+        dirs = 2
     else:
-        return HardLSTM1(*args, **kwargs)
+        layer_type = HardLSTMLayer
+        dirs = 1
+
+    return StackedLSTM(
+        num_layers,
+        layer_type,
+        first_layer_args=[input_size, hidden_size],
+        other_layer_args=[hidden_size * dirs, hidden_size],
+        num_directions=dirs,
+        batch_first=batch_first,
+    )
 
 
-class HardLSTM2(nn.Module):
+class HardLSTMCell(torch.nn.Module):
+    def __init__(self, input_size, hidden_size):
+        super().__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.weight_ih = torch.nn.Parameter(
+            torch.randn(4 * hidden_size, input_size)
+        )
+        self.weight_hh = torch.nn.Parameter(
+            torch.randn(4 * hidden_size, hidden_size)
+        )
+        self.bias_ih = torch.nn.Parameter(torch.randn(4 * hidden_size))
+        self.bias_hh = torch.nn.Parameter(torch.randn(4 * hidden_size))
+
+    def forward(
+        self, input: Tensor, state: Tuple[Tensor, Tensor]
+    ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
+        hx, cx = state
+
+        gates = (
+            torch.mm(input, self.weight_ih.t())
+            + self.bias_ih
+            + torch.mm(hx, self.weight_hh.t())
+            + self.bias_hh
+        )
+        ingate, forgetgate, cellgate, outgate = gates.chunk(4, 1)
+
+        ingate = torch.clamp(0.2 * ingate + 0.5, min=0.0, max=1.0)
+        forgetgate = torch.clamp(0.2 * forgetgate + 0.5, min=0.0, max=1.0)
+        cellgate = torch.nn.functional.hardtanh_(cellgate)
+        outgate = torch.clamp(0.2 * outgate + 0.5, min=0.0, max=1.0)
+
+        cy = (forgetgate * cx) + (ingate * cellgate)
+        hy = outgate * torch.nn.functional.hardtanh_(cy)
+
+        return hy, (hy, cy)
+
+
+class LSTMLayerBase(torch.nn.Module):
     def __init__(
         self, input_size, hidden_size, batch_first=False, bidirectional=False
     ):
-        assert bidirectional is True
-        super(HardLSTM2, self).__init__()
+        assert batch_first is False
+        super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.batch_first = batch_first
         self.bidirectional = bidirectional
         self.num_directions = 2 if bidirectional else 1
-
-        gate_size = 4 * hidden_size
-
-        self.weight_ih_l0 = nn.Parameter(torch.Tensor(gate_size, input_size))
-        self.weight_hh_l0 = nn.Parameter(torch.Tensor(gate_size, hidden_size))
-        self.bias_ih_l0 = nn.Parameter(torch.Tensor(gate_size))
-        self.bias_hh_l0 = nn.Parameter(torch.Tensor(gate_size))
-
-        # reverse
-        self.weight_ih_l0_reverse = nn.Parameter(
-            torch.Tensor(gate_size, input_size)
-        )
-        self.weight_hh_l0_reverse = nn.Parameter(
-            torch.Tensor(gate_size, hidden_size)
-        )
-        self.bias_ih_l0_reverse = nn.Parameter(torch.Tensor(gate_size))
-        self.bias_hh_l0_reverse = nn.Parameter(torch.Tensor(gate_size))
-
+        self.cell = HardLSTMCell(input_size, hidden_size)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -76,147 +93,111 @@ class HardLSTM2(nn.Module):
         for weight in self.parameters():
             weight.data.uniform_(-stdv, stdv)
 
-    def forward(
-        self, x: Tensor, hx: Tuple[Tensor, Tensor]
+    def recurrent(
+        self, x: Tensor, hx: Tuple[Tensor, Tensor], reverse: bool,
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
-        if self.batch_first:
-            x = x.transpose(0, 1)
 
-        weights_fwd = [
-            self.weight_ih_l0,
-            self.weight_hh_l0,
-            self.bias_ih_l0,
-            self.bias_hh_l0,
-        ]
+        xs = x.unbind(0)
+        y = torch.jit.annotate(List[Tensor], [])
 
-        weights_bwd = [
-            self.weight_ih_l0_reverse,
-            self.weight_hh_l0_reverse,
-            self.bias_ih_l0_reverse,
-            self.bias_hh_l0_reverse,
-        ]
-        weights = [weights_fwd, weights_bwd]
-
-        # hidden = list(zip(*hidden)) -> can't be scripted
-        h0, c0 = hx
-        hx_f = h0[0], c0[0]
-
-        hx_b = h0[1], c0[1]
-        hidden = [hx_f, hx_b]
-
-        all_outputs = torch.empty(0, device=h0.device)
-        hy = torch.empty(0, device=h0.device)
-        cy = torch.empty(0, device=h0.device)
-        for direction in range(self.num_directions):
-            output, (h, c) = recurrent(
-                x,
-                hidden[direction],
-                weights[direction],
-                reverse=(direction == 1),
-            )
-            all_outputs = torch.cat([all_outputs, output], -1)
-            hy = torch.cat([hy, h.unsqueeze(0)], 0)
-            cy = torch.cat([cy, c.unsqueeze(0)], 0)
-
-        if self.batch_first:
-            all_outputs = all_outputs.transpose(0, 1)
-
-        return all_outputs, (hy, cy)
+        if reverse:
+            for t in range(len(xs) - 1, -1, -1):
+                hy, hx = self.cell(xs[t], hx)
+                y += [hy]
+            y.reverse()
+        else:
+            for t in range(len(xs)):
+                hy, hx = self.cell(xs[t], hx)
+                y += [hy]
+        return torch.stack(y), hx
 
 
-class HardLSTM1(nn.Module):
+class HardLSTMLayer(LSTMLayerBase):
     def __init__(
         self, input_size, hidden_size, batch_first=False, bidirectional=False
     ):
         assert bidirectional is False
-        super(HardLSTM1, self).__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.batch_first = batch_first
-        self.bidirectional = bidirectional
-        self.num_directions = 2 if bidirectional else 1
-
-        gate_size = 4 * hidden_size
-
-        self.weight_ih_l0 = nn.Parameter(torch.Tensor(gate_size, input_size))
-        self.weight_hh_l0 = nn.Parameter(torch.Tensor(gate_size, hidden_size))
-        self.bias_ih_l0 = nn.Parameter(torch.Tensor(gate_size))
-        self.bias_hh_l0 = nn.Parameter(torch.Tensor(gate_size))
-
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        stdv = 1.0 / math.sqrt(self.hidden_size)
-        for weight in self.parameters():
-            weight.data.uniform_(-stdv, stdv)
+        super().__init__(input_size, hidden_size, batch_first, bidirectional)
 
     def forward(
         self, x: Tensor, hx: Tuple[Tensor, Tensor]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
-        if self.batch_first:
-            x = x.transpose(0, 1)
+        hx_f = hx[0][0], hx[1][0]
+        y, (h, c) = self.recurrent(x, hx_f, reverse=False)
+        return y, (h.unsqueeze(0), c.unsqueeze(0))
 
-        weights = [
-            self.weight_ih_l0,
-            self.weight_hh_l0,
-            self.bias_ih_l0,
-            self.bias_hh_l0,
+
+class HardLSTMBidirLayer(LSTMLayerBase):
+    def __init__(
+        self, input_size, hidden_size, batch_first=False, bidirectional=True
+    ):
+        assert bidirectional is True
+        super().__init__(input_size, hidden_size, batch_first, bidirectional)
+
+    def forward(
+        self, x: Tensor, hx: Tuple[Tensor, Tensor]
+    ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
+
+        h0, c0 = hx
+        hx_f = h0[0], c0[0]
+        hx_b = h0[1], c0[1]
+
+        y_f, (h_f, c_f) = self.recurrent(x, hx_f, reverse=False)
+        y_b, (h_b, c_b) = self.recurrent(x, hx_b, reverse=True)
+        out = torch.stack([y_f, y_b], 2)
+        out = out.view((out.size(0), out.size(1), -1))
+        return out, (torch.stack([h_f, h_b]), torch.stack([c_f, c_b]))
+
+
+class StackedLSTM(torch.nn.Module):
+    def __init__(
+        self,
+        num_layers,
+        layer,
+        first_layer_args,
+        other_layer_args,
+        num_directions=1,
+        batch_first=False,
+    ):
+        super(StackedLSTM, self).__init__()
+        self.num_layers = num_layers
+        self.num_directions = num_directions
+        self.batch_first = batch_first
+
+        layers = [layer(*first_layer_args)] + [
+            layer(*other_layer_args) for _ in range(num_layers - 1)
         ]
 
-        # hidden = list(zip(*hidden)) -> can't be scripted
-        h0, c0 = hx
-        hidden = h0[0], c0[0]
+        self.layers = torch.nn.ModuleList(layers)
 
-        output, (hy, cy) = recurrent(x, hidden, weights, reverse=False,)
+    def forward(
+        self, input: Tensor, hx: Tuple[Tensor, Tensor]
+    ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
+
+        if self.batch_first:
+            input = input.transpose(0, 1)
+
+        hn, cn = hx
+        req_size = self.num_layers, self.num_directions, hn.size(1), hn.size(2)
+        hn = hn.view(req_size)
+        cn = hn.view(req_size)
+
+        i = 0
+        output = input
+        hn_out = torch.jit.annotate(List[Tensor], [])
+        cn_out = torch.jit.annotate(List[Tensor], [])
+        for rnn_layer in self.layers:
+            output, (h, c) = rnn_layer(output, (hn[i], cn[i]))
+            hn_out += [h]
+            cn_out += [c]
+            i += 1
+
+        hn_out = torch.stack(hn_out)
+        cn_out = torch.stack(cn_out)
+        req_size_out = (-1, hn_out.size(2), hn_out.size(3))
+        out_states = hn_out.view(req_size_out), cn_out.view(req_size_out)
 
         if self.batch_first:
             output = output.transpose(0, 1)
 
-        return output, (hy.unsqueeze(0), cy.unsqueeze(0))
-
-
-@torch.jit.script
-def recurrent(
-    x: Tensor,
-    hidden: Tuple[Tensor, Tensor],
-    params: List[Tensor],
-    reverse: bool = False,
-) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
-    hx, cx = hidden
-    w_ih, w_hh, b_ih, b_hh = params
-    xs = x.unbind(0)
-    output = torch.jit.annotate(List[Tensor], [])
-    if reverse:
-        for t in range(x.size(0) - 1, -1, -1):
-            hx, cx = HardLSTMCell(xs[t], hx, cx, w_ih, w_hh, b_ih, b_hh)
-            output += [hx]
-        output.reverse()
-    else:
-        for t in range(x.size(0)):
-            hx, cx = HardLSTMCell(xs[t], hx, cx, w_ih, w_hh, b_ih, b_hh)
-            output += [hx]
-    return torch.stack(output), (hx, cx)
-
-
-if __name__ == "__main__":
-    input_size = 2
-    hidden = 4
-    seq_len = 3
-    num_layers = 1
-    bidirectional = True
-    batch = 3
-    lstm = HardLSTM(
-        input_size=input_size,
-        hidden_size=hidden,
-        batch_first=False,
-        bidirectional=bidirectional,
-    )
-
-    x = torch.randn(seq_len, batch, input_size)
-    num_directions = 2 if bidirectional else 1
-    zeros = torch.zeros(
-        num_layers * num_directions, batch, hidden, dtype=x.dtype,
-    )
-    args = (x, (zeros, zeros))
-
-    outputs = lstm(*args)
+        return output, out_states
