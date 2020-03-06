@@ -14,7 +14,8 @@ def deep_speech_1s(
     draw, return_kwargs: bool = False
 ) -> st.SearchStrategy[DeepSpeech1]:
     kwargs = {
-        "in_features": draw(st.integers(1, 128)),
+        "input_features": draw(st.integers(1, 32)),
+        "input_channels": draw(st.integers(1, 4)),
         "n_hidden": draw(st.integers(1, 128)),
         "out_features": draw(st.integers(1, 128)),
         "drop_prob": draw(st.floats(0.0, 1.0, allow_nan=False)),
@@ -42,8 +43,8 @@ def test_all_gradients_computed_for_all_model_parameters(data) -> None:
 
     # generate random input
     batch = data.draw(st.integers(1, 4))
-    channels = 1
-    features = kwargs["in_features"]
+    channels = kwargs["input_channels"]
+    features = kwargs["input_features"]
     seq_len = data.draw(st.integers(1, 8))
 
     x = torch.empty((batch, channels, features, seq_len)).normal_()

@@ -11,7 +11,9 @@ class DeepSpeech1(torch.nn.Module):
     """A `Deep Speech 1 <https://arxiv.org/abs/1412.5567>`_ -like model.
 
     Args:
-        in_features: Number of input features per step per batch.
+        input_features: Number of input features per step per batch.
+
+        input_features: Number of input channels per step per batch.
 
         n_hidden: Internal hidden unit size.
 
@@ -29,7 +31,8 @@ class DeepSpeech1(torch.nn.Module):
 
     Example:
         >>> ds1 = DeepSpeech1(
-        ...     in_features=5,
+        ...     input_features=5,
+        ...     input_channels=1,
         ...     n_hidden=10,
         ...     out_features=26,
         ...     drop_prob=0.25,
@@ -67,7 +70,8 @@ class DeepSpeech1(torch.nn.Module):
 
     def __init__(
         self,
-        in_features: int,
+        input_features: int,
+        input_channels: int,
         n_hidden: int,
         out_features: int,
         drop_prob: float,
@@ -75,13 +79,17 @@ class DeepSpeech1(torch.nn.Module):
         forget_gate_bias: float = 1.0,
     ):
         super().__init__()
+        self.input_features = input_features
+        self.input_channels = input_channels
 
         self.use_cuda = torch.cuda.is_available()
 
         self._relu_clip = float(relu_clip)
         self._drop_prob = drop_prob
 
-        self.fc1 = self._fully_connected(in_features, n_hidden)
+        self.fc1 = self._fully_connected(
+            input_features * input_channels, n_hidden
+        )
         self.fc2 = self._fully_connected(n_hidden, n_hidden)
         self.fc3 = self._fully_connected(n_hidden, 2 * n_hidden)
         self.bi_lstm = RNN(

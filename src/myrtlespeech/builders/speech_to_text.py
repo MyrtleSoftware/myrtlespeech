@@ -162,7 +162,8 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
     model_type = stt_cfg.WhichOneof("supported_models")
     if model_type == "deep_speech_1":
         model = DeepSpeech1(
-            in_features=input_channels * input_features,
+            input_features=input_features,
+            input_channels=input_channels,
             n_hidden=stt_cfg.deep_speech_1.n_hidden,
             out_features=len(alphabet),
             drop_prob=stt_cfg.deep_speech_1.drop_prob,
