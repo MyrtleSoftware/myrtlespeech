@@ -205,10 +205,20 @@ def test_correct_hard_lstm_type_and_size_returned(
         return
     hidden_size = kwargs["hidden_size"]
     for l in range(kwargs["num_layers"]):
-        bias = rnn.rnn.layers[l].cell.bias_ih[hidden_size : 2 * hidden_size]
-        bias += rnn.rnn.layers[l].cell.bias_hh[hidden_size : 2 * hidden_size]
-        bias = torch.tensor(bias).cpu()
-        assert torch.allclose(bias, torch.tensor(kwargs["forget_gate_bias"]))
+        layer = rnn.rnn.layers[l]
+        cells = []
+        if kwargs["bidirectional"]:
+            for direction in layer.directions:
+                cells.append(direction.cell)
+        else:
+            cells.append(layer.cell)
+        for cell in cells:
+            bias = cell.bias_ih[hidden_size : 2 * hidden_size]
+            bias += cell.bias_hh[hidden_size : 2 * hidden_size]
+            bias = torch.tensor(bias).cpu()
+            assert torch.allclose(
+                bias, torch.tensor(kwargs["forget_gate_bias"])
+            )
 
 
 @given(rnns_and_valid_inputs())
