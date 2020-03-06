@@ -1,10 +1,13 @@
 import inspect
+from typing import Dict
+from typing import Tuple
 
 import hypothesis.strategies as st
 import torch
 from hypothesis import given
 from myrtlespeech.model.deep_speech_1 import DeepSpeech1
-
+from myrtlespeech.model.hard_lstm import HardLSTM
+from myrtlespeech.model.rnn import RNN
 
 # Fixtures and Strategies -----------------------------------------------------
 
@@ -21,6 +24,7 @@ def deep_speech_1s(
         "drop_prob": draw(st.floats(0.0, 1.0, allow_nan=False)),
         "relu_clip": draw(st.floats(1.0, 20.0, allow_nan=False)),
         "forget_gate_bias": draw(st.floats(0.0, 1.0, allow_nan=False)),
+        "hard_lstm": draw(st.booleans()),
     }
 
     # ensure all args are generated to catch modifications to class
@@ -34,6 +38,44 @@ def deep_speech_1s(
 
 
 # Tests -----------------------------------------------------------------------
+
+
+@given(deep_speech_1s(return_kwargs=True))
+def test_correct_ds1_returned(ds1_kwargs: Tuple[DeepSpeech1, Dict]) -> None:
+    """Ensures correct ``rnn`` type and initialisation."""
+    ds1, kwargs = ds1_kwargs
+    fc1 = ds1.fc1
+    fc2 = ds1.fc2
+    fc3 = ds1.fc3
+    fc4 = ds1.fc4
+    fcout = ds1.out
+
+    if not isinstance(fc1, torch.nn.Linear):
+        fc1 = fc1[0]
+    if not isinstance(fc2, torch.nn.Linear):
+        fc2 = fc2[0]
+    if not isinstance(fc3, torch.nn.Linear):
+        fc3 = fc3[0]
+    if not isinstance(fc4, torch.nn.Linear):
+        fc4 = fc4[0]
+    if not isinstance(fcout, torch.nn.Linear):
+        fcout = fcout[0]
+    assert fc1.in_features == kwargs["in_features"]
+    assert (
+        fc1.out_features
+        == fc2.in_features
+        == fc2.out_features
+        == fc3.in_features
+        == fc4.out_features
+        == fcout.in_features
+        == kwargs["n_hidden"]
+    )
+    assert fc3.out_features == fc4.in_features == 2 * kwargs["n_hidden"]
+    assert fcout.out_features == kwargs["out_features"]
+    if kwargs["hard_lstm"]:
+        assert isinstance(ds1.bi_lstm, HardLSTM)
+    else:
+        assert isinstance(ds1.bi_lstm, RNN)
 
 
 @given(st.data())

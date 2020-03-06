@@ -17,4 +17,8 @@ message DeepSpeech1 {
 
   // Total initialized value of the bias used in the forget gate.
   float forget_gate_bias = 4;
+
+  // When using an LSTM, if True, then a Hard LSTM will be used instead of
+  // PyTorch default LSTM.
+  bool hard_lstm = 5;
 }

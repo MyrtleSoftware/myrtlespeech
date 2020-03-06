@@ -169,6 +169,7 @@ def build(stt_cfg: speech_to_text_pb2.SpeechToText) -> SpeechToText:
             drop_prob=stt_cfg.deep_speech_1.drop_prob,
             relu_clip=stt_cfg.deep_speech_1.relu_clip,
             forget_gate_bias=stt_cfg.deep_speech_1.forget_gate_bias,
+            hard_lstm=stt_cfg.deep_speech_1.hard_lstm,
         )
     elif model_type == "deep_speech_2":
         model = build_deep_speech_2(
