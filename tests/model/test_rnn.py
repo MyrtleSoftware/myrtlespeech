@@ -10,6 +10,7 @@ import pytest
 import torch
 from hypothesis import assume
 from hypothesis import given
+from myrtlespeech.model.hard_lstm import HardLSTM
 from myrtlespeech.model.rnn import RNN
 from myrtlespeech.model.rnn import RNNType
 
@@ -35,13 +36,24 @@ def rnn_types(draw) -> st.SearchStrategy[RNNType]:
 
 @st.composite
 def rnns(
-    draw, return_kwargs: bool = False, input_size: Optional[int] = None
+    draw,
+    return_kwargs: bool = False,
+    input_size: Optional[int] = None,
+    hard_lstm: Optional[bool] = None,
 ) -> Union[
-    st.SearchStrategy[RNN], st.SearchStrategy[Tuple[RNN, Dict]],
+    st.SearchStrategy[Union[RNN, HardLSTM]],
+    st.SearchStrategy[Tuple[Union[RNN, HardLSTM], Dict]],
 ]:
     """Returns a SearchStrategy for RNN."""
-    kwargs = {}
-    kwargs["rnn_type"] = draw(rnn_types())
+    kwargs: Dict = {}
+    if hard_lstm is True:
+        kwargs["rnn_type"] = RNNType.LSTM
+    else:
+        kwargs["rnn_type"] = draw(rnn_types())
+
+    if hard_lstm is None and kwargs["rnn_type"] == RNNType.LSTM:
+        hard_lstm = st.booleans()
+
     if input_size is None:
         kwargs["input_size"] = draw(st.integers(min_value=1, max_value=128))
     else:
@@ -54,13 +66,19 @@ def rnns(
         st.one_of(st.none(), st.floats(min_value=-10.0, max_value=10.0))
     )
     kwargs["batch_first"] = draw(st.booleans())
-    if kwargs["num_layers"] == 1:
+    if kwargs["num_layers"] == 1 or hard_lstm:
         kwargs["dropout"] = 0.0
     else:
         kwargs["dropout"] = draw(st.floats(min_value=0.0, max_value=1.0))
+
+    if hard_lstm:
+        rnn_clss = HardLSTM
+    else:
+        rnn_clss = RNN
+
     if not return_kwargs:
-        return RNN(**kwargs)
-    return RNN(**kwargs), kwargs
+        return rnn_clss(**kwargs)
+    return rnn_clss(**kwargs), kwargs
 
 
 @st.composite
@@ -115,7 +133,7 @@ def rnns_and_valid_inputs(draw) -> st.SearchStrategy[Tuple]:
 # Tests -----------------------------------------------------------------------
 
 
-@given(rnns(return_kwargs=True))
+@given(rnns(return_kwargs=True, hard_lstm=False))
 def test_correct_rnn_type_and_size_returned(
     rnn_kwargs: Tuple[RNN, Dict]
 ) -> None:
@@ -157,6 +175,42 @@ def test_correct_rnn_type_and_size_returned(
         assert torch.allclose(bias, torch.tensor(kwargs["forget_gate_bias"]))
 
 
+@given(rnns(return_kwargs=True, hard_lstm=True))
+def test_correct_hard_lstm_type_and_size_returned(
+    rnn_kwargs: Tuple[HardLSTM, Dict]
+) -> None:
+    """Ensures correct ``rnn`` type and initialisation."""
+    rnn, kwargs = rnn_kwargs
+    assert isinstance(rnn, HardLSTM)
+
+    assert rnn.rnn.input_size == kwargs["input_size"]
+    assert rnn.rnn.hidden_size == kwargs["hidden_size"]
+    assert rnn.rnn.num_layers == len(rnn.rnn.layers) == kwargs["num_layers"]
+    assert rnn.rnn.bidirectional == kwargs["bidirectional"]
+    num_directions = 2 if kwargs["bidirectional"] else 1
+    for li in range(kwargs["num_layers"]):
+        layer = rnn.rnn.layers[li]
+        if li == 0:
+            assert layer.input_size == kwargs["input_size"]
+        else:
+            assert layer.input_size == kwargs["hidden_size"] * num_directions
+        assert layer.hidden_size == kwargs["hidden_size"]
+
+    assert rnn.rnn.bias == kwargs["bias"]
+    assert rnn.rnn.batch_first == kwargs["batch_first"]
+    if kwargs["num_layers"] > 1:
+        assert math.isclose(rnn.rnn.dropout, kwargs["dropout"])
+
+    if not (kwargs["bias"] and kwargs["forget_gate_bias"] is not None):
+        return
+    hidden_size = kwargs["hidden_size"]
+    for l in range(kwargs["num_layers"]):
+        bias = rnn.rnn.layers[l].cell.bias_ih[hidden_size : 2 * hidden_size]
+        bias += rnn.rnn.layers[l].cell.bias_hh[hidden_size : 2 * hidden_size]
+        bias = torch.tensor(bias).cpu()
+        assert torch.allclose(bias, torch.tensor(kwargs["forget_gate_bias"]))
+
+
 @given(rnns_and_valid_inputs())
 def test_rnn_forward_pass_correct_shapes_returned(
     rnn_kwargs_and_valid_inputs: Tuple,
@@ -181,7 +235,7 @@ def test_rnn_forward_pass_correct_shapes_returned(
     # check data generation
     assert batch_size == len(seq_lens)
     # Run forward pass
-    res = rnn((inp, seq_lens), hx=hx)
+    res = rnn(x=(inp, seq_lens), hx=hx)
 
     assert isinstance(res, tuple) and len(res) == 2
     (out, out_lens), hid = res
@@ -209,3 +263,11 @@ def test_error_raised_for_unknown_rnn_type(rnn_type: int) -> None:
     assume(rnn_type not in list(RNNType))
     with pytest.raises(ValueError):
         RNN(rnn_type=rnn_type, input_size=1, hidden_size=1)  # type: ignore
+
+
+@given(rnn_type=st.integers(min_value=100, max_value=300))
+def test_error_raised_for_hard_lstm_for_alt_rnn_type(rnn_type: int) -> None:
+    """Ensures error raised when unknown RNNType used."""
+    assume(rnn_type != RNNType.LSTM)
+    with pytest.raises(ValueError):
+        HardLSTM(rnn_type, input_size=1, hidden_size=1)  # type: ignore

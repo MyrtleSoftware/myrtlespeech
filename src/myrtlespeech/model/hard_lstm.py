@@ -4,10 +4,76 @@ from typing import Optional
 from typing import Tuple
 
 import torch
+from myrtlespeech.model.rnn import init_hidden_state
+from myrtlespeech.model.rnn import RNNType
 from torch import Tensor
 
 
-def HardLSTM(
+class HardLSTM(torch.nn.Module):
+    """TODO"""
+
+    def __init__(
+        self,
+        rnn_type: RNNType,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        bias: int = True,
+        dropout: float = 0.0,
+        bidirectional: bool = False,
+        forget_gate_bias: Optional[float] = None,
+        batch_first: bool = False,
+    ):
+        if rnn_type != RNNType.LSTM:
+            raise ValueError("HardLSTM must have rnn_type==RNNType.LSTM.")
+        super().__init__()
+        self.hidden_size = hidden_size
+        self.bidirectional = bidirectional
+        self.rnn_type = rnn_type
+        self.batch_first = batch_first
+
+        rnn = gen_hard_lstm(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            bias=bias,
+            dropout=dropout,
+            bidirectional=bidirectional,
+            forget_gate_bias=forget_gate_bias,
+            batch_first=batch_first,
+        )
+
+        self.use_cuda = torch.cuda.is_available()
+        if self.use_cuda:
+            rnn = rnn.cuda()
+
+        self.rnn = torch.jit.script(rnn)
+
+    def forward(
+        self, x: Tuple[Tensor, Tensor], hx: Tuple[Tensor, Tensor] = None
+    ) -> Tuple[Tuple[Tensor, Tensor], Tuple[Tensor, Tensor]]:
+        inp, lengths = x
+        if hx is None:
+            hx = init_hidden_state(
+                batch=len(lengths),
+                dtype=inp.dtype,
+                hidden_size=self.hidden_size,
+                num_layers=self.rnn.num_layers,
+                bidirectional=self.bidirectional,
+                rnn_type=self.rnn_type,
+            )
+        if self.use_cuda:
+            inp = inp.cuda()
+            if self.rnn_type == RNNType.LSTM:
+                hx = hx[0].cuda(), hx[1].cuda()  # type: ignore
+            else:
+                hx = hx.cuda()  # type: ignore
+
+        y, hid = self.rnn(inp, hx)
+        return (y, lengths), hid
+
+
+def gen_hard_lstm(
     input_size: int,
     hidden_size: int,
     num_layers: int = 1,
@@ -16,23 +82,22 @@ def HardLSTM(
     bidirectional: bool = False,
     forget_gate_bias: Optional[float] = None,
     batch_first: bool = False,
-):
+) -> torch.nn.Module:
     assert not dropout
-    assert forget_gate_bias is None
     if bidirectional:
         layer_type = HardLSTMBidirLayer
-        dirs = 2
     else:
         layer_type = HardLSTMLayer
-        dirs = 1
 
     return StackedLSTM(
         num_layers,
         layer_type,
-        first_layer_args=[input_size, hidden_size],
-        other_layer_args=[hidden_size * dirs, hidden_size],
-        num_directions=dirs,
+        input_size=input_size,
+        hidden_size=hidden_size,
+        forget_gate_bias=forget_gate_bias,
         batch_first=batch_first,
+        bidirectional=bidirectional,
+        bias=bias,
     )
 
 
@@ -76,15 +141,15 @@ class HardLSTMCell(torch.nn.Module):
 
 class LSTMLayerBase(torch.nn.Module):
     def __init__(
-        self, input_size, hidden_size, batch_first=False, bidirectional=False
+        self,
+        input_size: int,
+        hidden_size: int,
+        forget_gate_bias: Optional[float] = None,
     ):
-        assert batch_first is False
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.batch_first = batch_first
-        self.bidirectional = bidirectional
-        self.num_directions = 2 if bidirectional else 1
+        self.forget_gate_bias = forget_gate_bias
         self.cell = HardLSTMCell(input_size, hidden_size)
         self.reset_parameters()
 
@@ -92,6 +157,14 @@ class LSTMLayerBase(torch.nn.Module):
         stdv = 1.0 / math.sqrt(self.hidden_size)
         for weight in self.parameters():
             weight.data.uniform_(-stdv, stdv)
+
+        if self.forget_gate_bias is not None:
+            self.cell.bias_ih.data[
+                self.hidden_size : 2 * self.hidden_size
+            ] = self.forget_gate_bias
+            self.cell.bias_hh.data[
+                self.hidden_size : 2 * self.hidden_size
+            ] = 0.0
 
     def recurrent(
         self, x: Tensor, hx: Tuple[Tensor, Tensor], reverse: bool,
@@ -114,10 +187,12 @@ class LSTMLayerBase(torch.nn.Module):
 
 class HardLSTMLayer(LSTMLayerBase):
     def __init__(
-        self, input_size, hidden_size, batch_first=False, bidirectional=False
+        self,
+        input_size: int,
+        hidden_size: int,
+        forget_gate_bias: Optional[float] = None,
     ):
-        assert bidirectional is False
-        super().__init__(input_size, hidden_size, batch_first, bidirectional)
+        super().__init__(input_size, hidden_size, forget_gate_bias)
 
     def forward(
         self, x: Tensor, hx: Tuple[Tensor, Tensor]
@@ -129,10 +204,12 @@ class HardLSTMLayer(LSTMLayerBase):
 
 class HardLSTMBidirLayer(LSTMLayerBase):
     def __init__(
-        self, input_size, hidden_size, batch_first=False, bidirectional=True
+        self,
+        input_size: int,
+        hidden_size: int,
+        forget_gate_bias: Optional[float] = None,
     ):
-        assert bidirectional is True
-        super().__init__(input_size, hidden_size, batch_first, bidirectional)
+        super().__init__(input_size, hidden_size, forget_gate_bias)
 
     def forward(
         self, x: Tensor, hx: Tuple[Tensor, Tensor]
@@ -152,20 +229,36 @@ class HardLSTMBidirLayer(LSTMLayerBase):
 class StackedLSTM(torch.nn.Module):
     def __init__(
         self,
-        num_layers,
-        layer,
-        first_layer_args,
-        other_layer_args,
-        num_directions=1,
-        batch_first=False,
+        num_layers: int,
+        layer_type: torch.nn.Module,
+        input_size: int,
+        hidden_size: int,
+        bias: int = True,
+        dropout: float = 0.0,
+        bidirectional: bool = False,
+        forget_gate_bias: Optional[float] = None,
+        batch_first: bool = False,
     ):
-        super(StackedLSTM, self).__init__()
-        self.num_layers = num_layers
-        self.num_directions = num_directions
-        self.batch_first = batch_first
 
-        layers = [layer(*first_layer_args)] + [
-            layer(*other_layer_args) for _ in range(num_layers - 1)
+        super(StackedLSTM, self).__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.num_directions = num_directions = 2 if bidirectional else 1
+        self.batch_first = batch_first
+        self.bias = bias
+        self.dropout = dropout
+        self.bidirectional = bidirectional
+
+        first_layer_args = [input_size, hidden_size, forget_gate_bias]
+        other_layer_args = [
+            hidden_size * num_directions,
+            hidden_size,
+            forget_gate_bias,
+        ]
+
+        layers = [layer_type(*first_layer_args)] + [
+            layer_type(*other_layer_args) for _ in range(num_layers - 1)
         ]
 
         self.layers = torch.nn.ModuleList(layers)
