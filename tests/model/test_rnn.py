@@ -235,7 +235,7 @@ def test_rnn_forward_pass_correct_shapes_returned(
     # check data generation
     assert batch_size == len(seq_lens)
     # Run forward pass
-    res = rnn(x=(inp, seq_lens), hx=hx)
+    res = rnn((inp, seq_lens), hx=hx)
 
     assert isinstance(res, tuple) and len(res) == 2
     (out, out_lens), hid = res

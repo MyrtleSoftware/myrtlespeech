@@ -9,6 +9,7 @@ from myrtlespeech.model.deep_speech_1 import DeepSpeech1
 from myrtlespeech.model.hard_lstm import HardLSTM
 from myrtlespeech.model.rnn import RNN
 
+
 # Fixtures and Strategies -----------------------------------------------------
 
 
