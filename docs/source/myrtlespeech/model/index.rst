@@ -10,6 +10,7 @@
     deep_speech_1
     deep_speech_2
     fully_connected
+    hard_lstm
     lookahead
     rnn
     seq_len_wrapper

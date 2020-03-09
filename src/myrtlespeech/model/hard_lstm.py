@@ -13,19 +13,18 @@ class HardLSTM(torch.nn.Module):
     """A Hard LSTM.
 
     This class may be used as a drop-in replacement for a :py:class:`RNN` of
-    ``rnn_type = RNNType.LSTM`` with the following differences:
+    ``rnn_type = RNNType.LSTM``. It has the following differences:
     1. In :py:class:`HardLSTM`, the sigmoid is replaced with a hard sigmoid.
     2. In :py:class:`HardLSTM`, the tanh is replaced with a hard tanh.
     3. :py:class:`HardLSTM` does not use
     :py:func:`torch.nn.utils.rnn.pad_packed_sequence`.
     4. :py:class:`HardLSTM` is implemented by hand instead of using a single
-    CUDNN kernel as :py:class:`torch.nn.LSTM` does. In order to recover some
-    of the performance, the :py:class:`HardLSTM` is
-    :py:class:`torch.jit.script`-ed.
-    5. As this class is scripted, its :py:meth:`forward` Args cannot be
-    cannot be of types ``RNNData, RNNState`` or ``Lengths`` (as they cannot
-    be polymorphic). Incidentally, this is also the reason that
-    :py:class:`HardLSTM` cannot subclass :py:class:`RNN`.
+    CUDNN kernel as in :py:class:`torch.nn.LSTM`. In order to recover some
+    performance, the :py:class:`HardLSTM` is :py:class:`torch.jit.script`-ed.
+    5. As this class is scripted, its :py:meth:`forward` Args must be
+    monomorphic and therefore cannot be of types ``RNNData, RNNState`` or
+    ``Lengths``. This in turn means that :py:class:`HardLSTM` cannot subclass
+    :py:class:`RNN`.
 
     Args:
         See :py:class:`RNN`.
@@ -74,7 +73,7 @@ class HardLSTM(torch.nn.Module):
     def forward(
         self, x: Tuple[Tensor, Tensor], hx: Tuple[Tensor, Tensor] = None
     ) -> Tuple[Tuple[Tensor, Tensor], Tuple[Tensor, Tensor]]:
-        r"""Returns the result of applying the hard_lstm to ``(x[0], hx)``.
+        r"""Returns the result of applying the hard lstm to ``(x[0], hx)``.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda`
         if :py:func:`torch.cuda.is_available` was :py:data:`True` on
@@ -147,10 +146,26 @@ def gen_hard_lstm(
 
 
 class StackedLSTM(torch.nn.Module):
-    """Multilayer LSTM.
+    """Multi-layer LSTM.
 
     Args:
-        See :py:class:`HardLSTM`.
+        num_layers: See :py:class:`HardLSTM`.
+
+        layer_type: The layer type used in the :py:class:`StackedLSTM`.
+
+        input_size: See :py:class:`HardLSTM`.
+
+        hidden_size: See :py:class:`HardLSTM`.
+
+        bias: See :py:class:`HardLSTM`.
+
+        dropout: See :py:class:`HardLSTM`.
+
+        bidirectional: See :py:class:`HardLSTM`.
+
+        forget_gate_bias: See :py:class:`HardLSTM`.
+
+        batch_first: See :py:class:`HardLSTM`.
     """
 
     def __init__(
@@ -180,13 +195,11 @@ class StackedLSTM(torch.nn.Module):
             input_size,
             hidden_size,
             forget_gate_bias,
-            bidirectional,
         ]
         other_layer_args = [
             hidden_size * num_directions,
             hidden_size,
             forget_gate_bias,
-            bidirectional,
         ]
 
         layers = [layer_type(*first_layer_args)] + [
@@ -198,7 +211,22 @@ class StackedLSTM(torch.nn.Module):
     def forward(
         self, input: Tensor, hx: Tuple[Tensor, Tensor]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
-        """Performs forward pass of multi-layer LSTM."""
+        """Performs forward pass of LSTM.
+
+        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda`
+        if :py:func:`torch.cuda.is_available` was :py:data:`True` on
+        initialisation.
+
+        Args:
+            input: A :py:class:`torch.Tensor` of rnn sequence inputs.
+
+            hx: The lstm hidden state: a Tuple of hidden state and cell state.
+
+        Returns:
+            A Tuple of Tuples; ``res = a, (b, c)`` where ``a`` is the lstm
+                output and ``(c, d)`` are the hidden and cell states of the
+                lstm.
+        """
 
         if self.batch_first:
             input = input.transpose(0, 1)
@@ -230,17 +258,26 @@ class StackedLSTM(torch.nn.Module):
 
 
 class HardLSTMLayer(torch.nn.Module):
-    """An LSTM layer."""
+    """A single-directional LSTM layer.
+
+    Args:
+        input_size: See :py:class:`HardLSTM`.
+
+        hidden_size: See :py:class:`HardLSTM`.
+
+        forget_gate_bias: See :py:class:`HardLSTM`.
+
+        reverse: A boolean. If True, this is is a reverse LSTM layer (used in
+            a bidirectional LSTM).
+    """
 
     def __init__(
         self,
         input_size: int,
         hidden_size: int,
         forget_gate_bias: Optional[float] = None,
-        bidirectional: bool = False,
         reverse: bool = False,
     ):
-        assert not bidirectional
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -284,16 +321,18 @@ class HardLSTMLayer(torch.nn.Module):
 
 
 class HardLSTMBidirLayer(torch.nn.Module):
-    """A Bidirectional LSTM layer."""
+    """A Bidirectional LSTM layer.
+
+    Args:
+        See :py:class:`HardLSTM`.
+    """
 
     def __init__(
         self,
         input_size: int,
         hidden_size: int,
         forget_gate_bias: Optional[float] = None,
-        bidirectional: bool = True,
     ):
-        assert bidirectional
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -336,7 +375,11 @@ class HardLSTMBidirLayer(torch.nn.Module):
 
 
 class HardLSTMCell(torch.nn.Module):
-    """A Hard LSTM cell."""
+    """A Hard LSTM cell.
+
+    Args:
+        See :py:class:`HardLSTM`.
+    """
 
     def __init__(self, input_size, hidden_size):
         super().__init__()
@@ -354,6 +397,7 @@ class HardLSTMCell(torch.nn.Module):
     def forward(
         self, input: Tensor, state: Tuple[Tensor, Tensor]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
+        """Performs forward pass of HardLSTM cell."""
         hx, cx = state
 
         gates = (
