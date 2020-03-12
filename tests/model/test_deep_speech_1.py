@@ -61,7 +61,9 @@ def test_correct_ds1_returned(ds1_kwargs: Tuple[DeepSpeech1, Dict]) -> None:
         fc4 = fc4[0]
     if not isinstance(fcout, torch.nn.Linear):
         fcout = fcout[0]
-    assert fc1.in_features == kwargs["in_features"]
+    assert (
+        fc1.in_features == kwargs["input_features"] * kwargs["input_channels"]
+    )
     assert (
         fc1.out_features
         == fc2.in_features
