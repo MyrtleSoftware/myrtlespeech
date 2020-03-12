@@ -177,6 +177,7 @@ class StackedLSTM(torch.nn.Module):
     """
 
     _num_layers: Final[int]
+    _hidden_size: Final[int]
     _num_directions: Final[int]
     _batch_first: Final[bool]
     device: Final[torch.device]
@@ -204,7 +205,7 @@ class StackedLSTM(torch.nn.Module):
         # required in the forward pass (e.g. batch_first) we define duplicate
         # atrributes (e.g. self._batch_first and self.batch_first).
         self.input_size = input_size
-        self.hidden_size = hidden_size
+        self.hidden_size = self._hidden_size = hidden_size
         self.num_layers = self._num_layers = num_layers
         num_directions = 2 if bidirectional else 1
         self.num_directions = self._num_directions = num_directions
@@ -235,7 +236,7 @@ class StackedLSTM(torch.nn.Module):
         if self.use_cuda:
             self.layers = self.layers.cuda()
 
-        self.device: torch.device = next(self.layers.parameters()).device
+        self.device = next(self.layers.parameters()).device
 
     def forward(
         self, input: Tensor, hx: Tuple[Tensor, Tensor]
@@ -260,11 +261,12 @@ class StackedLSTM(torch.nn.Module):
             input = input.transpose(0, 1)
 
         hn, cn = hx
+        batch = hn.size(1)
         req_size = (
             self._num_layers,
             self._num_directions,
-            hn.size(1),
-            hn.size(2),
+            batch,
+            self._hidden_size,
         )
         hn = hn.view(req_size)
         cn = cn.view(req_size)
@@ -323,7 +325,7 @@ class HardLSTMLayer(torch.nn.Module):
         if self.use_cuda:
             self.cell = self.cell.cuda()
 
-        self.device: torch.device = next(self.cell.parameters()).device
+        self.device = next(self.cell.parameters()).device
 
 
 class HardLSTMLayerForward(HardLSTMLayer):
@@ -349,7 +351,7 @@ class HardLSTMLayerForward(HardLSTMLayer):
             hy, hx = self.cell(x[t], hx)
             y = torch.cat([y, hy.unsqueeze(0)], 0)
 
-        # Remove the torch.empty element:
+        # Remove torch.empty element
         y = y[1:]
         h, c = hx
         return y, (h.unsqueeze(0), c.unsqueeze(0))
@@ -411,7 +413,7 @@ class HardLSTMBidirLayer(torch.nn.Module):
         if self.use_cuda:
             self.directions = self.directions.cuda()
 
-        self.device: torch.device = next(self.directions.parameters()).device
+        self.device = next(self.directions.parameters()).device
 
     def forward(
         self, x: Tensor, hx: Tuple[Tensor, Tensor]
@@ -440,9 +442,6 @@ class HardLSTMBidirLayer(torch.nn.Module):
         i = 0
         for direction in self.directions:
             y, (h, c) = direction(x, states[i])
-            # eps = x.mean()
-            # y = torch.zeros(timesteps, batch, self.hidden_size) + eps + i
-            # h = c = torch.zeros(1, batch, self.hidden_size) + eps  + i
             ys = torch.cat([ys, y.unsqueeze(2)], 2)
             hs = torch.cat([hs, h], 0)
             cs = torch.cat([cs, c], 0)
@@ -487,7 +486,7 @@ class HardLSTMCell(torch.nn.Module):
 
         self.hardtanh = torch.nn.Hardtanh()
 
-        # Hard Sigmoid parameters. Use Tensors instead of floats to
+        # Hard sigmoid parameters: use Tensors instead of floats to
         # preserve type during ONNX export
         self.slope = torch.tensor([0.2], dtype=torch.float32)
         self.offset = torch.tensor([0.5], dtype=torch.float32)
