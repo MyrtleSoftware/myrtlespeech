@@ -145,14 +145,14 @@ def gen_hard_lstm(
         layer_type = HardLSTMLayer
 
     return StackedLSTM(
-        num_layers,
-        layer_type,
         input_size=input_size,
         hidden_size=hidden_size,
-        forget_gate_bias=forget_gate_bias,
+        num_layers=num_layers,
+        bias=bias,
         batch_first=batch_first,
         bidirectional=bidirectional,
-        bias=bias,
+        layer_type=layer_type,
+        forget_gate_bias=forget_gate_bias,
     )
 
 
@@ -160,23 +160,24 @@ class StackedLSTM(torch.nn.Module):
     """Multi-layer LSTM.
 
     Args:
-        num_layers: See :py:class:`HardLSTM`.
-
-        layer_type: The layer type used in the :py:class:`StackedLSTM`.
-
         input_size: See :py:class:`HardLSTM`.
 
         hidden_size: See :py:class:`HardLSTM`.
 
+        num_layers: See :py:class:`HardLSTM`.
+
         bias: See :py:class:`HardLSTM`.
+
+        batch_first: See :py:class:`HardLSTM`.
 
         dropout: See :py:class:`HardLSTM`.
 
         bidirectional: See :py:class:`HardLSTM`.
 
+        layer_type: The layer type used in :py:class:`StackedLSTM`.
+
         forget_gate_bias: See :py:class:`HardLSTM`.
 
-        batch_first: See :py:class:`HardLSTM`.
     """
 
     _num_layers: Final[int]
@@ -187,15 +188,15 @@ class StackedLSTM(torch.nn.Module):
 
     def __init__(
         self,
-        num_layers: int,
-        layer_type: torch.nn.Module,
         input_size: int,
         hidden_size: int,
+        num_layers: int,
         bias: bool = True,
+        batch_first: bool = False,
         dropout: float = 0.0,
         bidirectional: bool = False,
+        layer_type: Optional[torch.nn.Module] = None,
         forget_gate_bias: Optional[float] = None,
-        batch_first: bool = False,
     ):
 
         super(StackedLSTM, self).__init__()
@@ -217,16 +218,18 @@ class StackedLSTM(torch.nn.Module):
         self.dropout = dropout
         self.bidirectional = bidirectional
 
-        first_layer_args = [
+        first_layer_args = (
             input_size,
             hidden_size,
             forget_gate_bias,
-        ]
-        other_layer_args = [
+        )
+        other_layer_args = (
             hidden_size * num_directions,
             hidden_size,
             forget_gate_bias,
-        ]
+        )
+        if layer_type is None:
+            layer_type = HardLSTMLayer
 
         layers = [layer_type(*first_layer_args)] + [
             layer_type(*other_layer_args) for _ in range(num_layers - 1)
@@ -275,6 +278,7 @@ class StackedLSTM(torch.nn.Module):
             batch,
             self._hidden_size,
         )
+        # reshape hidden/cell states to split layers from directions:
         hn = hn.view(req_size)
         cn = cn.view(req_size)
 
