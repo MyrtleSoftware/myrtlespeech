@@ -6,7 +6,6 @@ from typing import Tuple
 import torch
 from myrtlespeech.model.rnn import RNNType
 from torch import Tensor
-from torch.functional import F
 from typing_extensions import Final
 
 
@@ -138,7 +137,7 @@ def gen_hard_lstm(
     if bidirectional:
         layer_type = HardLSTMBidirLayer
     else:
-        layer_type = HardLSTMLayer
+        layer_type = HardLSTMLayerForward
 
     return StackedLSTM(
         num_layers,
@@ -199,7 +198,8 @@ class StackedLSTM(torch.nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.num_directions = num_directions = 2 if bidirectional else 1
+        num_directions = 2 if bidirectional else 1
+        self.num_directions = num_directions
         self.batch_first = batch_first
         self.bias = bias
         self.dropout = dropout
@@ -241,6 +241,9 @@ class StackedLSTM(torch.nn.Module):
                 output and ``(c, d)`` are the hidden and cell states of the
                 lstm.
         """
+        # hn, cn = hx
+        # return input+1., (hn+1., cn+1.)
+        one = torch.tensor([1], dtype=torch.float32)
         if self.batch_first:
             input = input.transpose(0, 1)
 
@@ -250,13 +253,19 @@ class StackedLSTM(torch.nn.Module):
         cn = cn.view(req_size)
 
         i = 0
-        output = input
+        output = input + one
+
         hn_out = torch.empty(0)
         cn_out = torch.empty(0)
         for rnn_layer in self.layers:
             output, (h, c) = rnn_layer(output, (hn[i], cn[i]))
-            hn_out = torch.cat([hn_out, h.unsqueeze(0)], 0)
-            cn_out = torch.cat([cn_out, c.unsqueeze(0)], 0)
+            # h, c = (hn[i]+one, cn[i]+one)
+            if i == 0:
+                hn_out = h.unsqueeze(0)
+                cn_out = c.unsqueeze(0)
+            else:
+                cn_out = torch.cat([cn_out, c.unsqueeze(0)], 0)
+                hn_out = torch.cat([hn_out, h.unsqueeze(0)], 0)
             i += 1
         req_size_out = (-1, hn_out.size(2), hn_out.size(3))
         out_states = hn_out.view(req_size_out), cn_out.view(req_size_out)
@@ -265,6 +274,85 @@ class StackedLSTM(torch.nn.Module):
             output = output.transpose(0, 1)
 
         return output, out_states
+
+
+# class HardLSTMLayer(torch.nn.Module):
+#     """A single-directional LSTM layer.
+#
+#     Args:
+#         input_size: See :py:class:`HardLSTM`.
+#
+#         hidden_size: See :py:class:`HardLSTM`.
+#
+#         forget_gate_bias: See :py:class:`HardLSTM`.
+#
+#         reverse: A boolean. If True, this is is a reverse LSTM layer (used in
+#             a bidirectional LSTM).
+#     """
+#
+#     input_size: Final[int]
+#     hidden_size: Final[int]
+#     reverse: Final[bool]
+#
+#     def __init__(
+#         self,
+#         input_size: int,
+#         hidden_size: int,
+#         forget_gate_bias: Optional[float] = None,
+#         reverse: bool = False,
+#     ):
+#         super().__init__()
+#         self.input_size = input_size
+#         self.hidden_size = hidden_size
+#         self.forget_gate_bias = forget_gate_bias
+#         self.reverse = reverse
+#         self.cell = HardLSTMCell(input_size, hidden_size)
+#         # zeros = torch.zeros(2, hidden_size)
+#         # args = torch.zeros(2, input_size), (zeros, zeros)
+#         # self.cell = torch.jit.trace(
+#         #     HardLSTMCell(input_size, hidden_size), args, check_trace=False
+#         # )
+#         # self.reset_parameters()
+#
+#     def reset_parameters(self):
+#         stdv = 1.0 / math.sqrt(self.hidden_size)
+#         for weight in self.parameters():
+#             weight.data.uniform_(-stdv, stdv)
+#
+#         if self.forget_gate_bias is not None:
+#             self.cell.bias_ih.data[
+#                 self.hidden_size : 2 * self.hidden_size
+#             ] = self.forget_gate_bias
+#             self.cell.bias_hh.data[
+#                 self.hidden_size : 2 * self.hidden_size
+#             ] = 0.0
+#
+#     def forward(
+#         self, x: Tensor, hx: Tuple[Tensor, Tensor]
+#     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
+#         """Performs forward pass of single LSTM layer."""
+#         hx = hx[0].squeeze(0), hx[1].squeeze(0)
+#         timesteps = x.size(0)
+#         y = torch.empty(1, x.size(1), x.size(2))
+#         if self.reverse:
+#             for t in range(timesteps - 1, -1, -1):
+#                 eps = x[t].mean()
+#                 #hy, hx = hx[0]+eps, (hx[0]+eps, hx[1] + eps)
+#                 #hy, hx = self.cell(x[t], hx)
+#                 hy, hx = self.cell(hx[0]+eps, (hx[0]+eps, hx[1] + eps))
+#                 y = torch.cat([y, hy.unsqueeze(0)], 0)
+#             y = torch.flip(y, (0,))
+#         else:
+#             for t in range(timesteps):
+#                 eps = x[t].mean()
+#                 #hy, hx = hx[0]+eps, (hx[0]+eps, hx[1] + eps)
+#                 #hy, hx = self.cell(x[t], hx)
+#                 hy, hx = self.cell(hx[0]+eps, (hx[0]+eps, hx[1] + eps))
+#                 y = torch.cat([y, hy.unsqueeze(0)], 0)
+#         (h, c) = hx
+#         # must remove the torch.empty element from the start of the list:
+#         y = y[1:]
+#         return y, (h.unsqueeze(0), c.unsqueeze(0))
 
 
 class HardLSTMLayer(torch.nn.Module):
@@ -297,13 +385,13 @@ class HardLSTMLayer(torch.nn.Module):
         self.hidden_size = hidden_size
         self.forget_gate_bias = forget_gate_bias
         self.reverse = reverse
-        # self.cell = HardLSTMCell(input_size, hidden_size)
-        zeros = torch.zeros(2, hidden_size)
-        args = torch.zeros(2, input_size), (zeros, zeros)
-        self.cell = torch.jit.trace(
-            HardLSTMCell(input_size, hidden_size), args, check_trace=False
-        )
-        self.reset_parameters()
+        self.cell = HardLSTMCell(input_size, hidden_size)
+        # zeros = torch.zeros(2, hidden_size)
+        # args = torch.zeros(2, input_size), (zeros, zeros)
+        # self.cell = torch.jit.trace(
+        #     HardLSTMCell(input_size, hidden_size), args, check_trace=False
+        # )
+        # self.reset_parameters()
 
     def reset_parameters(self):
         stdv = 1.0 / math.sqrt(self.hidden_size)
@@ -318,22 +406,45 @@ class HardLSTMLayer(torch.nn.Module):
                 self.hidden_size : 2 * self.hidden_size
             ] = 0.0
 
+
+class HardLSTMLayerForward(HardLSTMLayer):
+    def forward(
+        self, x: Tensor, hx: Tuple[Tensor, Tensor]
+    ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
+        hx = hx[0].squeeze(0), hx[1].squeeze(0)
+        timesteps = x.size(0)
+        y = torch.empty(1, x.size(1), x.size(2))
+        t = 0
+        for _ in range(timesteps):
+            eps = x[t].mean()
+            # hy, hx = hx[0]+eps, (hx[0]+eps, hx[1] + eps)
+            # hy, hx = self.cell(x[t], hx)
+            hy, hx = self.cell(x[t] + eps, (hx[0] + eps, hx[1] + eps))
+            y = torch.cat([y, hy.unsqueeze(0)], 0)
+            t += 1
+        (h, c) = hx
+        # must remove the torch.empty element from the start of the list:
+        y = y[1:]
+        return y, (h.unsqueeze(0), c.unsqueeze(0))
+
+
+class HardLSTMLayerReverse(HardLSTMLayer):
     def forward(
         self, x: Tensor, hx: Tuple[Tensor, Tensor]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
         """Performs forward pass of single LSTM layer."""
-        hx = hx[0][0], hx[1][0]
+        hx = hx[0].squeeze(0), hx[1].squeeze(0)
         timesteps = x.size(0)
-        y = torch.empty(0)
-        if self.reverse:
-            for t in range(timesteps - 1, -1, -1):
-                hy, hx = self.cell(x[t], hx)
-                y = torch.cat([y, hy.unsqueeze(0)], 0)
-            y = torch.flip(y, 0)
-        else:
-            for t in range(timesteps):
-                hy, hx = self.cell(x[t], hx)
-                y = torch.cat([y, hy.unsqueeze(0)], 0)
+        y = torch.empty(1, x.size(1), x.size(2))
+        for t in range(timesteps - 1, -1, -1):
+            eps = x[t].mean()
+            # hy, hx = hx[0]+eps, (hx[0]+eps, hx[1] + eps)
+            hy, hx = self.cell(x[t], hx)  # this fails
+            hy, hx = self.cell(hx[0] + eps, (hx[0] + eps, hx[1] + eps))
+            y = torch.cat([y, hy.unsqueeze(0)], 0)
+        # Remove the torch.empty element from the start of the list:
+        y = y[1:]
+        y = torch.flip(y, (0,))
         (h, c) = hx
         return y, (h.unsqueeze(0), c.unsqueeze(0))
 
@@ -366,8 +477,8 @@ class HardLSTMBidirLayer(torch.nn.Module):
         )
         self.directions = torch.nn.ModuleList(
             [
-                HardLSTMLayer(*args, reverse=False),
-                HardLSTMLayer(*args, reverse=True),
+                HardLSTMLayerForward(*args, reverse=False),
+                HardLSTMLayerReverse(*args, reverse=True),
             ]
         )
 
@@ -419,22 +530,42 @@ class HardLSTMCell(torch.nn.Module):
         self.bias_ih = torch.nn.Parameter(torch.randn(4 * hidden_size))
         self.bias_hh = torch.nn.Parameter(torch.randn(4 * hidden_size))
 
+        self.hardtanh = torch.nn.Hardtanh()
+
+        # Hard Sigmoid parameters. Use Tensors instead of floats to
+        # preserve type during ONNX export
+        self.slope = torch.tensor([0.2], dtype=torch.float32)
+        self.offset = torch.tensor([0.5], dtype=torch.float32)
+
     def forward(
         self, input: Tensor, state: Tuple[Tensor, Tensor]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
         """Performs forward pass of HardLSTM cell."""
         hx, cx = state
-        gates = F.linear(input, self.weight_ih, self.bias_ih) + F.linear(
-            hx, self.weight_hh, self.bias_hh
+        gates = (
+            input.matmul(self.weight_ih.t())
+            + self.bias_ih
+            + hx.matmul(self.weight_hh.t())
+            + self.bias_hh
         )
-        ingate, forgetgate, cellgate, outgate = gates.chunk(4, 1)
 
-        ingate = torch.clamp(0.2 * ingate + 0.5, min=0.0, max=1.0)
-        forgetgate = torch.clamp(0.2 * forgetgate + 0.5, min=0.0, max=1.0)
-        cellgate = torch.nn.functional.hardtanh_(cellgate)
-        outgate = torch.clamp(0.2 * outgate + 0.5, min=0.0, max=1.0)
+        # gates.chunk(4, 1) is breaks onnx export so index manually:
+        ingate = gates[:, : self.hidden_size]
+        forgetgate = gates[:, self.hidden_size : 2 * self.hidden_size]
+        cellgate = gates[:, 2 * self.hidden_size : 3 * self.hidden_size]
+        outgate = gates[:, 3 * self.hidden_size :]
+
+        ingate = torch.clamp(
+            self.slope * ingate + self.offset, min=0.0, max=1.0
+        )
+        forgetgate = torch.clamp(
+            self.slope * forgetgate + self.offset, min=0.0, max=1.0
+        )
+        cellgate = self.hardtanh(cellgate)
+        outgate = torch.clamp(
+            self.slope * outgate + self.offset, min=0.0, max=1.0
+        )
 
         cy = (forgetgate * cx) + (ingate * cellgate)
-        hy = outgate * torch.nn.functional.hardtanh_(cy)
-
+        hy = outgate * self.hardtanh(cy)
         return hy, (hy, cy)
