@@ -1,5 +1,4 @@
 import math
-from typing import List
 from typing import Optional
 from typing import Tuple
 
@@ -60,7 +59,7 @@ class HardLSTM(torch.nn.Module):
         self.batch_first = batch_first
         self.num_layers = num_layers
 
-        rnn = gen_hard_lstm(
+        self.rnn = gen_hard_lstm(
             input_size=input_size,
             hidden_size=hidden_size,
             num_layers=num_layers,
@@ -72,10 +71,12 @@ class HardLSTM(torch.nn.Module):
         )
 
         self.use_cuda = torch.cuda.is_available()
-        if self.use_cuda:
-            rnn = rnn.cuda()
 
-        self.rnn = torch.jit.script(rnn)
+        # Send module to GPU _before_ scripting for optimal performance
+        if self.use_cuda:
+            self.rnn = self.rnn.cuda()
+
+        self.rnn = torch.jit.script(self.rnn)
 
     def forward(
         self,
@@ -110,6 +111,7 @@ class HardLSTM(torch.nn.Module):
                 dtype=inp.dtype,
             )
             hx = torch.jit.annotate(Tuple[Tensor, Tensor], (zeros, zeros))
+
         if self.use_cuda:
             inp = inp.cuda()
             hx = hx[0].cuda(), hx[1].cuda()
@@ -174,12 +176,10 @@ class StackedLSTM(torch.nn.Module):
         batch_first: See :py:class:`HardLSTM`.
     """
 
-    num_layers: Final[int]
-    input_size: Final[int]
-    hidden_size: Final[int]
-    num_directions: Final[int]
-    batch_first: Final[bool]
-    bias: Final[bool]
+    _num_layers: Final[int]
+    _num_directions: Final[int]
+    _batch_first: Final[bool]
+    device: Final[torch.device]
 
     def __init__(
         self,
@@ -195,12 +195,20 @@ class StackedLSTM(torch.nn.Module):
     ):
 
         super(StackedLSTM, self).__init__()
+        # To make model attributes available in forward method for onnx export,
+        # it is necessary to define the type in advance with the Final[type]
+        # constructor (see class attributes below class docstring). However,
+        # after a module is scripted, any attributes marked with Final are
+        # not available to user as self.atrb. Hence, for those attributes that
+        # are required by the user (defined by :py:class:`RNN`) that are also
+        # required in the forward pass (e.g. batch_first) we define duplicate
+        # atrributes (e.g. self._batch_first and self.batch_first).
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.num_layers = num_layers
+        self.num_layers = self._num_layers = num_layers
         num_directions = 2 if bidirectional else 1
-        self.num_directions = num_directions
-        self.batch_first = batch_first
+        self.num_directions = self._num_directions = num_directions
+        self.batch_first = self._batch_first = batch_first
         self.bias = bias
         self.dropout = dropout
         self.bidirectional = bidirectional
@@ -222,6 +230,13 @@ class StackedLSTM(torch.nn.Module):
 
         self.layers = torch.nn.ModuleList(layers)
 
+        self.use_cuda = torch.cuda.is_available()
+
+        if self.use_cuda:
+            self.layers = self.layers.cuda()
+
+        self.device: torch.device = next(self.layers.parameters()).device
+
     def forward(
         self, input: Tensor, hx: Tuple[Tensor, Tensor]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
@@ -241,25 +256,26 @@ class StackedLSTM(torch.nn.Module):
                 output and ``(c, d)`` are the hidden and cell states of the
                 lstm.
         """
-        # hn, cn = hx
-        # return input+1., (hn+1., cn+1.)
-        one = torch.tensor([1], dtype=torch.float32)
-        if self.batch_first:
+        if self._batch_first:
             input = input.transpose(0, 1)
 
         hn, cn = hx
-        req_size = self.num_layers, self.num_directions, hn.size(1), hn.size(2)
+        req_size = (
+            self._num_layers,
+            self._num_directions,
+            hn.size(1),
+            hn.size(2),
+        )
         hn = hn.view(req_size)
         cn = cn.view(req_size)
 
         i = 0
-        output = input + one
+        output = input
 
-        hn_out = torch.empty(0)
-        cn_out = torch.empty(0)
+        hn_out = torch.empty(0, device=self.device)
+        cn_out = torch.empty(0, device=self.device)
         for rnn_layer in self.layers:
             output, (h, c) = rnn_layer(output, (hn[i], cn[i]))
-            # h, c = (hn[i]+one, cn[i]+one)
             if i == 0:
                 hn_out = h.unsqueeze(0)
                 cn_out = c.unsqueeze(0)
@@ -270,89 +286,10 @@ class StackedLSTM(torch.nn.Module):
         req_size_out = (-1, hn_out.size(2), hn_out.size(3))
         out_states = hn_out.view(req_size_out), cn_out.view(req_size_out)
 
-        if self.batch_first:
+        if self._batch_first:
             output = output.transpose(0, 1)
 
         return output, out_states
-
-
-# class HardLSTMLayer(torch.nn.Module):
-#     """A single-directional LSTM layer.
-#
-#     Args:
-#         input_size: See :py:class:`HardLSTM`.
-#
-#         hidden_size: See :py:class:`HardLSTM`.
-#
-#         forget_gate_bias: See :py:class:`HardLSTM`.
-#
-#         reverse: A boolean. If True, this is is a reverse LSTM layer (used in
-#             a bidirectional LSTM).
-#     """
-#
-#     input_size: Final[int]
-#     hidden_size: Final[int]
-#     reverse: Final[bool]
-#
-#     def __init__(
-#         self,
-#         input_size: int,
-#         hidden_size: int,
-#         forget_gate_bias: Optional[float] = None,
-#         reverse: bool = False,
-#     ):
-#         super().__init__()
-#         self.input_size = input_size
-#         self.hidden_size = hidden_size
-#         self.forget_gate_bias = forget_gate_bias
-#         self.reverse = reverse
-#         self.cell = HardLSTMCell(input_size, hidden_size)
-#         # zeros = torch.zeros(2, hidden_size)
-#         # args = torch.zeros(2, input_size), (zeros, zeros)
-#         # self.cell = torch.jit.trace(
-#         #     HardLSTMCell(input_size, hidden_size), args, check_trace=False
-#         # )
-#         # self.reset_parameters()
-#
-#     def reset_parameters(self):
-#         stdv = 1.0 / math.sqrt(self.hidden_size)
-#         for weight in self.parameters():
-#             weight.data.uniform_(-stdv, stdv)
-#
-#         if self.forget_gate_bias is not None:
-#             self.cell.bias_ih.data[
-#                 self.hidden_size : 2 * self.hidden_size
-#             ] = self.forget_gate_bias
-#             self.cell.bias_hh.data[
-#                 self.hidden_size : 2 * self.hidden_size
-#             ] = 0.0
-#
-#     def forward(
-#         self, x: Tensor, hx: Tuple[Tensor, Tensor]
-#     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
-#         """Performs forward pass of single LSTM layer."""
-#         hx = hx[0].squeeze(0), hx[1].squeeze(0)
-#         timesteps = x.size(0)
-#         y = torch.empty(1, x.size(1), x.size(2))
-#         if self.reverse:
-#             for t in range(timesteps - 1, -1, -1):
-#                 eps = x[t].mean()
-#                 #hy, hx = hx[0]+eps, (hx[0]+eps, hx[1] + eps)
-#                 #hy, hx = self.cell(x[t], hx)
-#                 hy, hx = self.cell(hx[0]+eps, (hx[0]+eps, hx[1] + eps))
-#                 y = torch.cat([y, hy.unsqueeze(0)], 0)
-#             y = torch.flip(y, (0,))
-#         else:
-#             for t in range(timesteps):
-#                 eps = x[t].mean()
-#                 #hy, hx = hx[0]+eps, (hx[0]+eps, hx[1] + eps)
-#                 #hy, hx = self.cell(x[t], hx)
-#                 hy, hx = self.cell(hx[0]+eps, (hx[0]+eps, hx[1] + eps))
-#                 y = torch.cat([y, hy.unsqueeze(0)], 0)
-#         (h, c) = hx
-#         # must remove the torch.empty element from the start of the list:
-#         y = y[1:]
-#         return y, (h.unsqueeze(0), c.unsqueeze(0))
 
 
 class HardLSTMLayer(torch.nn.Module):
@@ -364,67 +301,57 @@ class HardLSTMLayer(torch.nn.Module):
         hidden_size: See :py:class:`HardLSTM`.
 
         forget_gate_bias: See :py:class:`HardLSTM`.
-
-        reverse: A boolean. If True, this is is a reverse LSTM layer (used in
-            a bidirectional LSTM).
     """
 
     input_size: Final[int]
     hidden_size: Final[int]
-    reverse: Final[bool]
+    device: Final[torch.device]
 
     def __init__(
         self,
         input_size: int,
         hidden_size: int,
         forget_gate_bias: Optional[float] = None,
-        reverse: bool = False,
     ):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.forget_gate_bias = forget_gate_bias
-        self.reverse = reverse
-        self.cell = HardLSTMCell(input_size, hidden_size)
-        # zeros = torch.zeros(2, hidden_size)
-        # args = torch.zeros(2, input_size), (zeros, zeros)
-        # self.cell = torch.jit.trace(
-        #     HardLSTMCell(input_size, hidden_size), args, check_trace=False
-        # )
-        # self.reset_parameters()
+        self.cell = HardLSTMCell(input_size, hidden_size, forget_gate_bias)
 
-    def reset_parameters(self):
-        stdv = 1.0 / math.sqrt(self.hidden_size)
-        for weight in self.parameters():
-            weight.data.uniform_(-stdv, stdv)
+        self.use_cuda = torch.cuda.is_available()
 
-        if self.forget_gate_bias is not None:
-            self.cell.bias_ih.data[
-                self.hidden_size : 2 * self.hidden_size
-            ] = self.forget_gate_bias
-            self.cell.bias_hh.data[
-                self.hidden_size : 2 * self.hidden_size
-            ] = 0.0
+        if self.use_cuda:
+            self.cell = self.cell.cuda()
+
+        self.device: torch.device = next(self.cell.parameters()).device
 
 
 class HardLSTMLayerForward(HardLSTMLayer):
     def forward(
         self, x: Tensor, hx: Tuple[Tensor, Tensor]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
+        """TODO
+        x: [seq_len, batch, input_size]
+        h/c: [1, batch, hidden_size]
+        y: [seq_len, batch, hidden_size]
+
+        """
         hx = hx[0].squeeze(0), hx[1].squeeze(0)
         timesteps = x.size(0)
-        y = torch.empty(1, x.size(1), x.size(2))
-        t = 0
-        for _ in range(timesteps):
-            eps = x[t].mean()
-            # hy, hx = hx[0]+eps, (hx[0]+eps, hx[1] + eps)
-            # hy, hx = self.cell(x[t], hx)
-            hy, hx = self.cell(x[t] + eps, (hx[0] + eps, hx[1] + eps))
+        # We extend y on each timestep with y = torch.cat([y, ...]) so
+        # must define initial y. Normally we could use y = torch.empty(0) but
+        # with onnx export, the dimensions must match for **all** concated
+        # tensors, even when empty. Hence define with correct shape but this
+        # means that it will not be treated as empty and will have to be
+        # removed from y later.
+        y = torch.empty(1, x.size(1), self.hidden_size, device=self.device)
+        for t in range(timesteps):
+            hy, hx = self.cell(x[t], hx)
             y = torch.cat([y, hy.unsqueeze(0)], 0)
-            t += 1
-        (h, c) = hx
-        # must remove the torch.empty element from the start of the list:
+
+        # Remove the torch.empty element:
         y = y[1:]
+        h, c = hx
         return y, (h.unsqueeze(0), c.unsqueeze(0))
 
 
@@ -432,20 +359,20 @@ class HardLSTMLayerReverse(HardLSTMLayer):
     def forward(
         self, x: Tensor, hx: Tuple[Tensor, Tensor]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
-        """Performs forward pass of single LSTM layer."""
+        """TODO."""
         hx = hx[0].squeeze(0), hx[1].squeeze(0)
         timesteps = x.size(0)
-        y = torch.empty(1, x.size(1), x.size(2))
-        for t in range(timesteps - 1, -1, -1):
-            eps = x[t].mean()
-            # hy, hx = hx[0]+eps, (hx[0]+eps, hx[1] + eps)
-            hy, hx = self.cell(x[t], hx)  # this fails
-            hy, hx = self.cell(hx[0] + eps, (hx[0] + eps, hx[1] + eps))
+        y = torch.empty(1, x.size(1), self.hidden_size, device=self.device)
+        # range(t, -1, -1) not supported for onnx export so must keep track
+        # of timestep index for reverse layer:
+        t = timesteps - 1
+        for _ in range(timesteps):
+            hy, hx = self.cell(x[t], hx)
             y = torch.cat([y, hy.unsqueeze(0)], 0)
-        # Remove the torch.empty element from the start of the list:
+            t -= 1
         y = y[1:]
         y = torch.flip(y, (0,))
-        (h, c) = hx
+        h, c = hx
         return y, (h.unsqueeze(0), c.unsqueeze(0))
 
 
@@ -458,6 +385,7 @@ class HardLSTMBidirLayer(torch.nn.Module):
 
     input_size: Final[int]
     hidden_size: Final[int]
+    device: Final[torch.device]
 
     def __init__(
         self,
@@ -476,35 +404,56 @@ class HardLSTMBidirLayer(torch.nn.Module):
             forget_gate_bias,
         )
         self.directions = torch.nn.ModuleList(
-            [
-                HardLSTMLayerForward(*args, reverse=False),
-                HardLSTMLayerReverse(*args, reverse=True),
-            ]
+            [HardLSTMLayerForward(*args), HardLSTMLayerReverse(*args)]
         )
+
+        self.use_cuda = torch.cuda.is_available()
+        if self.use_cuda:
+            self.directions = self.directions.cuda()
+
+        self.device: torch.device = next(self.directions.parameters()).device
 
     def forward(
         self, x: Tensor, hx: Tuple[Tensor, Tensor]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
-        """Performs forward pass of single bidirectional LSTM layer."""
+        """Performs forward pass of single bidirectional LSTM layer.
+
+        x: [seq_len, batch, input_size]
+        h/c: [2, batch, hidden_size]
+        ys: [seq_len, batch, 2 * hidden_size]
+
+        """
         h0, c0 = hx
         hx_f = h0[0].unsqueeze(0), c0[0].unsqueeze(0)
         hx_b = h0[1].unsqueeze(0), c0[1].unsqueeze(0)
-        states = [hx_f, hx_b]
+        states = torch.jit.annotate(
+            Tuple[Tuple[Tensor, Tensor], Tuple[Tensor, Tensor]], (hx_f, hx_b)
+        )
+
+        timesteps = x.size(0)
+        batch = x.size(1)
+        ys = torch.empty(
+            timesteps, batch, 1, self.hidden_size, device=self.device
+        )
+        hs = torch.empty(1, batch, self.hidden_size, device=self.device)
+        cs = torch.empty(1, batch, self.hidden_size, device=self.device)
         i = 0
-        ys = torch.jit.annotate(List[Tensor], [])
-        hs = torch.jit.annotate(List[Tensor], [])
-        cs = torch.jit.annotate(List[Tensor], [])
         for direction in self.directions:
             y, (h, c) = direction(x, states[i])
-            ys.append(y)
-            hs.append(h)
-            cs.append(c)
+            # eps = x.mean()
+            # y = torch.zeros(timesteps, batch, self.hidden_size) + eps + i
+            # h = c = torch.zeros(1, batch, self.hidden_size) + eps  + i
+            ys = torch.cat([ys, y.unsqueeze(2)], 2)
+            hs = torch.cat([hs, h], 0)
+            cs = torch.cat([cs, c], 0)
             i + 1
-        out = torch.stack(ys, 2)
-        hs = torch.stack(hs).squeeze(1)
-        cs = torch.stack(cs).squeeze(1)
-        out = out.view((out.size(0), out.size(1), -1))
-        return out, (hs, cs)
+
+        ys = ys[:, :, 1:]
+        ys = ys.view((timesteps, batch, 2 * self.hidden_size))
+
+        hs = hs[1:]
+        cs = cs[1:]
+        return ys, (hs, cs)
 
 
 class HardLSTMCell(torch.nn.Module):
@@ -517,10 +466,16 @@ class HardLSTMCell(torch.nn.Module):
     input_size: Final[int]
     hidden_size: Final[int]
 
-    def __init__(self, input_size, hidden_size):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        forget_gate_bias: Optional[float] = None,
+    ):
         super(HardLSTMCell, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
+        self.forget_gate_bias = forget_gate_bias
         self.weight_ih = torch.nn.Parameter(
             torch.randn(4 * hidden_size, input_size)
         )
@@ -536,6 +491,24 @@ class HardLSTMCell(torch.nn.Module):
         # preserve type during ONNX export
         self.slope = torch.tensor([0.2], dtype=torch.float32)
         self.offset = torch.tensor([0.5], dtype=torch.float32)
+
+        if torch.cuda.is_available():
+            self = self.cuda()  # sends registered parameters
+            self.slope = self.slope.cuda()
+            self.offset = self.offset.cuda()
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        stdv = 1.0 / math.sqrt(self.hidden_size)
+        for weight in self.parameters():
+            weight.data.uniform_(-stdv, stdv)
+
+        if self.forget_gate_bias is not None:
+            self.bias_ih.data[
+                self.hidden_size : 2 * self.hidden_size
+            ] = self.forget_gate_bias
+            self.bias_hh.data[self.hidden_size : 2 * self.hidden_size] = 0.0
 
     def forward(
         self, input: Tensor, state: Tuple[Tensor, Tensor]
