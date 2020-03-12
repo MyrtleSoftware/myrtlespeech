@@ -97,9 +97,9 @@ class HardLSTM(torch.nn.Module):
 
         Returns:
             A Tuple of Tuples; ``res = (a, b), (c, d)`` where
-                ``a`` is the lstm sequence output, ``b`` are the lengths of
-                these output sequences and ``(c, d)`` are the hidden and cell
-                states of the lstm.
+            ``a`` is the lstm sequence output, ``b`` are the lengths of
+            these output sequences and ``(c, d)`` are the hidden and cell
+            states of the lstm.
         """
         inp, lengths = x
         if hx is None:
@@ -241,21 +241,25 @@ class StackedLSTM(torch.nn.Module):
     def forward(
         self, input: Tensor, hx: Tuple[Tensor, Tensor]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
-        """Performs forward pass of LSTM.
+        """Returns the result of applying the hard lstm to ``(input, hx)``.
 
         All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda`
         if :py:func:`torch.cuda.is_available` was :py:data:`True` on
         initialisation.
 
         Args:
-            input: A :py:class:`torch.Tensor` of rnn sequence inputs.
+            input: A :py:class:`torch.Tensor` of rnn sequence inputs of size
+                ``[seq_len, batch, self.input_size]``.
 
-            hx: The lstm hidden state: a Tuple of hidden state and cell state.
+            hx: The lstm hidden state: a Tuple of lstm hidden state and cell
+                states where both are :py:class:`torch.Tensor`s of size
+                ``[self.num_directions, batch, self.hidden_size]``.
 
         Returns:
-            A Tuple of Tuples; ``res = a, (b, c)`` where ``a`` is the lstm
-                output and ``(c, d)`` are the hidden and cell states of the
-                lstm.
+            A Tuple of Tuples; ``res = a, (b, c)`` where all elements are
+            :py:class:`torch.Tensor`s. ``a`` is the lstm output of size
+            ``[seq_len, batch, self.num_directions * self.hidden_size]``
+            and ``(c, d)`` are the final lstm hidden and cell states.
         """
         if self._batch_first:
             input = input.transpose(0, 1)
@@ -285,7 +289,7 @@ class StackedLSTM(torch.nn.Module):
                 cn_out = torch.cat([cn_out, c.unsqueeze(0)], 0)
                 hn_out = torch.cat([hn_out, h.unsqueeze(0)], 0)
             i += 1
-        req_size_out = (-1, hn_out.size(2), hn_out.size(3))
+        req_size_out = (-1, batch, self._hidden_size)
         out_states = hn_out.view(req_size_out), cn_out.view(req_size_out)
 
         if self._batch_first:
@@ -295,14 +299,22 @@ class StackedLSTM(torch.nn.Module):
 
 
 class HardLSTMLayer(torch.nn.Module):
-    """A single-directional LSTM layer.
+    """Base class for forwards and reverse hard LSTM layers.
+
+    It is currently (March 2020) necessary to use different classes for
+    :py:class:`HardLSTMLayerForward` and :py:class:`HardLSTMLayerReverse` as
+    the combination of following three components did not export:
+    1. ``for`` loop with ``range``.
+    2. ``if`` statement(s) (to perform operations specific to reverse layer).
+    3. torch.cat(...).
+
+    If we remove the :py:meth`torch.cat` from loops in the future (when
+    scatter + scripting is supported:
+    https://github.com/pytorch/pytorch/issues/34538), we should be able to
+    collapse the two subclasses into a single class.
 
     Args:
-        input_size: See :py:class:`HardLSTM`.
-
-        hidden_size: See :py:class:`HardLSTM`.
-
-        forget_gate_bias: See :py:class:`HardLSTM`.
+        See :py:class:`HardLSTM`.
     """
 
     input_size: Final[int]
@@ -327,17 +339,39 @@ class HardLSTMLayer(torch.nn.Module):
 
         self.device = next(self.cell.parameters()).device
 
-
-class HardLSTMLayerForward(HardLSTMLayer):
     def forward(
         self, x: Tensor, hx: Tuple[Tensor, Tensor]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
-        """TODO
-        x: [seq_len, batch, input_size]
-        h/c: [1, batch, hidden_size]
-        y: [seq_len, batch, hidden_size]
+        """Returns the result of applying the layer to ``(x, hx)``.
 
+        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda`
+        if :py:func:`torch.cuda.is_available` was :py:data:`True` on
+        initialisation.
+
+        Args:
+            x: A :py:class:`torch.Tensor` of rnn sequence inputs of size
+                ``[seq_len, batch, self.input_size]``.
+
+            hx: The lstm hidden state: a Tuple of lstm hidden state and cell
+                states where both are :py:class:`torch.Tensor`s of size
+                ``[1, batch, self.hidden_size]``.
+
+        Returns:
+            A Tuple of Tuples; ``res = a, (b, c)`` where all elements are
+            :py:class:`torch.Tensor`s. ``a`` is the lstm output of size
+            ``[seq_len, batch, self.hidden_size]`` and ``(c, d)`` are the
+            final lstm hidden and cell states.
         """
+        raise NotImplementedError
+
+
+class HardLSTMLayerForward(HardLSTMLayer):
+    """Forward LSTM layer. See :py:class:`HardLSTMLayer`."""
+
+    def forward(
+        self, x: Tensor, hx: Tuple[Tensor, Tensor]
+    ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
+        """See :py:meth`HardLSTMLayer.forward`."""
         hx = hx[0].squeeze(0), hx[1].squeeze(0)
         timesteps = x.size(0)
         # We extend y on each timestep with y = torch.cat([y, ...]) so
@@ -358,20 +392,24 @@ class HardLSTMLayerForward(HardLSTMLayer):
 
 
 class HardLSTMLayerReverse(HardLSTMLayer):
+    """Reverse LSTM layer. See :py:class:`HardLSTMLayer`."""
+
     def forward(
         self, x: Tensor, hx: Tuple[Tensor, Tensor]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
-        """TODO."""
+        """See :py:meth`HardLSTMLayer.forward`."""
         hx = hx[0].squeeze(0), hx[1].squeeze(0)
         timesteps = x.size(0)
         y = torch.empty(1, x.size(1), self.hidden_size, device=self.device)
-        # range(t, -1, -1) not supported for onnx export so must keep track
-        # of timestep index for reverse layer:
+        # `range(t, -1, -1)` not supported for onnx export so must keep track
+        # of timestep index:
         t = timesteps - 1
         for _ in range(timesteps):
             hy, hx = self.cell(x[t], hx)
             y = torch.cat([y, hy.unsqueeze(0)], 0)
             t -= 1
+
+        # Remove torch.empty element
         y = y[1:]
         y = torch.flip(y, (0,))
         h, c = hx
@@ -379,7 +417,7 @@ class HardLSTMLayerReverse(HardLSTMLayer):
 
 
 class HardLSTMBidirLayer(torch.nn.Module):
-    """A Bidirectional LSTM layer.
+    """A bidirectional LSTM layer.
 
     Args:
         See :py:class:`HardLSTM`.
@@ -418,12 +456,25 @@ class HardLSTMBidirLayer(torch.nn.Module):
     def forward(
         self, x: Tensor, hx: Tuple[Tensor, Tensor]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
-        """Performs forward pass of single bidirectional LSTM layer.
+        """Returns the result of applying the layer to ``(x, hx)``.
 
-        x: [seq_len, batch, input_size]
-        h/c: [2, batch, hidden_size]
-        ys: [seq_len, batch, 2 * hidden_size]
+        All inputs are moved to the GPU with :py:meth:`torch.nn.Module.cuda`
+        if :py:func:`torch.cuda.is_available` was :py:data:`True` on
+        initialisation.
 
+        Args:
+            x: A :py:class:`torch.Tensor` of rnn sequence inputs of size
+                ``[seq_len, batch, self.input_size]``.
+
+            hx: The lstm hidden state: a Tuple of lstm hidden state and cell
+                states where both are :py:class:`torch.Tensor`s of size
+                ``[2, batch, self.hidden_size]``.
+
+        Returns:
+            A Tuple of Tuples; ``res = a, (b, c)`` where all elements are
+            :py:class:`torch.Tensor`s. ``a`` is the lstm output of size
+            ``[seq_len, batch, 2 * self.hidden_size]`` and ``(c, d)`` are
+            the final lstm hidden and cell states.
         """
         h0, c0 = hx
         hx_f = h0[0].unsqueeze(0), c0[0].unsqueeze(0)
@@ -492,7 +543,7 @@ class HardLSTMCell(torch.nn.Module):
         self.offset = torch.tensor([0.5], dtype=torch.float32)
 
         if torch.cuda.is_available():
-            self = self.cuda()  # sends registered parameters
+            self = self.cuda()  # sends module's registered parameters
             self.slope = self.slope.cuda()
             self.offset = self.offset.cuda()
 
@@ -512,7 +563,24 @@ class HardLSTMCell(torch.nn.Module):
     def forward(
         self, input: Tensor, state: Tuple[Tensor, Tensor]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
-        """Performs forward pass of HardLSTM cell."""
+        """Returns the result of applying the cell to ``(x, hx)``.
+
+        Args:
+            input: A :py:class:`torch.Tensor` of cell inputs of size
+                ``[batch, self.input_size]``.
+
+            state: The lstm hidden state: a Tuple of hidden state and cell
+                states where both are :py:class:`torch.Tensor`s of size
+                ``[batch, self.hidden_size]``.
+
+        Returns:
+            A Tuple of Tuples; ``res = a, (b, c)`` where all elements are
+            :py:class:`torch.Tensor`s. ``a`` is the cell output of size
+            ``[batch, 2 * self.hidden_size]`` and ``(c, d)`` are
+            the final hidden and cell states of size
+            ``[batch, self.hidden_size]``.
+
+        """
         hx, cx = state
         gates = (
             input.matmul(self.weight_ih.t())

@@ -148,9 +148,9 @@ class RNN(torch.nn.Module):
 
         Returns:
             A ``res: Tuple[Tuple[RNNData, Lengths], RNNState]`` where
-                ``res[0][0]`` is the rnn sequence output, ``res[0][1]`` are
-                the lengths of these output sequences and ``res[1]`` is the
-                hidden state of the rnn.
+            ``res[0][0]`` is the rnn sequence output, ``res[0][1]`` are
+            the lengths of these output sequences and ``res[1]`` is the
+            hidden state of the rnn.
         """
         inp, lengths = x
 
