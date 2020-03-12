@@ -102,6 +102,7 @@ class HardLSTM(torch.nn.Module):
             states of the lstm.
         """
         inp, lengths = x
+        hid: Tuple[Tensor, Tensor]
         if hx is None:
             num_directions = 2 if self.bidirectional else 1
             zeros = torch.zeros(
@@ -110,13 +111,15 @@ class HardLSTM(torch.nn.Module):
                 self.hidden_size,
                 dtype=inp.dtype,
             )
-            hx = torch.jit.annotate(Tuple[Tensor, Tensor], (zeros, zeros))
+            hid = (zeros, zeros)
+        else:
+            hid = hx
 
         if self.use_cuda:
             inp = inp.cuda()
-            hx = hx[0].cuda(), hx[1].cuda()
+            hid = hid[0].cuda(), hid[1].cuda()
 
-        y, hid = self.rnn(inp, hx)
+        y, hid = self.rnn(inp, hid)
         return (y, lengths), hid
 
 
@@ -476,12 +479,6 @@ class HardLSTMBidirLayer(torch.nn.Module):
             ``[seq_len, batch, 2 * self.hidden_size]`` and ``(c, d)`` are
             the final lstm hidden and cell states.
         """
-        h0, c0 = hx
-        hx_f = h0[0].unsqueeze(0), c0[0].unsqueeze(0)
-        hx_b = h0[1].unsqueeze(0), c0[1].unsqueeze(0)
-        states = torch.jit.annotate(
-            Tuple[Tuple[Tensor, Tensor], Tuple[Tensor, Tensor]], (hx_f, hx_b)
-        )
 
         timesteps = x.size(0)
         batch = x.size(1)
@@ -490,6 +487,13 @@ class HardLSTMBidirLayer(torch.nn.Module):
         )
         hs = torch.empty(1, batch, self.hidden_size, device=self.device)
         cs = torch.empty(1, batch, self.hidden_size, device=self.device)
+        h0, c0 = hx
+        hx_f = h0[0].unsqueeze(0), c0[0].unsqueeze(0)
+        hx_b = h0[1].unsqueeze(0), c0[1].unsqueeze(0)
+        states: Tuple[Tuple[Tensor, Tensor], Tuple[Tensor, Tensor]] = (
+            hx_f,
+            hx_b,
+        )
         i = 0
         for direction in self.directions:
             y, (h, c) = direction(x, states[i])
