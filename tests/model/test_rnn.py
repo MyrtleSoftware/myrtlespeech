@@ -206,12 +206,10 @@ def test_correct_hard_lstm_type_and_size_returned(
     hidden_size = kwargs["hidden_size"]
     for l in range(kwargs["num_layers"]):
         layer = rnn.rnn.layers[l]
-        cells = []
         if kwargs["bidirectional"]:
-            for direction in layer.directions:
-                cells.append(direction.cell)
+            cells = [layer.fwd.cell, layer.bwd.cell]
         else:
-            cells.append(layer.cell)
+            cells = [layer.cell]
         for cell in cells:
             bias = cell.bias_ih[hidden_size : 2 * hidden_size]
             bias += cell.bias_hh[hidden_size : 2 * hidden_size]

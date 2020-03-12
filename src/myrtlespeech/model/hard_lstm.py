@@ -142,7 +142,7 @@ def gen_hard_lstm(
     if bidirectional:
         layer_type = HardLSTMBidirLayer
     else:
-        layer_type = HardLSTMLayerForward
+        layer_type = HardLSTMLayer
 
     return StackedLSTM(
         num_layers,
@@ -302,19 +302,7 @@ class StackedLSTM(torch.nn.Module):
 
 
 class HardLSTMLayer(torch.nn.Module):
-    """Base class for forwards and reverse hard LSTM layers.
-
-    It is currently (March 2020) necessary to use different classes for
-    :py:class:`HardLSTMLayerForward` and :py:class:`HardLSTMLayerReverse` as
-    the combination of following three components did not export:
-    1. ``for`` loop with ``range``.
-    2. ``if`` statement(s) (to perform operations specific to reverse layer).
-    3. torch.cat(...).
-
-    If we remove the :py:meth`torch.cat` from loops in the future (when
-    scatter + scripting is supported:
-    https://github.com/pytorch/pytorch/issues/34538), we should be able to
-    collapse the two subclasses into a single class.
+    """Hard LSTM layer.
 
     Args:
         See :py:class:`HardLSTM`.
@@ -365,16 +353,6 @@ class HardLSTMLayer(torch.nn.Module):
             ``[seq_len, batch, self.hidden_size]`` and ``(c, d)`` are the
             final lstm hidden and cell states.
         """
-        raise NotImplementedError
-
-
-class HardLSTMLayerForward(HardLSTMLayer):
-    """Forward LSTM layer. See :py:class:`HardLSTMLayer`."""
-
-    def forward(
-        self, x: Tensor, hx: Tuple[Tensor, Tensor]
-    ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
-        """See :py:meth`HardLSTMLayer.forward`."""
         hx = hx[0].squeeze(0), hx[1].squeeze(0)
         timesteps = x.size(0)
         # We extend y on each timestep with y = torch.cat([y, ...]) so
@@ -394,31 +372,6 @@ class HardLSTMLayerForward(HardLSTMLayer):
         return y, (h.unsqueeze(0), c.unsqueeze(0))
 
 
-class HardLSTMLayerReverse(HardLSTMLayer):
-    """Reverse LSTM layer. See :py:class:`HardLSTMLayer`."""
-
-    def forward(
-        self, x: Tensor, hx: Tuple[Tensor, Tensor]
-    ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
-        """See :py:meth`HardLSTMLayer.forward`."""
-        hx = hx[0].squeeze(0), hx[1].squeeze(0)
-        timesteps = x.size(0)
-        y = torch.empty(1, x.size(1), self.hidden_size, device=self.device)
-        # `range(t, -1, -1)` not supported for onnx export so must keep track
-        # of timestep index:
-        t = timesteps - 1
-        for _ in range(timesteps):
-            hy, hx = self.cell(x[t], hx)
-            y = torch.cat([y, hy.unsqueeze(0)], 0)
-            t -= 1
-
-        # Remove torch.empty element
-        y = y[1:]
-        y = torch.flip(y, (0,))
-        h, c = hx
-        return y, (h.unsqueeze(0), c.unsqueeze(0))
-
-
 class HardLSTMBidirLayer(torch.nn.Module):
     """A bidirectional LSTM layer.
 
@@ -428,7 +381,6 @@ class HardLSTMBidirLayer(torch.nn.Module):
 
     input_size: Final[int]
     hidden_size: Final[int]
-    device: Final[torch.device]
 
     def __init__(
         self,
@@ -446,15 +398,13 @@ class HardLSTMBidirLayer(torch.nn.Module):
             hidden_size,
             forget_gate_bias,
         )
-        self.directions = torch.nn.ModuleList(
-            [HardLSTMLayerForward(*args), HardLSTMLayerReverse(*args)]
-        )
+        self.fwd = HardLSTMLayer(*args)
+        self.bwd = HardLSTMLayer(*args)
 
         self.use_cuda = torch.cuda.is_available()
         if self.use_cuda:
-            self.directions = self.directions.cuda()
-
-        self.device = next(self.directions.parameters()).device
+            self.fwd = self.fwd.cuda()
+            self.bwd = self.bwd.cuda()
 
     def forward(
         self, x: Tensor, hx: Tuple[Tensor, Tensor]
@@ -482,32 +432,21 @@ class HardLSTMBidirLayer(torch.nn.Module):
 
         timesteps = x.size(0)
         batch = x.size(1)
-        ys = torch.empty(
-            timesteps, batch, 1, self.hidden_size, device=self.device
-        )
-        hs = torch.empty(1, batch, self.hidden_size, device=self.device)
-        cs = torch.empty(1, batch, self.hidden_size, device=self.device)
+
         h0, c0 = hx
         hx_f = h0[0].unsqueeze(0), c0[0].unsqueeze(0)
         hx_b = h0[1].unsqueeze(0), c0[1].unsqueeze(0)
-        states: Tuple[Tuple[Tensor, Tensor], Tuple[Tensor, Tensor]] = (
-            hx_f,
-            hx_b,
-        )
-        i = 0
-        for direction in self.directions:
-            y, (h, c) = direction(x, states[i])
-            ys = torch.cat([ys, y.unsqueeze(2)], 2)
-            hs = torch.cat([hs, h], 0)
-            cs = torch.cat([cs, c], 0)
-            i + 1
+        x_rev = torch.flip(x, (0,))
+        y_f, (h_f, c_f) = self.fwd(x, hx_f)
+        y_b, (h_b, c_b) = self.bwd(x_rev, hx_b)
+        y_b = torch.flip(y_b, (0,))
 
-        ys = ys[:, :, 1:]
+        ys = torch.cat([y_f.unsqueeze(2), y_b.unsqueeze(2)], 2)
         ys = ys.view((timesteps, batch, 2 * self.hidden_size))
+        h = torch.cat([h_f, h_b], 0)
+        c = torch.cat([c_f, c_b], 0)
 
-        hs = hs[1:]
-        cs = cs[1:]
-        return ys, (hs, cs)
+        return ys, (h, c)
 
 
 class HardLSTMCell(torch.nn.Module):
