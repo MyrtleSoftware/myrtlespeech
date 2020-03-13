@@ -65,11 +65,12 @@ def rnns(
     kwargs["forget_gate_bias"] = draw(
         st.one_of(st.none(), st.floats(min_value=-10.0, max_value=10.0))
     )
-    kwargs["batch_first"] = draw(st.booleans())
     if kwargs["num_layers"] == 1 or hard_lstm:
         kwargs["dropout"] = 0.0
+        kwargs["batch_first"] = False
     else:
         kwargs["dropout"] = draw(st.floats(min_value=0.0, max_value=1.0))
+        kwargs["batch_first"] = draw(st.booleans())
 
     rnn_clss: torch.nn.Module
     if hard_lstm:

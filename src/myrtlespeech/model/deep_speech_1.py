@@ -61,7 +61,7 @@ class DeepSpeech1(torch.nn.Module):
             (2): Dropout(p=0.25, inplace=False)
           )
           (bi_lstm): RNN(
-            (rnn): LSTM(20, 10, batch_first=True, bidirectional=True)
+            (rnn): LSTM(20, 10, bidirectional=True)
           )
           (fc4): Sequential(
             (0): Linear(in_features=20, out_features=10, bias=True)
@@ -178,11 +178,10 @@ class DeepSpeech1(torch.nn.Module):
         h = self.fc1(h)
         h = self.fc2(h)
         h = self.fc3(h)
-
+        h = h.transpose(0, 1)
         (h, _), hid = self.bi_lstm(x=(h, seq_lens), hx=hx)
 
         h = self.fc4(h)
         out = self.out(h)
-        out = out.transpose(0, 1)
 
         return (out, seq_lens), hid

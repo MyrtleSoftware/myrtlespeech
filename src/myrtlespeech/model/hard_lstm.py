@@ -145,6 +145,7 @@ def gen_hard_lstm(
         See :py:class:`HardLSTM`.
     """
     assert not dropout, "Dropout for HardLSTMs is not supported."
+    assert not batch_first, "batch_first does not export to onnx."
     if bidirectional:
         layer_type = HardLSTMBidirLayer
     else:
@@ -273,9 +274,6 @@ class StackedLSTM(torch.nn.Module):
             ``[seq_len, batch, self.num_directions * self.hidden_size]``
             and ``(c, d)`` are the final lstm hidden and cell states.
         """
-        if self._batch_first:
-            input = input.transpose(0, 1)
-
         hn, cn = hx
         batch = hn.size(1)
         req_size = (
@@ -307,9 +305,6 @@ class StackedLSTM(torch.nn.Module):
         cn_out = cn_out[1:]
         req_size_out = (-1, batch, self._hidden_size)
         out_states = hn_out.view(req_size_out), cn_out.view(req_size_out)
-
-        if self._batch_first:
-            output = output.transpose(0, 1)
 
         return output, out_states
 
