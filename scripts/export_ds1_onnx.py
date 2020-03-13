@@ -8,6 +8,7 @@ import google.protobuf.text_format as text_format
 import torch
 from myrtlespeech.builders.speech_to_text import build as build_stt
 from myrtlespeech.model.deep_speech_1 import DeepSpeech1
+from myrtlespeech.model.rnn import init_hidden_state
 from myrtlespeech.protos import task_config_pb2
 
 
@@ -56,6 +57,10 @@ def export_ds1(
 
     model.eval()
     example_outputs = model(*args)
+
+    # trace model
+    model = torch.jit.trace(model, args)
+
     torch.onnx.export(
         model,
         args,
@@ -100,7 +105,14 @@ def gen_ds1_args(model: DeepSpeech1, id: int = 0, batch: int = 2) -> Tuple:
         )
         xlen = xlen.sort(descending=True)[0]
         xlen[0] = seq_len
-    hn, cn = model.bi_lstm._init_hidden(batch=batch, dtype=x.dtype)
+    hn, cn = init_hidden_state(
+        batch=batch,
+        dtype=x.dtype,
+        hidden_size=model.bi_lstm.rnn.hidden_size,
+        num_layers=model.bi_lstm.rnn.num_layers,
+        bidirectional=model.bi_lstm.rnn.bidirectional,
+        rnn_type=0,
+    )
     return x, xlen, hn, cn
 
 
@@ -138,5 +150,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "onnx_fp", help="The path the onnx model should be written to."
     )
+    parser.add_argument(
+        "opset_version",
+        help="The onnx opset version to use for the export.",
+        type=int,
+    )
     args = parser.parse_args()
-    export_ds1(args.config, args.weights_fp, args.onnx_fp)
+    export_ds1(args.config, args.weights_fp, args.onnx_fp, args.opset_version)
