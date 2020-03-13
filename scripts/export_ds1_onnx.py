@@ -121,7 +121,7 @@ def gen_ds1_args(model: DeepSpeech1, id: int = 0, batch: int = 2) -> Tuple:
         )
         xlen = xlen.sort(descending=True)[0]
         xlen[0] = seq_len
-    hn, cn = init_hidden_state(
+    hn, cn = init_hidden_state(  # type: ignore
         batch=batch,
         dtype=x.dtype,
         hidden_size=model.bi_lstm.rnn.hidden_size,
