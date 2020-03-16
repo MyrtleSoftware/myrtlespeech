@@ -13,11 +13,7 @@ from myrtlespeech.protos import task_config_pb2
 
 
 def export_ds1(
-    ds1_cfg_fp: str,
-    weights_fp: str,
-    onnx_fp: str,
-    opset_version: int = 11,
-    rename_lengths: bool = False,
+    ds1_cfg_fp: str, weights_fp: str, onnx_fp: str, opset_version: int = 11,
 ):
     """Exports :py:class:`DeepSpeech1` model.
 
@@ -29,33 +25,19 @@ def export_ds1(
         onnx_fp: filepath to save onnx file to.
 
         opset_version: onnx opset_version.
-
-        rename_lengths: User should pass :py:Data`True` if the onnx compiler
-            renames the ``lens`` inputs/outputs after compiling. To access
-            this information, print
-            ``[x.name for x in ort_session.get_inputs()]`` (or equivalent
-            for the graph outputs). This is necessary because, for some
-            combinations of opset and hard/soft-LSTM, the onnx exported
-            correctly realises that sequence lengths are unchanged from input
-            to output whereas in other cases it does not. In the latter case
-            it renames the input or output names (e.g.``lens -> lens.1``)
-            which breaks the ort session.
     """
     # Define attributes for ONNX export
-    input_names = ["input", "lens", "h_n_in", "c_n_in"]
+    input_names = ["input", "in_lens", "h_n_in", "c_n_in"]
+    output_names = ["output", "out_lens", "h_n_out", "c_n_out"]
     dynamic_axes = {
         "input": {0: "batch", 3: "seq_len"},
-        "lens": {0: "batch"},
+        "in_lens": {0: "batch"},
         "h_n_in": {1: "batch"},
         "c_n_in": {1: "batch"},
         "output": {0: "seq_len", 1: "batch"},
+        "out_lens": {0: "batch"},
         "c_n_out": {1: "batch"},
     }
-    if rename_lengths:
-        output_names = ["output", "lens_out", "h_n_out", "c_n_out"]
-        dynamic_axes["lens_out"] = {0: "batch"}
-    else:
-        output_names = ["output", "lens", "h_n_out", "c_n_out"]
 
     # build model and load weights
     with open(ds1_cfg_fp) as f:
@@ -171,21 +153,8 @@ if __name__ == "__main__":
         help="The onnx opset version to use for the export.",
         type=int,
     )
-    parser.add_argument(
-        "-r",
-        "--rename",
-        help=(
-            "If flag is passed, onnx export renames input/output sequence "
-            "length arguments."
-        ),
-        action="store_const",
-        const=True,
-    )
+
     args = parser.parse_args()
     export_ds1(
-        args.config,
-        args.weights_fp,
-        args.onnx_fp,
-        args.opset_version,
-        args.rename,
+        args.config, args.weights_fp, args.onnx_fp, args.opset_version,
     )
