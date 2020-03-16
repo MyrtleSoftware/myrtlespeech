@@ -455,22 +455,37 @@ class HardLSTMCell(torch.nn.Module):
     """A Hard LSTM cell.
 
     Args:
-        See :py:class:`HardLSTM`.
+        input_size: See :py:class:`HardLSTM`.
+
+        hidden_size: See :py:class:`HardLSTM`.
+
+        forget_gate_bias: See :py:class:`HardLSTM`.
+
+        delta: if not :py:Data:`None`, the lstm cell state is clipped to
+            the range [-delta, delta] (before producing the hidden state).
+
+        sigmoid_slope: A float giving the gradient of the hard sigmoid's
+            slope.
     """
 
     input_size: Final[int]
     hidden_size: Final[int]
+    delta: Final[Optional[float]]
 
     def __init__(
         self,
         input_size: int,
         hidden_size: int,
         forget_gate_bias: Optional[float] = None,
+        delta: Optional[float] = 1.0,
+        sigmoid_slope: float = 0.125,
     ):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.forget_gate_bias = forget_gate_bias
+        self.delta = delta
+
         self.weight_ih = torch.nn.Parameter(
             torch.randn(4 * hidden_size, input_size)
         )
@@ -484,7 +499,7 @@ class HardLSTMCell(torch.nn.Module):
 
         # Hard sigmoid parameters: use Tensors instead of floats to
         # preserve type during ONNX export
-        self.slope = torch.tensor([0.2], dtype=torch.float32)
+        self.slope = torch.tensor([sigmoid_slope], dtype=torch.float32)
         self.offset = torch.tensor([0.5], dtype=torch.float32)
 
         if torch.cuda.is_available():
@@ -552,5 +567,10 @@ class HardLSTMCell(torch.nn.Module):
         )
 
         cy = (forgetgate * cx) + (ingate * cellgate)
+
+        if self.delta is not None:
+            # clamp cell state to range [ -self.delta, self.delta ]
+            cy = torch.clamp(cy, min=-self.delta, max=self.delta)
+
         hy = outgate * self.hardtanh(cy)
         return hy, (hy, cy)
