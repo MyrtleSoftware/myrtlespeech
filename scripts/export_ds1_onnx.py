@@ -45,7 +45,7 @@ def export_ds1(
         task_config = text_format.Merge(f.read(), pb)
     stt = build_stt(task_config.speech_to_text)
     ds1 = stt.model
-    state_dict = torch.load(weights_fp, map_location=torch.device("cpu"))
+    state_dict = torch.load(weights_fp)
     ds1.load_state_dict(state_dict=state_dict, strict=True)
 
     # gen ds1 input args
