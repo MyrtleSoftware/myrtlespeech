@@ -45,17 +45,16 @@ class HardLSTM(torch.nn.Module):
         hidden_size: int,
         num_layers: int = 1,
         bias: bool = True,
+        batch_first: bool = False,
         dropout: float = 0.0,
         bidirectional: bool = False,
         forget_gate_bias: Optional[float] = None,
-        batch_first: bool = False,
     ):
         if rnn_type != RNNType.LSTM:
             raise ValueError("HardLSTM must have rnn_type==RNNType.LSTM.")
         super().__init__()
         self.hidden_size = hidden_size
         self.bidirectional = bidirectional
-        self.rnn_type = rnn_type
         self.batch_first = batch_first
         self.num_layers = num_layers
 
@@ -198,8 +197,7 @@ class StackedLSTM(torch.nn.Module):
         layer_type: Optional[torch.nn.Module] = None,
         forget_gate_bias: Optional[float] = None,
     ):
-
-        super(StackedLSTM, self).__init__()
+        super().__init__()
         # To make model attributes available in forward method for onnx export,
         # it is necessary to define the type in advance with the Final[type]
         # constructor (see class attributes below class docstring). However,
@@ -255,7 +253,8 @@ class StackedLSTM(torch.nn.Module):
 
         Args:
             input: A :py:class:`torch.Tensor` of rnn sequence inputs of size
-                ``[seq_len, batch, self.input_size]``.
+                ``[seq_len, batch, self.input_size] if self.batch_first else
+                [batch, seq_len, self.input_size]``.
 
             hx: The lstm hidden state: a Tuple of lstm hidden state and cell
                 states where both are :py:class:`torch.Tensor`s of size
@@ -469,7 +468,7 @@ class HardLSTMCell(torch.nn.Module):
         hidden_size: int,
         forget_gate_bias: Optional[float] = None,
     ):
-        super(HardLSTMCell, self).__init__()
+        super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.forget_gate_bias = forget_gate_bias
