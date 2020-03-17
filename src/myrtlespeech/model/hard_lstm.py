@@ -280,21 +280,24 @@ class StackedLSTM(torch.nn.Module):
         # reshape hidden/cell states to split layers from directions:
         hn = hn.view(req_size)
         cn = cn.view(req_size)
-
-        i = 0
         output = input
 
-        hn_out = torch.empty(0, device=self.device)
-        cn_out = torch.empty(0, device=self.device)
-        for rnn_layer in self.layers:
+        # We extend hn_out/cn_out on each timestep with hn_out =
+        # torch.cat([hn_out, ...]) so must define initial hn_out. Normally we
+        # could use hn_out = torch.empty(0) but with onnx export, the
+        # dimensions must match for **all** concated tensors, even when empty.
+        # Hence define with correct shape but this means that it will not be
+        # treated as empty and will have to be removed from hn_out later.
+        hn_out = torch.empty(1, *req_size[1:], device=self.device)
+        cn_out = torch.empty(1, *req_size[1:], device=self.device)
+        for i, rnn_layer in enumerate(self.layers):
             output, (h, c) = rnn_layer(output, (hn[i], cn[i]))
-            if i == 0:
-                hn_out = h.unsqueeze(0)
-                cn_out = c.unsqueeze(0)
-            else:
-                cn_out = torch.cat([cn_out, c.unsqueeze(0)], 0)
-                hn_out = torch.cat([hn_out, h.unsqueeze(0)], 0)
-            i += 1
+            cn_out = torch.cat([cn_out, c.unsqueeze(0)], 0)
+            hn_out = torch.cat([hn_out, h.unsqueeze(0)], 0)
+
+        # Remove torch.empty element
+        hn_out = hn_out[1:]
+        cn_out = cn_out[1:]
         req_size_out = (-1, batch, self._hidden_size)
         out_states = hn_out.view(req_size_out), cn_out.view(req_size_out)
 
@@ -358,12 +361,6 @@ class HardLSTMLayer(torch.nn.Module):
         """
         hx = hx[0].squeeze(0), hx[1].squeeze(0)
         timesteps = x.size(0)
-        # We extend y on each timestep with y = torch.cat([y, ...]) so
-        # must define initial y. Normally we could use y = torch.empty(0) but
-        # with onnx export, the dimensions must match for **all** concated
-        # tensors, even when empty. Hence define with correct shape but this
-        # means that it will not be treated as empty and will have to be
-        # removed from y later.
         y = torch.empty(1, x.size(1), self.hidden_size, device=self.device)
         for t in range(timesteps):
             hy, hx = self.cell(x[t], hx)
@@ -535,7 +532,7 @@ class HardLSTMCell(torch.nn.Module):
             + self.bias_hh
         )
 
-        # gates.chunk(4, 1) is breaks onnx export so index manually:
+        # gates.chunk(4, 1) breaks onnx export so index manually:
         ingate = gates[:, : self.hidden_size]
         forgetgate = gates[:, self.hidden_size : 2 * self.hidden_size]
         cellgate = gates[:, 2 * self.hidden_size : 3 * self.hidden_size]
