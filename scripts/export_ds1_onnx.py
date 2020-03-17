@@ -35,6 +35,7 @@ def export_ds1(
         "h_n_in": {1: "batch"},
         "c_n_in": {1: "batch"},
         "output": {0: "seq_len", 1: "batch"},
+        "h_n_out": {1: "batch"},
         "out_lens": {0: "batch"},
         "c_n_out": {1: "batch"},
     }
@@ -45,7 +46,7 @@ def export_ds1(
         task_config = text_format.Merge(f.read(), pb)
     stt = build_stt(task_config.speech_to_text)
     ds1 = stt.model
-    state_dict = torch.load(weights_fp)
+    state_dict = torch.load(weights_fp, map_location=torch.device("cpu"))
     ds1.load_state_dict(state_dict=state_dict, strict=True)
 
     # gen ds1 input args
