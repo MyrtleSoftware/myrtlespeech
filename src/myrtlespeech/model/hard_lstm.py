@@ -23,28 +23,30 @@ from typing_extensions import Final
 
 
 class HardLSTM(torch.nn.Module):
+class HardLSTM(torch.nn.Module):
     """A Hard LSTM.
 
-    This class may be used as a drop-in replacement for a :py:class:`RNN` of
-    ``rnn_type = RNNType.LSTM``. It has the following differences:
-    1. In :py:class:`HardLSTM`, the sigmoid is replaced with a hard sigmoid.
-    2. In :py:class:`HardLSTM`, the tanh is replaced with a hard tanh.
-    3. :py:class:`HardLSTM` does not use
-    :py:func:`torch.nn.utils.rnn.pad_packed_sequence`.
-    4. :py:class:`HardLSTM` is implemented by hand instead of using a single
-    CUDNN kernel as in :py:class:`torch.nn.LSTM`. In order to recover some
-    performance, the :py:class:`HardLSTM` is :py:class:`torch.jit.script`-ed.
-    5. As this class is scripted, its :py:meth:`forward` Args must be
-    monomorphic and therefore cannot be of types ``RNNData, RNNState`` or
-    ``Lengths``. This in turn means that :py:class:`HardLSTM` cannot subclass
-    :py:class:`RNN`.
+    This class may be used as a drop-in replacement for an :py:class:`.RNN` of
+    ``rnn_type = RNNType.LSTM``.
 
-    Args:
-        See :py:class:`RNN`.
+    It has the following differences:
+
+    1. Sigmoid is replaced with a hard sigmoid.
+
+    2. Tanh is replaced with a hard tanh.
+
+    3. :py:func:`torch.nn.utils.rnn.pad_packed_sequence` is not used.
+
+    4. The implementation uses TorchScript internally. TorchScript
+       support user-defined types such as ``RNNData``, ``RNNState``
+       ``Lengths`` meaning this class cannot subclass :py:class:`.RNN`.
+
+    See :py:class:`.RNN` for Args.
 
     Raises:
         :py:class:`ValueError`: If ``rnn_type != RNNType.LSTM``.
     """
+
 
     hidden_size: Final[int]
     bidirectional: Final[bool]
