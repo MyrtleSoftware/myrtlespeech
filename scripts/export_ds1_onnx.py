@@ -13,7 +13,7 @@ from myrtlespeech.protos import task_config_pb2
 
 
 def export_ds1(
-    ds1_cfg_fp: str, weights_fp: str, onnx_fp: str, opset_version: int = 11,
+    ds1_cfg_fp: str, weights_fp: str, onnx_fp: str, opset_version: int = 11
 ):
     """Exports :py:class:`DeepSpeech1` model.
 
@@ -35,8 +35,8 @@ def export_ds1(
         "h_n_in": {1: "batch"},
         "c_n_in": {1: "batch"},
         "output": {0: "seq_len", 1: "batch"},
-        "h_n_out": {1: "batch"},
         "out_lens": {0: "batch"},
+        "h_n_out": {1: "batch"},
         "c_n_out": {1: "batch"},
     }
 
