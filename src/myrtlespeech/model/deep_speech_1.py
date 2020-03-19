@@ -105,7 +105,6 @@ class DeepSpeech1(torch.nn.Module):
             "bias": True,
             "bidirectional": True,
             "forget_gate_bias": forget_gate_bias,
-            "batch_first": True,
         }
         if hard_lstm:
             self.bi_lstm = HardLSTM(**lstm_kwargs)  # type: ignore
