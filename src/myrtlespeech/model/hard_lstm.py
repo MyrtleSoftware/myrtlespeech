@@ -17,7 +17,6 @@ from typing import Optional
 from typing import Tuple
 
 import torch
-from myrtlespeech.model.rnn import RNNType
 from torch import Tensor
 from typing_extensions import Final
 
@@ -41,9 +40,6 @@ class HardLSTM(torch.nn.Module):
        ``Lengths`` meaning this class cannot subclass :py:class:`.RNN`.
 
     See :py:class:`.RNN` for Args.
-
-    Raises:
-        :py:class:`ValueError`: If ``rnn_type != RNNType.LSTM``.
     """
 
     hidden_size: Final[int]
@@ -54,7 +50,6 @@ class HardLSTM(torch.nn.Module):
 
     def __init__(
         self,
-        rnn_type: RNNType,
         input_size: int,
         hidden_size: int,
         num_layers: int = 1,
@@ -64,8 +59,6 @@ class HardLSTM(torch.nn.Module):
         bidirectional: bool = False,
         forget_gate_bias: Optional[float] = None,
     ):
-        if rnn_type != RNNType.LSTM:
-            raise ValueError("HardLSTM must have rnn_type==RNNType.LSTM.")
         super().__init__()
         self.hidden_size = hidden_size
         self.bidirectional = bidirectional

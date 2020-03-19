@@ -46,13 +46,13 @@ def rnns(
 ]:
     """Returns a SearchStrategy for RNN."""
     kwargs: Dict = {}
-    if hard_lstm is True:
-        kwargs["rnn_type"] = RNNType.LSTM
-    else:
+    if hard_lstm is not True:
         kwargs["rnn_type"] = draw(rnn_types())
 
     if hard_lstm is None and kwargs["rnn_type"] == RNNType.LSTM:
         hard_lstm = st.booleans()
+        if hard_lstm:
+            del kwargs["rnn_type"]  # this is not an arg for HardLSTM
 
     if input_size is None:
         kwargs["input_size"] = draw(st.integers(min_value=1, max_value=128))
@@ -71,6 +71,7 @@ def rnns(
     else:
         kwargs["dropout"] = draw(st.floats(min_value=0.0, max_value=1.0))
 
+    rnn_clss: torch.nn.Module
     if hard_lstm:
         rnn_clss = HardLSTM
     else:
@@ -89,7 +90,7 @@ def rnns_and_valid_inputs(draw) -> st.SearchStrategy[Tuple]:
     max_seq_len, batch_size, input_size = inp.size()
 
     rnn, kwargs = draw(rnns(return_kwargs=True, input_size=input_size))
-
+    hard_lstm = isinstance(rnn, HardLSTM)
     if kwargs["batch_first"]:
         inp = inp.transpose(1, 0)
 
@@ -104,9 +105,9 @@ def rnns_and_valid_inputs(draw) -> st.SearchStrategy[Tuple]:
             [num_layers * num_directions, batch_size, hidden_size],
             requires_grad=False,
         ).normal_()
-        if kwargs["rnn_type"] in [RNNType.BASIC_RNN, RNNType.GRU]:
+        if kwargs.get("rnn_type") in [RNNType.BASIC_RNN, RNNType.GRU]:
             hid = h_0
-        elif kwargs["rnn_type"] == RNNType.LSTM:
+        elif kwargs.get("rnn_type") == RNNType.LSTM or hard_lstm:
             c_0 = h_0  # i.e. same dimensions
             hid = h_0, c_0
     else:
@@ -254,10 +255,10 @@ def test_rnn_forward_pass_correct_shapes_returned(
         out_lens.int(), seq_lens
     ), "Sequence length should be unchanged in this module"
 
-    if kwargs["rnn_type"] in [RNNType.BASIC_RNN, RNNType.GRU]:
+    if kwargs.get("rnn_type") in [RNNType.BASIC_RNN, RNNType.GRU]:
         h_0 = hid
         c_0 = None
-    elif kwargs["rnn_type"] == RNNType.LSTM:
+    elif kwargs.get("rnn_type") in [RNNType.LSTM, None]:  # None -> HardLSTM
         h_0, c_0 = hid
 
     assert h_0.shape == expected_hid_size
@@ -271,11 +272,3 @@ def test_error_raised_for_unknown_rnn_type(rnn_type: int) -> None:
     assume(rnn_type not in list(RNNType))
     with pytest.raises(ValueError):
         RNN(rnn_type=rnn_type, input_size=1, hidden_size=1)  # type: ignore
-
-
-@given(rnn_type=st.integers(min_value=100, max_value=300))
-def test_error_raised_for_hard_lstm_for_alt_rnn_type(rnn_type: int) -> None:
-    """Ensures error raised when unknown RNNType used."""
-    assume(rnn_type != RNNType.LSTM)
-    with pytest.raises(ValueError):
-        HardLSTM(rnn_type, input_size=1, hidden_size=1)  # type: ignore
