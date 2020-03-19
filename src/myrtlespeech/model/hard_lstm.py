@@ -1,16 +1,16 @@
 """This implementation of a hard LSTM can be exported to ONNX and run on
 ONNX Runtime (ORT). In order to capture the control flow (e.g. looping over
-timesteps), it is necessary to :py:meth`torch.jit.script` the module before
-:py:meth`torch.onnx.export`-ing it. In other words, the :py:class:`HardLSTM`
+timesteps), it is necessary to :py:meth:`torch.jit.script` the module before
+:py:meth:`torch.onnx.export`-ing it. In other words, the :py:class:`HardLSTM`
 below must be able to pass through the following pipeline:
     ``nn.Module -> TorchScript -> ONNX -> ORT session``
 
-In order to sastify this constraint, our :py:class:`HardLSTM` class has a
+In order to sastify this constraint, the :py:class:`HardLSTM` class has a
 number of unusual (some say ugly) implementation details that are explained in
 inline comments. Refer to the following `PyTorch blog
 <https://pytorch.org/blog/optimizing-cuda-rnn-with-torchscript/>`_
 and `file
-<https://github.com/pytorch/pytorch/blob/6684ef3f23/benchmarks/fastrnns/custom_lstms.py>`_
+<https://github.com/pytorch/pytorch/blob/6684ef3f23/benchmarks/fastrnns/custom_lstms.py>`_.
 """
 import math
 from typing import Optional

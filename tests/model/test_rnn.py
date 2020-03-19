@@ -46,7 +46,7 @@ def rnns(
 ]:
     """Returns a SearchStrategy for RNN."""
     kwargs: Dict = {}
-    if hard_lstm is not True:
+    if not hard_lstm:
         kwargs["rnn_type"] = draw(rnn_types())
 
     if hard_lstm is None and kwargs["rnn_type"] == RNNType.LSTM:
