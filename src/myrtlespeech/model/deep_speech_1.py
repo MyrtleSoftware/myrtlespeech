@@ -98,21 +98,22 @@ class DeepSpeech1(torch.nn.Module):
         self.fc2 = self._fully_connected(n_hidden, n_hidden)
         self.fc3 = self._fully_connected(n_hidden, 2 * n_hidden)
 
+        lstm_kwargs = {
+            "input_size": 2 * n_hidden,
+            "hidden_size": n_hidden,
+            "num_layers": 1,
+            "bias": True,
+            "bidirectional": True,
+            "forget_gate_bias": forget_gate_bias,
+            "batch_first": True,
+        }
         if hard_lstm:
-            rnn_clss = HardLSTM
+            self.bi_lstm = HardLSTM(**lstm_kwargs)  # type: ignore
         else:
-            rnn_clss = RNN
+            self.bi_lstm = RNN(  # type: ignore
+                rnn_type=RNNType.LSTM, **lstm_kwargs
+            )
 
-        self.bi_lstm = rnn_clss(
-            rnn_type=RNNType.LSTM,
-            input_size=2 * n_hidden,
-            hidden_size=n_hidden,
-            num_layers=1,
-            bias=True,
-            bidirectional=True,
-            forget_gate_bias=forget_gate_bias,
-            batch_first=True,
-        )
         self.fc4 = self._fully_connected(2 * n_hidden, n_hidden)
         self.out = self._fully_connected(
             n_hidden, out_features, relu=False, dropout=False
