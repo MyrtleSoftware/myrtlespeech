@@ -23,7 +23,6 @@ from typing_extensions import Final
 
 
 class HardLSTM(torch.nn.Module):
-class HardLSTM(torch.nn.Module):
     """A Hard LSTM.
 
     This class may be used as a drop-in replacement for an :py:class:`.RNN` of
@@ -37,7 +36,7 @@ class HardLSTM(torch.nn.Module):
 
     3. :py:func:`torch.nn.utils.rnn.pad_packed_sequence` is not used.
 
-    4. The implementation uses TorchScript internally. TorchScript
+    4. The implementation uses TorchScript internally. TorchScript doesn't
        support user-defined types such as ``RNNData``, ``RNNState``
        ``Lengths`` meaning this class cannot subclass :py:class:`.RNN`.
 
@@ -46,7 +45,6 @@ class HardLSTM(torch.nn.Module):
     Raises:
         :py:class:`ValueError`: If ``rnn_type != RNNType.LSTM``.
     """
-
 
     hidden_size: Final[int]
     bidirectional: Final[bool]
