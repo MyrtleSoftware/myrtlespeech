@@ -26,6 +26,7 @@ def deep_speech_1s(
     kwargs["drop_prob"] = draw(st.floats(0.0, 1.0, allow_nan=False))
     kwargs["relu_clip"] = draw(st.floats(1.0, 20.0))
     kwargs["forget_gate_bias"] = draw(st.floats(0.0, 1.0))
+    kwargs["hard_lstm"] = draw(st.booleans())
 
     # initialise and return
     all_fields_set(deep_speech_1_pb2.DeepSpeech1, kwargs)

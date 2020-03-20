@@ -2,6 +2,7 @@ from typing import Optional
 from typing import Tuple
 
 import torch
+from myrtlespeech.model.hard_lstm import HardLSTM
 from myrtlespeech.model.rnn import RNN
 from myrtlespeech.model.rnn import RNNState
 from myrtlespeech.model.rnn import RNNType
@@ -28,6 +29,9 @@ class DeepSpeech1(torch.nn.Module):
             initialisation.  (For more information, see `An Empirical
             Exploration of Recurrent Network Architectures
             <http://proceedings.mlr.press/v37/jozefowicz15.pdf>`_)
+
+        hard_lstm: Bool. If True, a :py:class:`HardLSTM` will be used instead
+            of :py:class:`RNN`.
 
     Example:
         >>> ds1 = DeepSpeech1(
@@ -77,6 +81,7 @@ class DeepSpeech1(torch.nn.Module):
         drop_prob: float,
         relu_clip: float = 20.0,
         forget_gate_bias: float = 1.0,
+        hard_lstm: bool = False,
     ):
         super().__init__()
         self.input_features = input_features
@@ -92,16 +97,23 @@ class DeepSpeech1(torch.nn.Module):
         )
         self.fc2 = self._fully_connected(n_hidden, n_hidden)
         self.fc3 = self._fully_connected(n_hidden, 2 * n_hidden)
-        self.bi_lstm = RNN(
-            rnn_type=RNNType.LSTM,
-            input_size=2 * n_hidden,
-            hidden_size=n_hidden,
-            num_layers=1,
-            bias=True,
-            bidirectional=True,
-            forget_gate_bias=forget_gate_bias,
-            batch_first=True,
-        )
+
+        lstm_kwargs = {
+            "input_size": 2 * n_hidden,
+            "hidden_size": n_hidden,
+            "num_layers": 1,
+            "bias": True,
+            "bidirectional": True,
+            "forget_gate_bias": forget_gate_bias,
+            "batch_first": True,
+        }
+        if hard_lstm:
+            self.bi_lstm = HardLSTM(**lstm_kwargs)  # type: ignore
+        else:
+            self.bi_lstm = RNN(  # type: ignore
+                rnn_type=RNNType.LSTM, **lstm_kwargs
+            )
+
         self.fc4 = self._fully_connected(2 * n_hidden, n_hidden)
         self.out = self._fully_connected(
             n_hidden, out_features, relu=False, dropout=False

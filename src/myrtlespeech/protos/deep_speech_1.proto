@@ -17,4 +17,7 @@ message DeepSpeech1 {
 
   // Total initialized value of the bias used in the forget gate.
   float forget_gate_bias = 4;
+
+  // If True then uses a HardLSTM.
+  bool hard_lstm = 5;
 }
