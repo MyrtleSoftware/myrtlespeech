@@ -265,6 +265,14 @@ class Saver(ModelCallback):
             )
         return epoch, total_train_batches
 
+    def _save_seq_to_seq(self, epoch: int, total_train_batches: int) -> None:
+        dict_ = self.model.state_dict()
+        dict_["epoch"] = epoch
+        dict_["total_train_batches"] = total_train_batches
+        torch.save(
+            dict_, str(self.log_dir.joinpath(f"state_dict_{epoch}.pt")),
+        )
+
     def _load_seq_to_seq(
         self, state_dict_fp: Union[str, Path]
     ) -> Tuple[Optional[int], Optional[int]]:
@@ -288,13 +296,7 @@ class Saver(ModelCallback):
     def on_epoch_end(self, **kwargs):
         if not self.training:
             return
-        dict_ = self.model.state_dict()
-        dict_["epoch"] = kwargs["epoch"]
-        dict_["total_train_batches"] = kwargs["total_train_batches"]
-        torch.save(
-            dict_,
-            str(self.log_dir.joinpath(f"state_dict_{kwargs['epoch']}.pt")),
-        )
+        self._save_seq_to_seq(kwargs["epoch"], kwargs["total_train_batches"])
 
 
 def parse(config_path: str) -> task_config_pb2.TaskConfig:
@@ -342,7 +344,10 @@ def run() -> None:
         callbacks.append(StopEpochAfter(epoch_batches=args.stop_epoch_after))
 
     callbacks.extend(
-        [CSVLogger(log_dir.joinpath("log.csv")), Saver(log_dir, seq_to_seq)]
+        [
+            CSVLogger(log_dir.joinpath("log.csv")),
+            Saver(log_dir, load_fp=None, model=seq_to_seq),
+        ]
     )
 
     # train and evaluate
