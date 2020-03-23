@@ -571,7 +571,8 @@ class HardLSTMCell(torch.nn.Module):
         cy = (forgetgate * cx) + (ingate * cellgate)
 
         if self.delta is not None:
-            # clamp cell state to range [ -self.delta, self.delta ]
+            # As T increases, so does |cy| (which causes problems in
+            # quantization) so do:
             cy = torch.clamp(cy, min=-self.delta, max=self.delta)
         hy = outgate * self.hardtanh(cy)
         return hy, (hy, cy)

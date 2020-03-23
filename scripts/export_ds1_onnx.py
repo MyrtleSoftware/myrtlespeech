@@ -74,7 +74,6 @@ def export_ds1(
     model.eval()
     example_outputs = model(*args)
 
-    # trace model
     model = torch.jit.trace(model, args)
 
     torch.onnx.export(
