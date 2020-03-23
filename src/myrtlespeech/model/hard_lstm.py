@@ -481,7 +481,6 @@ class HardLSTMCell(torch.nn.Module):
         forget_gate_bias: Optional[float] = None,
         delta: Optional[float] = 1.0,
         sigmoid_slope: float = 0.125,
-
     ):
         super().__init__()
         self.input_size = input_size
@@ -570,7 +569,7 @@ class HardLSTMCell(torch.nn.Module):
         )
 
         cy = (forgetgate * cx) + (ingate * cellgate)
-        
+
         if self.delta is not None:
             # clamp cell state to range [ -self.delta, self.delta ]
             cy = torch.clamp(cy, min=-self.delta, max=self.delta)
