@@ -146,6 +146,7 @@ def gen_hard_lstm(
     """
     assert not dropout, "Dropout for HardLSTMs is not supported."
     assert not batch_first, "batch_first does not export to onnx."
+
     if bidirectional:
         layer_type = HardLSTMBidirLayer
     else:
@@ -466,6 +467,7 @@ class HardLSTMCell(torch.nn.Module):
 
         sigmoid_slope: A float giving the gradient of the hard sigmoid's
             slope.
+
     """
 
     input_size: Final[int]
@@ -479,6 +481,7 @@ class HardLSTMCell(torch.nn.Module):
         forget_gate_bias: Optional[float] = None,
         delta: Optional[float] = 1.0,
         sigmoid_slope: float = 0.125,
+
     ):
         super().__init__()
         self.input_size = input_size
@@ -567,10 +570,9 @@ class HardLSTMCell(torch.nn.Module):
         )
 
         cy = (forgetgate * cx) + (ingate * cellgate)
-
+        
         if self.delta is not None:
             # clamp cell state to range [ -self.delta, self.delta ]
             cy = torch.clamp(cy, min=-self.delta, max=self.delta)
-
         hy = outgate * self.hardtanh(cy)
         return hy, (hy, cy)
